@@ -1,0 +1,21 @@
+[[package]]
+name = "gd_caching_framework"
+version = "0.1.0"
+dependencies = [
+ "gdcf 0.1.0",
+ "gdcf_postgres 0.1.0",
+ "gdrs 0.1.0",
+]
+
+[[package]]
+name = "gdcf"
+version = "0.1.0"
+
+[[package]]
+name = "gdcf_postgres"
+version = "0.1.0"
+
+[[package]]
+name = "gdrs"
+version = "0.1.0"
+

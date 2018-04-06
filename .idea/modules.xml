@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/gd_caching_framework.iml" filepath="$PROJECT_DIR$/gd_caching_framework.iml" />
+      <module fileurl="file://$PROJECT_DIR$/gdcf/gdcf.iml" filepath="$PROJECT_DIR$/gdcf/gdcf.iml" />
+      <module fileurl="file://$PROJECT_DIR$/gdcf_postgres/gdcf_postgres.iml" filepath="$PROJECT_DIR$/gdcf_postgres/gdcf_postgres.iml" />
+      <module fileurl="file://$PROJECT_DIR$/gdrs/gdrs.iml" filepath="$PROJECT_DIR$/gdrs/gdrs.iml" />
+    </modules>
+  </component>
+</project>

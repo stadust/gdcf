@@ -1,0 +1,10 @@
+[package]
+name = "gd_caching_framework"
+version = "0.1.0"
+
+[dependencies]
+gdrs = { path = "gdrs" }
+gdcf_postgres = { path = "gdcf_postgres" }
+gdcf = { path = "gdcf" }
+
+[workspace]
