@@ -1,0 +1,43 @@
+use model::level::Level;
+
+use api::request::level::LevelRequest;
+use api::request::BaseRequest;
+use api::client::GDClient;
+
+use futures::Future;
+
+use std::time::{SystemTime, UNIX_EPOCH};
+use model::level::PartialLevel;
+
+pub struct CacheConfig {
+    pub invalidate_after: u64
+}
+
+pub trait Cache
+{
+    fn config(&self) -> CacheConfig;
+
+    fn lookup_partial_level(&self, lid: u64) -> Option<CachedObject<PartialLevel>>;
+    fn store_partial_level(&mut self, lid: u64);
+
+    fn lookup_level(&self, lid: u64) -> Option<CachedObject<Level>>;
+    fn store_level(&mut self, level: Level);
+
+    fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() - obj.cached_at > self.config().invalidate_after
+    }
+}
+
+pub struct CachedObject<T> {
+    cached_at: u64,
+    obj: T,
+}
+
+impl<T> CachedObject<T> {
+    pub fn cached_at(&self) -> u64 { self.cached_at }
+    pub fn extract(self) -> T { self.obj }
+}
+
