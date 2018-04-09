@@ -9,5 +9,4 @@ serde = "1.0"
 serde_derive = "1.0"
 
 [features]
-robtop-types = []
-robtop-names = []
+gj-format = []

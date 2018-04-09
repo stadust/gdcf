@@ -6,11 +6,11 @@ mod ser;
 
 #[derive(Serialize, Debug)]
 pub struct BaseRequest {
-    #[cfg_attr(feature="robtop-names", serde(rename = "gameVersion"))]
+    #[cfg_attr(feature="gj-format", serde(rename = "gameVersion"))]
     #[serde(serialize_with = "ser::game_version")]
     game_version: GameVersion,
 
-    #[cfg_attr(feature="robtop-names", serde(rename = "binaryVersion"))]
+    #[cfg_attr(feature="gj-format", serde(rename = "binaryVersion"))]
     #[serde(serialize_with = "ser::game_version")]
     binary_version: GameVersion,
 

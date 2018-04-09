@@ -10,4 +10,4 @@ serde_urlencoded = "0.5.1"
 
 [dependencies.gdcf]
 path = "../gdcf"
-features = ["robtop-names", "robtop-types"]
+features = ["gj-format"]

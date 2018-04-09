@@ -6,14 +6,13 @@ pub struct LevelRequest {
     #[serde(flatten)]
     base: BaseRequest,
 
-    #[cfg_attr(feature="robtop-names", serde(rename = "levelID"))]
+    #[cfg_attr(feature = "gj-format", serde(rename = "levelID"))]
     pub level_id: u64,
 
-    #[cfg_attr(feature="robtop-types", serde(serialize_with = "ser::bool_to_int"))]
+    #[cfg_attr(feature = "gj-format", serde(serialize_with = "ser::bool_to_int"))]
     pub inc: bool,
 
-    #[cfg_attr(feature="robtop-types", serde(serialize_with = "ser::bool_to_int"))]
-    #[cfg_attr(feature="robtop-names", serde(rename = "extras"))]
+    #[cfg_attr(feature = "gj-format", serde(serialize_with = "ser::bool_to_int", rename = "extras"))]
     pub extra: bool,
 }
 
