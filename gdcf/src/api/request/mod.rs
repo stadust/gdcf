@@ -1,18 +1,19 @@
 use model::level::GameVersion;
+use serde::Serializer;
 
 pub mod level;
+mod ser;
 
-pub trait Request {
-    fn form_data(&self) -> Vec<(&str, String)>;
-}
-
-pub trait Paginatable: Request {
-    fn next(&self) -> Self;
-}
-
+#[derive(Serialize, Debug)]
 pub struct BaseRequest {
+    #[cfg_attr(feature="robtop-names", serde(rename = "gameVersion"))]
+    #[serde(serialize_with = "ser::game_version")]
     game_version: GameVersion,
+
+    #[cfg_attr(feature="robtop-names", serde(rename = "binaryVersion"))]
+    #[serde(serialize_with = "ser::game_version")]
     binary_version: GameVersion,
+
     secret: String,
 }
 
@@ -28,8 +29,8 @@ impl BaseRequest {
     pub fn gd_21() -> BaseRequest {
         BaseRequest::new(
             GameVersion::Version { major: 2, minor: 1 },
-            GameVersion::Version { major: 3, minor: 1 },
-            String::from("sdjklf"), // TODO: get the proper stuff here
+            GameVersion::Version { major: 3, minor: 3 },
+            "Wmfd2893gb7".into(),
         )
     }
 }
@@ -37,15 +38,5 @@ impl BaseRequest {
 impl Default for BaseRequest {
     fn default() -> Self {
         BaseRequest::gd_21()
-    }
-}
-
-impl Request for BaseRequest {
-    fn form_data(&self) -> Vec<(&str, String)> {
-        vec![
-            ("gameVersion", self.game_version.to_string()),
-            ("binaryVersion", self.binary_version.to_string()),
-            ("secret", self.secret.clone())
-        ]
     }
 }

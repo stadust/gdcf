@@ -2,12 +2,15 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 use std::convert::From;
 use model::Value;
+use serde::Serializer;
 
+#[derive(Debug)]
 pub enum GameVersion {
     Unknown,
     Version { minor: u8, major: u8 },
 }
 
+#[derive(Debug)]
 pub enum LevelLength {
     Tiny,
     Short,
@@ -16,6 +19,7 @@ pub enum LevelLength {
     ExtraLong,
 }
 
+#[derive(Debug)]
 pub enum LevelRating {
     Auto,
     Demon(DemonRating),
@@ -27,6 +31,7 @@ pub enum LevelRating {
     Insane,
 }
 
+#[derive(Debug)]
 pub enum DemonRating {
     Easy,
     Medium,
@@ -35,6 +40,7 @@ pub enum DemonRating {
     Extreme,
 }
 
+#[derive(Debug)]
 pub struct PartialLevel {
     /// The request's id. Index: 1
     lid: u64,
@@ -70,7 +76,7 @@ pub struct PartialLevel {
     /// The gd version the request was uploaded/last updated in. Index: 13
     gd_version: GameVersion,
 
-    // The amound of likes the request has recieved. Index: 14
+    // The amount of likes the level has received. Index: 14
     likes: u32,
 
     /// The length of the request. Index: 15
@@ -138,6 +144,7 @@ pub struct PartialLevel {
     // Index 47 has unknown usage
 }
 
+#[derive(Debug)]
 pub struct Level {
     base: PartialLevel,
 

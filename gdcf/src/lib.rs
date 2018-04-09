@@ -1,5 +1,8 @@
+#[macro_use]
+extern crate serde_derive;
 extern crate futures;
-extern crate tokio;
+extern crate tokio_core;
+extern crate serde;
 
 use futures::Future;
 
@@ -10,7 +13,6 @@ use model::GDObject;
 use api::client::GDClient;
 use api::request::level::LevelRequest;
 use api::request::BaseRequest;
-use api::request::Request;
 use api::client::GDError;
 
 use std::sync::mpsc;
@@ -26,7 +28,7 @@ pub mod api;
 
 pub struct Gdcf<A, C: 'static>
     where
-        A: GDClient + Sync,
+        A: GDClient,
         C: Cache + Send
 {
     cache: Arc<Mutex<C>>,
@@ -36,7 +38,7 @@ pub struct Gdcf<A, C: 'static>
 
 impl<A, C: 'static> Gdcf<A, C>
     where
-        A: GDClient + Sync,
+        A: GDClient,
         C: Cache + Send
 {
     pub fn new(mut cache: C, client: A) -> Gdcf<A, C> {
@@ -88,19 +90,19 @@ impl<A, C: 'static> Gdcf<A, C>
 
     fn refresh_one<F>(&self, future: F)
         where
-            F: Future<Item=GDObject, Error=GDError> + Send + 'static
+            F: Future<Item=GDObject, Error=GDError> + 'static
     {
         let sender = self.sender.clone();
         let future = future
             .map(move |obj| sender.send(obj).unwrap())
-            .map_err(|e| println!("Unknown error while retrieving level for cache: {:?}", e));
+            .map_err(|e| println!("Unexpected error while retrieving level for cache: {:?}", e));
 
-        tokio::spawn(future);
+        self.client.handle().spawn(future)
     }
 
     fn refresh_many<F>(&self, future: F)
         where
-            F: Future<Item=Vec<GDObject>, Error=GDError> + Send + 'static
+            F: Future<Item=Vec<GDObject>, Error=GDError> + 'static
     {
         let sender = self.sender.clone();
         let future = future
@@ -109,8 +111,8 @@ impl<A, C: 'static> Gdcf<A, C>
                     sender.send(obj).unwrap()
                 }
             })
-            .map_err(|e| println!("Unknown error while retrieving level for cache: {:?}", e));
+            .map_err(|e| println!("Unexpected error while retrieving level for cache: {:?}", e));
 
-        tokio::spawn(future);
+        self.client.handle().spawn(future)
     }
 }

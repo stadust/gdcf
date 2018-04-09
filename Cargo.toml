@@ -6,5 +6,9 @@ version = "0.1.0"
 gdrs = { path = "gdrs" }
 gdcf_postgres = { path = "gdcf_postgres" }
 gdcf = { path = "gdcf" }
+futures = "^0.1.17"
+tokio-core = "0.1"
+hyper = "^0.11.25"
+serde_urlencoded = "0.5.1"
 
 [workspace]

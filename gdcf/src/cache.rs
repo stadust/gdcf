@@ -18,7 +18,7 @@ pub trait Cache
     fn config(&self) -> CacheConfig;
 
     fn lookup_partial_level(&self, lid: u64) -> Option<CachedObject<PartialLevel>>;
-    fn store_partial_level(&mut self, lid: u64);
+    fn store_partial_level(&mut self, level: PartialLevel);
 
     fn lookup_level(&self, lid: u64) -> Option<CachedObject<Level>>;
     fn store_level(&mut self, level: Level);

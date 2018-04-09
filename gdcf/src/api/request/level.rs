@@ -1,19 +1,28 @@
 use api::request::BaseRequest;
-use api::request::Request;
+use api::request::ser;
 
+#[derive(Serialize, Debug)]
 pub struct LevelRequest {
+    #[serde(flatten)]
     base: BaseRequest,
 
-    pub lid: u64,
+    #[cfg_attr(feature="robtop-names", serde(rename = "levelID"))]
+    pub level_id: u64,
+
+    #[cfg_attr(feature="robtop-types", serde(serialize_with = "ser::bool_to_int"))]
     pub inc: bool,
+
+    #[cfg_attr(feature="robtop-types", serde(serialize_with = "ser::bool_to_int"))]
+    #[cfg_attr(feature="robtop-names", serde(rename = "extras"))]
     pub extra: bool,
 }
 
+
 impl LevelRequest {
-    pub fn new(lid: u64) -> LevelRequest {
+    pub fn new(level_id: u64) -> LevelRequest {
         LevelRequest {
             base: BaseRequest::default(),
-            lid,
+            level_id,
             inc: true,
             extra: false,
         }
@@ -32,18 +41,5 @@ impl LevelRequest {
     pub fn with_extra(mut self, extra: bool) -> LevelRequest {
         self.extra = extra;
         self
-    }
-}
-
-
-impl Request for LevelRequest {
-    fn form_data(&self) -> Vec<(&str, String)> {
-        let mut data = self.base.form_data();
-
-        data.push(("levelID", self.lid.to_string()));
-        data.push(("inc", String::from(if self.extra { "1" } else { "0" })));
-        data.push(("extras", String::from(if self.extra { "1" } else { "0" })));
-
-        data
     }
 }
