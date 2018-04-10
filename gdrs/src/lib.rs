@@ -1,6 +1,7 @@
+#![feature(pattern)]
+
 extern crate gdcf;
 
-#[macro_use]
 extern crate futures;
 extern crate tokio_core;
 extern crate hyper;
@@ -12,9 +13,8 @@ pub mod parse;
 
 use std::str;
 
-use gdcf::api::GDClient;
+use gdcf::api::{GDClient, GDError};
 use gdcf::model::GDObject;
-use gdcf::api::client::GDError;
 use gdcf::api::request::level::LevelRequest;
 
 use futures::Future;

@@ -1,8 +1,14 @@
+#![feature(try_from)]
+#![feature(box_syntax)]
+#![feature(attr_literals)]
+
 #[macro_use]
 extern crate serde_derive;
 extern crate futures;
 extern crate tokio_core;
 extern crate serde;
+#[macro_use]
+extern crate gdcf_derive;
 
 use futures::Future;
 
@@ -12,8 +18,7 @@ use model::GDObject;
 
 use api::client::GDClient;
 use api::request::level::LevelRequest;
-use api::request::BaseRequest;
-use api::client::GDError;
+use api::GDError;
 
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
@@ -41,7 +46,7 @@ impl<A, C: 'static> Gdcf<A, C>
         A: GDClient,
         C: Cache + Send
 {
-    pub fn new(mut cache: C, client: A) -> Gdcf<A, C> {
+    pub fn new(cache: C, client: A) -> Gdcf<A, C> {
         let (tx, rx) = mpsc::channel();
         let mutex = Arc::new(Mutex::new(cache));
 
@@ -70,7 +75,7 @@ impl<A, C: 'static> Gdcf<A, C>
         self.cache.lock().unwrap()
     }
 
-    pub fn level(&mut self, lid: u64) -> Option<Level>
+    pub fn level(&self, lid: u64) -> Option<Level>
     {
         let (cached, expired) = {
             let cache = self.cache();

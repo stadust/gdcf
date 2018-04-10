@@ -1,14 +1,9 @@
+use std::convert::From;
 use std::str::FromStr;
 use std::num::ParseIntError;
-use std::convert::From;
-use model::Value;
-use serde::Serializer;
+use std;
 
-#[derive(Debug)]
-pub enum GameVersion {
-    Unknown,
-    Version { minor: u8, major: u8 },
-}
+use model::{GameVersion, ValueError, GDObject, RawObject, FromRawObject};
 
 #[derive(Debug)]
 pub enum LevelLength {
@@ -17,6 +12,7 @@ pub enum LevelLength {
     Medium,
     Long,
     ExtraLong,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -29,6 +25,7 @@ pub enum LevelRating {
     Hard,
     Harder,
     Insane,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -38,129 +35,149 @@ pub enum DemonRating {
     Hard,
     Insane,
     Extreme,
+    Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRawObject)]
 pub struct PartialLevel {
-    /// The request's id. Index: 1
+    #[raw_data(index = 1)]
     lid: u64,
-    /// The request's name. Index: 2
+
+    #[raw_data(index = 2)]
     name: String,
-    /// The request's description. Index: 3
+
+    #[raw_data(index = 3)]
     description: String,
 
     // Index 4 not provided for partial levels
 
-    /// The levels' version. Index: 5
+    #[raw_data(index = 5)]
     version: u32,
 
-    // The request creator's userid. index: 6
+    #[raw_data(index = 6)]
     creator_id: u64,
 
-    // Index 7 is unused
-
-    /// Index 8
+    #[raw_data(index = 8, deserialize_with = "de::int_to_bool")]
     has_difficulty_rating: bool,
 
-    /// Index 9
+    #[raw_data(custom = "de::level_rating")]
     difficulty: LevelRating,
 
-    // The amount of downloads the request received. Index: 10
+    #[raw_data(index = 10)]
     downloads: u32,
 
-    // Index 11 is unused
-
-    /// The main song id. Index: 12
-    main_song_id: Option<u32>,
+    #[raw_data(custom = "de::main_song")]
+    main_song_id: Option<u8>,
 
     /// The gd version the request was uploaded/last updated in. Index: 13
+    #[raw_data(index = 13)]
     gd_version: GameVersion,
 
-    // The amount of likes the level has received. Index: 14
+    #[raw_data(index = 14)]
     likes: u32,
 
-    /// The length of the request. Index: 15
+    #[raw_data(index = 15)]
     length: LevelLength,
 
-    // Index 16 is unused
-
-    /// Index: 17
+    #[raw_data(index = 17, deserialize_with = "de::int_to_bool", default = false)]
     is_demon: bool,
 
-    /// Index: 18
+    #[raw_data(index = 18)]
     stars: u8,
 
     /// 0 if the request isn't featured, otherwise an arbitrary value that indicates the ranking on the featured list.
-    /// Index: 19
+    #[raw_data(index = 19)]
     featured_weight: u32,
 
-    // Index 20 is unused
-    // Index 21 is unused
-    // Index 22 is unused
-    // Index 23 is unused
-    // Index 24 is unused
-
-    /// Index: 25
+    #[raw_data(index = 25, deserialize_with = "de::int_to_bool", default = false)]
     is_auto: bool,
 
-    // Index 26 is unused
     // Index 27 is not provided for partial levels
     // Index 28 is not provided for partial levels
     // Index 29 is not provided for partial levels
 
-    /// The id of the request this one is a copy of. Index: 30
+    #[raw_data(index = 30, deserialize_with = "de::default_to_none")]
     copy_of: Option<u64>,
 
-    // Index 32 is unused
-    // Index 33 is unused
-    // Index 34 is unused
-
-    // Index: 35
+    #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
     custom_song_id: Option<u64>,
 
     // Index 36 is not provided for partial levels
 
-    /// Index: 37
+    #[raw_data(index = 37)]
     coin_amount: u8,
 
     // Index 38 has unknown usage
+    #[raw_data(index = 38)]
+    index_38: String,
 
-    /// Index 39
+    #[raw_data(index = 39, deserialize_with = "de::default_to_none")]
     stars_requested: Option<u8>,
 
-    // Index 40 is unused
-    // Index 41 is unused
-
-    /// Index: 42
+    #[raw_data(index = 42, deserialize_with = "de::int_to_bool")]
     is_epic: bool,
 
     // Index 43 has unknown usage
-    // Index 44 is unused
+    #[raw_data(index = 43)]
+    index_43: String,
 
-    /// Index: 45
+    #[raw_data(index = 45)]
     object_amount: u32,
 
     // Index 46 has unknown usage
+    //#[raw_data(index = 46)]
+    //index_46: String,
+
     // Index 47 has unknown usage
+    //#[raw_data(index = 47)]
+    //index_47: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRawObject)]
 pub struct Level {
+    #[raw_data(flatten)]
     base: PartialLevel,
 
     /// GZip compressed level data. Index: 4
+    #[raw_data(index = 4)]
     level_data: String,
 
-    /// The request's password.  Index: 27
+    /// The request's password (encrypted).  Index: 27
+    #[raw_data(index = 27)]
     password: String,
 
     /// Index: 28
+    #[raw_data(index = 28)]
     time_since_upload: String,
 
     /// Index: 29
+    #[raw_data(index = 29)]
     time_since_update: String,
 
     // Index 36 has unknown usage
+    //#[raw_data(index = 36)]
+    //index_36: String,
+}
+
+
+impl Into<GDObject> for Level {
+    fn into(self) -> GDObject {
+        GDObject::Level(self)
+    }
+}
+
+impl FromStr for GameVersion {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        let version: i32 = s.parse()?;
+
+        if version == 10 {
+            Ok(GameVersion::Unknown)
+        } else {
+            Ok(GameVersion::Version { major: (version / 10) as u8, minor: (version % 10) as u8 })
+        }
+    }
 }
 
 impl ToString for GameVersion {
@@ -172,9 +189,42 @@ impl ToString for GameVersion {
     }
 }
 
-impl LevelRating {
-    pub fn value(&self) -> i32 {
-        match *self {
+impl FromStr for LevelLength {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        let length = s.parse()?;
+
+        Ok(
+            match length {
+                0 => LevelLength::Tiny,
+                1 => LevelLength::Short,
+                2 => LevelLength::Medium,
+                3 => LevelLength::Long,
+                4 => LevelLength::ExtraLong,
+                _ => LevelLength::Unknown
+            }
+        )
+    }
+}
+
+impl From<i32> for LevelRating {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => LevelRating::NotAvailable,
+            10 => LevelRating::Easy,
+            20 => LevelRating::Normal,
+            30 => LevelRating::Hard,
+            40 => LevelRating::Harder,
+            50 => LevelRating::Insane,  // TODO: auto
+            _ => LevelRating::Unknown
+        }
+    }
+}
+
+impl Into<i32> for LevelRating {
+    fn into(self) -> i32 {
+        match self {
             LevelRating::Auto => -3,
             LevelRating::Demon(_) => -2,
             LevelRating::NotAvailable => -1,
@@ -182,35 +232,8 @@ impl LevelRating {
             LevelRating::Normal => 2,
             LevelRating::Hard => 3,
             LevelRating::Harder => 4,
-            LevelRating::Insane => 5
-        }
-    }
-
-    pub fn from_i32(value: i32, is_demon: bool) -> LevelRating {
-        if is_demon {
-            LevelRating::Demon(DemonRating::from(value))
-        } else {
-            match value {
-                0 => LevelRating::NotAvailable,
-                10 => LevelRating::Easy,
-                20 => LevelRating::Normal,
-                30 => LevelRating::Hard,
-                40 => LevelRating::Harder,
-                50 => LevelRating::Insane,  // TODO: auto
-                _ => panic!("Invalid enum value for LevelRating: {}", value)
-            }
-        }
-    }
-}
-
-impl DemonRating {
-    pub fn values(&self) -> i32 {
-        match *self {
-            DemonRating::Easy => 1,
-            DemonRating::Medium => 2,
-            DemonRating::Hard => 3,
-            DemonRating::Insane => 4,
-            DemonRating::Extreme => 5
+            LevelRating::Insane => 5,
+            LevelRating::Unknown => std::i32::MAX
         }
     }
 }
@@ -223,7 +246,78 @@ impl From<i32> for DemonRating {
             30 => DemonRating::Hard,
             40 => DemonRating::Insane,
             50 => DemonRating::Extreme,
-            _ => panic!("Invalid enum value for DemonRating: {}", value)
+            _ => DemonRating::Unknown
         }
+    }
+}
+
+impl Into<i32> for DemonRating {
+    fn into(self) -> i32 {
+        match self {
+            DemonRating::Easy => 1,
+            DemonRating::Medium => 2,
+            DemonRating::Hard => 3,
+            DemonRating::Insane => 4,
+            DemonRating::Extreme => 5,
+            DemonRating::Unknown => std::i32::MAX
+        }
+    }
+}
+
+mod de {
+    use model::RawObject;
+    use model::LevelRating;
+    use model::ValueError;
+
+    use std::str::FromStr;
+    use std::num::ParseIntError;
+
+    pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
+        let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
+        let rating: i32 = raw_obj.get(9)?;
+
+        if is_demon {
+            Ok(LevelRating::Demon(rating.into()))
+        } else {
+            Ok(rating.into())
+        }
+    }
+
+    pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<u8>, ValueError> {
+        let main = raw_obj.get(12)?;
+        let custom: u64 = raw_obj.get(35)?;
+
+        if custom == 0 {
+            Ok(Some(main))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub(super) fn custom_song(raw_obj: &RawObject) -> Result<Option<u64>, ValueError> {
+        let custom = raw_obj.get(35)?;
+
+        if custom != 0 {
+            Ok(Some(custom))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub(super) fn default_to_none<T>(value: &String) -> Result<Option<T>, <T as FromStr>::Err>
+        where
+            T: FromStr + Default + PartialEq
+    {
+        let value: T = value.parse()?;
+
+        if value == Default::default() {
+            Ok(None)
+        } else {
+            Ok(Some(value))
+        }
+    }
+
+    pub(super) fn int_to_bool(value: &String) -> Result<bool, ParseIntError> {
+        Ok(value.parse::<u8>()? != 0)
     }
 }

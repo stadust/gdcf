@@ -17,18 +17,17 @@ use tokio_core::reactor::Core;
 use gdcf::Gdcf;
 use futures::Future;
 use futures::Async;
-use gdcf::api::request::BaseRequest;
-use gdcf::api::request::level::LevelRequest;
 
 fn main() {
     let mut core = Core::new().unwrap();
     let client = GDClientImpl::new(&core.handle());
     let cache = DummyCache {};
 
-    let mut gdcf = Gdcf::new(cache, client);
+    let gdcf = Gdcf::new(cache, client);
 
     gdcf.level(39976494);
     gdcf.level(1);
+    gdcf.level(3150);
 
     core.run(Thing {});
 }
@@ -58,7 +57,7 @@ impl Cache for DummyCache {
     }
 
     fn store_partial_level(&mut self, level: PartialLevel) {
-        unimplemented!()
+
     }
 
     fn lookup_level(&self, lid: u64) -> Option<CachedObject<Level>> {
@@ -66,6 +65,6 @@ impl Cache for DummyCache {
     }
 
     fn store_level(&mut self, level: Level) {
-        unimplemented!()
+        println!("{:?}", level);
     }
 }

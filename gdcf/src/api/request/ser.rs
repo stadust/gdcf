@@ -1,4 +1,4 @@
-use model::level::GameVersion;
+use model::GameVersion;
 use serde::Serializer;
 
 pub(super) fn game_version<S>(version: &GameVersion, serializer: S) -> Result<S::Ok, S::Error>

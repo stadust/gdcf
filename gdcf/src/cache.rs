@@ -1,11 +1,5 @@
 use model::level::Level;
 
-use api::request::level::LevelRequest;
-use api::request::BaseRequest;
-use api::client::GDClient;
-
-use futures::Future;
-
 use std::time::{SystemTime, UNIX_EPOCH};
 use model::level::PartialLevel;
 
