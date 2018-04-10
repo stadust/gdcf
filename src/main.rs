@@ -23,7 +23,7 @@ fn main() {
     let client = GDClientImpl::new(&core.handle());
     let cache = DummyCache {};
 
-    let gdcf = Gdcf::new(cache, client);
+    let gdcf = Gdcf::new(cache, &client);
 
     gdcf.level(39976494);
     gdcf.level(1);

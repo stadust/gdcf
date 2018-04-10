@@ -10,6 +10,8 @@ macro_rules! prepare_request {
             let body = serde_urlencoded::to_string($request).unwrap();
             let mut req = Request::new(Method::Post, endpoint!($endpoint));
 
+            println!("Making request {}", body);
+
             req.headers_mut().set(ContentType::form_url_encoded());
             req.headers_mut().set(ContentLength(body.len() as u64));
             req.set_body(body);

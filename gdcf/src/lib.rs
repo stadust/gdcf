@@ -9,6 +9,8 @@ extern crate tokio_core;
 extern crate serde;
 #[macro_use]
 extern crate gdcf_derive;
+#[macro_use]
+extern crate lazy_static;
 
 use futures::Future;
 
@@ -31,22 +33,22 @@ pub mod cache;
 pub mod model;
 pub mod api;
 
-pub struct Gdcf<A, C: 'static>
+pub struct Gdcf<'a, A: 'a, C: 'static>
     where
         A: GDClient,
         C: Cache + Send
 {
     cache: Arc<Mutex<C>>,
-    client: A,
+    client: &'a A,
     sender: Sender<GDObject>,
 }
 
-impl<A, C: 'static> Gdcf<A, C>
+impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
     where
         A: GDClient,
         C: Cache + Send
 {
-    pub fn new(cache: C, client: A) -> Gdcf<A, C> {
+    pub fn new(cache: C, client: &A) -> Gdcf<A, C> {
         let (tx, rx) = mpsc::channel();
         let mutex = Arc::new(Mutex::new(cache));
 
@@ -111,11 +113,7 @@ impl<A, C: 'static> Gdcf<A, C>
     {
         let sender = self.sender.clone();
         let future = future
-            .map(move |objs| {
-                for obj in objs {
-                    sender.send(obj).unwrap()
-                }
-            })
+            .map(move |objs| objs.into_iter().for_each(|obj| sender.send(obj).unwrap()))
             .map_err(|e| println!("Unexpected error while retrieving level for cache: {:?}", e));
 
         self.client.handle().spawn(future)

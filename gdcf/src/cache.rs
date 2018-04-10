@@ -25,6 +25,7 @@ pub trait Cache
     }
 }
 
+#[derive(Debug)]
 pub struct CachedObject<T> {
     cached_at: u64,
     obj: T,

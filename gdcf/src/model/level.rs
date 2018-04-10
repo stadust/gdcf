@@ -4,6 +4,7 @@ use std::num::ParseIntError;
 use std;
 
 use model::{GameVersion, ValueError, GDObject, RawObject, FromRawObject};
+use model::song::MainSong;
 
 #[derive(Debug)]
 pub enum LevelLength {
@@ -67,7 +68,7 @@ pub struct PartialLevel {
     downloads: u32,
 
     #[raw_data(custom = "de::main_song")]
-    main_song_id: Option<u8>,
+    main_song: Option<&'static MainSong>,
 
     /// The gd version the request was uploaded/last updated in. Index: 13
     #[raw_data(index = 13)]
@@ -271,6 +272,7 @@ mod de {
 
     use std::str::FromStr;
     use std::num::ParseIntError;
+    use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
 
     pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
         let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -283,12 +285,9 @@ mod de {
         }
     }
 
-    pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<u8>, ValueError> {
-        let main = raw_obj.get(12)?;
-        let custom: u64 = raw_obj.get(35)?;
-
-        if custom == 0 {
-            Ok(Some(main))
+    pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>, ValueError> {
+        if raw_obj.get::<u64>(35)? == 0 {
+            Ok(Some(MAIN_SONGS.get(raw_obj.get::<usize>(12)?).unwrap_or(&UNKNOWN)))
         } else {
             Ok(None)
         }
