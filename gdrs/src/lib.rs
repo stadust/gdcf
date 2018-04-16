@@ -2,13 +2,17 @@
 
 extern crate gdcf;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_urlencoded;
 extern crate futures;
 extern crate tokio_core;
 extern crate hyper;
-extern crate serde_urlencoded;
 
 #[macro_use]
 mod macros;
+mod ser;
 pub mod parse;
 
 use std::str;
@@ -16,6 +20,7 @@ use std::str;
 use gdcf::api::{GDClient, GDError};
 use gdcf::model::GDObject;
 use gdcf::api::request::level::LevelRequest;
+use gdcf::api::request::level::LevelsRequest;
 
 use futures::Future;
 use futures::Stream;
@@ -30,6 +35,19 @@ use hyper::header::{ContentLength, ContentType};
 use hyper::Error;
 use hyper::StatusCode;
 
+use ser::LevelRequestRem;
+use ser::LevelsRequestRem;
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum Req {
+    #[serde(with = "LevelRequestRem")]
+    DownloadLevel(LevelRequest),
+
+    #[serde(with = "LevelsRequestRem")]
+    GetLevels(LevelsRequest)
+}
+
 pub struct GDClientImpl {
     client: Client<HttpConnector>,
 }
@@ -40,6 +58,19 @@ impl GDClientImpl {
             client: Client::new(handle),
         }
     }
+
+    fn make_request(&self, endpoint: &str, req: Req) -> Request {
+        let body = serde_urlencoded::to_string(req).unwrap();
+        let mut req = Request::new(Method::Post, endpoint!(endpoint));
+
+        println!("Making request {} to endpoint {}", body, endpoint);
+
+        req.headers_mut().set(ContentType::form_url_encoded());
+        req.headers_mut().set(ContentLength(body.len() as u64));
+        req.set_body(body);
+
+        req
+    }
 }
 
 impl GDClient for GDClientImpl {
@@ -48,7 +79,8 @@ impl GDClient for GDClientImpl {
     }
 
     fn level(&self, req: LevelRequest) -> Box<Future<Item=GDObject, Error=GDError> + 'static> {
-        let req = prepare_request!("downloadGJLevel22", req);
+        //let req = prepare_request!("downloadGJLevel22", req);
+        let req = self.make_request("donwloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
     }

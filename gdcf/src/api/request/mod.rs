@@ -1,21 +1,14 @@
 use model::GameVersion;
 
 pub mod level;
-mod ser;
 
-pub use self::level::LevelRequest;
+pub use self::level::{LevelRequest, LevelsRequest};
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct BaseRequest {
-    #[cfg_attr(feature = "gj-format", serde(rename = "gameVersion"))]
-    #[serde(serialize_with = "ser::game_version")]
-    game_version: GameVersion,
-
-    #[cfg_attr(feature = "gj-format", serde(rename = "binaryVersion"))]
-    #[serde(serialize_with = "ser::game_version")]
-    binary_version: GameVersion,
-
-    secret: String,
+    pub game_version: GameVersion,
+    pub binary_version: GameVersion,
+    pub secret: String,
 }
 
 impl BaseRequest {

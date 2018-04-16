@@ -6,7 +6,7 @@ use std;
 use model::{GameVersion, ValueError, GDObject, RawObject, FromRawObject};
 use model::song::MainSong;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Copy, Clone, Eq, PartialEq)]
 pub enum LevelLength {
     Tiny,
     Short,
@@ -16,7 +16,7 @@ pub enum LevelLength {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Copy, Clone, Eq, PartialEq)]
 pub enum LevelRating {
     Auto,
     Demon(DemonRating),
@@ -29,7 +29,7 @@ pub enum LevelRating {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Copy, Clone, Eq, PartialEq)]
 pub enum DemonRating {
     Easy,
     Medium,
@@ -209,6 +209,19 @@ impl FromStr for LevelLength {
     }
 }
 
+impl From<LevelLength> for i32 {
+    fn from(length: LevelLength) -> Self {
+        match length {
+            LevelLength::Tiny => 0,
+            LevelLength::Short => 1,
+            LevelLength::Medium => 2,
+            LevelLength::Long => 3,
+            LevelLength::ExtraLong => 4,
+            LevelLength::Unknown => std::i32::MAX
+        }
+    }
+}
+
 impl From<i32> for LevelRating {
     fn from(value: i32) -> Self {
         match value {
@@ -217,15 +230,15 @@ impl From<i32> for LevelRating {
             20 => LevelRating::Normal,
             30 => LevelRating::Hard,
             40 => LevelRating::Harder,
-            50 => LevelRating::Insane,  // TODO: auto
+            50 => LevelRating::Insane,
             _ => LevelRating::Unknown
         }
     }
 }
 
-impl Into<i32> for LevelRating {
-    fn into(self) -> i32 {
-        match self {
+impl From<LevelRating> for i32 {
+    fn from(rating: LevelRating) -> Self {
+        match rating {
             LevelRating::Auto => -3,
             LevelRating::Demon(_) => -2,
             LevelRating::NotAvailable => -1,
@@ -238,6 +251,7 @@ impl Into<i32> for LevelRating {
         }
     }
 }
+
 
 impl From<i32> for DemonRating {
     fn from(value: i32) -> DemonRating {

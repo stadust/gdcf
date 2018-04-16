@@ -4,12 +4,14 @@ extern crate gdcf;
 extern crate tokio_core;
 extern crate futures;
 extern crate serde_urlencoded;
+extern crate serde_json;
 
 use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
 use gdcf::cache::CachedObject;
 use gdcf::model::PartialLevel;
 use gdcf::model::Level;
+use gdcf::api::request::LevelsRequest;
 
 use gdrs::GDClientImpl;
 
@@ -17,6 +19,8 @@ use tokio_core::reactor::Core;
 use gdcf::Gdcf;
 use futures::Future;
 use futures::Async;
+use gdcf::api::request::level::SongFilter;
+use gdrs::Req;
 
 fn main() {
     let mut core = Core::new().unwrap();
@@ -29,7 +33,19 @@ fn main() {
     gdcf.level(1);
     gdcf.level(3150);
 
-    core.run(Thing {});
+    /*for i in 10000..10010 {
+        gdcf.level(i);
+    }*/
+
+   /* let filter = SearchOptions::new()
+        .uncompleted()
+        .custom_song(1)
+        .featured();*/
+
+    //println!("{:?}", serde_json::to_string(&filter));
+    //println!("{:?}", serde_urlencoded::to_string(filter));
+
+    //core.run(Thing {});
 }
 
 struct Thing;
@@ -56,9 +72,7 @@ impl Cache for DummyCache {
         None
     }
 
-    fn store_partial_level(&mut self, level: PartialLevel) {
-
-    }
+    fn store_partial_level(&mut self, level: PartialLevel) {}
 
     fn lookup_level(&self, lid: u64) -> Option<CachedObject<Level>> {
         None
