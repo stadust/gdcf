@@ -10,17 +10,21 @@ pub fn level(body: &str) -> Result<RawObject, GDError> {
     let mut sections = body.split("#");
 
     match sections.next() {
-        Some(section) => parse_section(section, ":"),
+        Some(section) => parse_section(ObjectType::Level, section, ":"),
         None => Err(GDError::MalformedResponse)
     }
 }
 
-fn parse_section<'a, P>(section: &'a str, seperator: P) -> Result<RawObject, GDError>
+pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
+    unimplemented!()
+}
+
+fn parse_section<'a, P>(obj_type: ObjectType, section: &'a str, seperator: P) -> Result<RawObject, GDError>
     where
         P: Pattern<'a>
 {
     let mut iter = section.split(seperator);
-    let mut raw_obj = RawObject::new(ObjectType::Level);
+    let mut raw_obj = RawObject::new(obj_type);
 
     while let Some(idx) = iter.next() {
         let idx = match idx.parse() {

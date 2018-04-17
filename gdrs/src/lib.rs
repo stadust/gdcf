@@ -45,7 +45,7 @@ pub enum Req {
     DownloadLevel(LevelRequest),
 
     #[serde(with = "LevelsRequestRem")]
-    GetLevels(LevelsRequest)
+    GetLevels(LevelsRequest),
 }
 
 pub struct GDClientImpl {
@@ -82,6 +82,12 @@ impl GDClient for GDClientImpl {
         let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
+    }
+
+    fn levels(&self, req: LevelsRequest) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+        let req = self.make_request("getGJLevels21", Req::GetLevels(req));
+
+        prepare_future!(self.client.request(req), parse::levels)
     }
 }
 
