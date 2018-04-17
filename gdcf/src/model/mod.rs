@@ -14,8 +14,9 @@ pub enum GameVersion {
     Version { minor: u8, major: u8 },
 }
 
-pub enum GDObject {
-    Level(Level)
+#[derive(Debug)]
+pub enum ObjectType {
+    Level
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -36,7 +37,8 @@ pub enum ValueError
 
 #[derive(Debug)]
 pub struct RawObject {
-    values: Vec<Value>
+    values: Vec<Value>,
+    pub object_type: ObjectType,
 }
 
 pub trait FromRawObject: Sized {
@@ -44,9 +46,10 @@ pub trait FromRawObject: Sized {
 }
 
 impl RawObject {
-    pub fn new() -> RawObject {
+    pub fn new(object_type: ObjectType) -> RawObject {
         RawObject {
-            values: Vec::new()
+            values: Vec::new(),
+            object_type,
         }
     }
 

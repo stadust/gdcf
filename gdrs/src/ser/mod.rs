@@ -16,6 +16,7 @@ pub use self::request::level::LevelsRequestRem;
 use gdcf::api::request::level::LevelRequestType;
 use gdcf::api::request::level::SearchFilters;
 use gdcf::api::request::level::SongFilter;
+use gdcf::model::DemonRating;
 
 pub(super) fn game_version<S>(version: &GameVersion, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -59,6 +60,13 @@ pub(super) fn rating_vec<S>(values: &Vec<LevelRating>, serializer: S) -> Result<
                 .join(",")
         )
     }
+}
+
+pub(super) fn demon_rating<S>(rating: &Option<DemonRating>, serialize: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+{
+    serialize.serialize_i32(i32::from(rating.unwrap()))
 }
 
 pub(super) fn req_type<S>(req_type: &LevelRequestType, serializer: S) -> Result<S::Ok, S::Error>

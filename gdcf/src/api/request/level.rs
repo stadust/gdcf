@@ -1,7 +1,9 @@
+#[cfg(ser)]
+use serde::{Serializer, Serialize};
+
 use api::request::BaseRequest;
 use model::LevelRating;
 use model::LevelLength;
-use serde::{Serializer, Serialize};
 use model::DemonRating;
 
 #[derive(Debug, Default)]

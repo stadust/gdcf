@@ -45,7 +45,7 @@ pub struct LevelsRequestRem {
     #[serde(rename = "diff", serialize_with = "ser::rating_vec")]
     ratings: Vec<LevelRating>,
 
-    #[serde(rename = "demonDiff", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "demonDiff", skip_serializing_if = "Option::is_none", serialize_with = "ser::demon_rating")]
     pub demon_rating: Option<DemonRating>,
 
     pub page: u32,

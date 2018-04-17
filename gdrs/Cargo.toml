@@ -9,7 +9,4 @@ hyper = "^0.11.25"
 serde_urlencoded = "0.5.1"
 serde = "^1.0"
 serde_derive = "^1.0"
-
-[dependencies.gdcf]
-path = "../gdcf"
-features = ["gj-format"]
+gdcf = {path = "../gdcf"}

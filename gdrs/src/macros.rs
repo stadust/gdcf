@@ -4,30 +4,13 @@ macro_rules! endpoint {
     }
 }
 
-macro_rules! prepare_request {
-    ($endpoint:expr, $request:expr) => {
-        {
-            let body = serde_urlencoded::to_string($request).unwrap();
-            let mut req = Request::new(Method::Post, endpoint!($endpoint));
-
-            println!("Making request {} to endpoint {}", body, $endpoint);
-
-            req.headers_mut().set(ContentType::form_url_encoded());
-            req.headers_mut().set(ContentLength(body.len() as u64));
-            req.set_body(body);
-
-            req
-        }
-    }
-}
-
 macro_rules! prepare_future {
     ($future:expr, $parser:expr) => {
         {
             let future = $future
                 .map_err(|err| convert_error(err))
                 .and_then(|resp| {
-                    println!("Got a response {:?}", resp.headers());
+                    println!("Got a response {:?}", resp);
                     match resp.status() {
                         StatusCode::InternalServerError => Err(GDError::InternalServerError),
                         StatusCode::NotFound => Err(GDError::ServersDown),

@@ -3,20 +3,28 @@
 #![feature(attr_literals)]
 
 #[macro_use]
+#[cfg(ser)]
 extern crate serde_derive;
-extern crate futures;
-extern crate tokio_core;
+
+#[cfg(ser)]
 extern crate serde;
-#[macro_use]
-extern crate gdcf_derive;
+
 #[macro_use]
 extern crate lazy_static;
+
+extern crate futures;
+
+extern crate tokio_core;
+
+#[macro_use]
+extern crate gdcf_derive;
 
 use futures::Future;
 
 use cache::Cache;
 use model::Level;
-use model::GDObject;
+use model::ObjectType;
+use model::FromRawObject;
 
 use api::client::GDClient;
 use api::request::level::LevelRequest;
@@ -28,6 +36,8 @@ use std::thread;
 use std::sync::Mutex;
 use std::sync::Arc;
 use std::sync::MutexGuard;
+use model::RawObject;
+use std::sync::mpsc::Receiver;
 
 pub mod cache;
 pub mod model;
@@ -40,7 +50,7 @@ pub struct Gdcf<'a, A: 'a, C: 'static>
 {
     cache: Arc<Mutex<C>>,
     client: &'a A,
-    sender: Sender<GDObject>,
+    sender: Sender<RawObject>,
 }
 
 impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
@@ -49,18 +59,22 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
         C: Cache + Send
 {
     pub fn new(cache: C, client: &A) -> Gdcf<A, C> {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx): (Sender<RawObject>, Receiver<RawObject>) = mpsc::channel();
         let mutex = Arc::new(Mutex::new(cache));
 
         let handle = {
             let mutex = Arc::clone(&mutex);
 
             thread::spawn(move || {
-                for gdobj in rx {
+                for raw_obj in rx {
                     let mut cache = mutex.lock().unwrap();
 
-                    match gdobj {
-                        GDObject::Level(level) => cache.store_level(level)
+                    let err = match raw_obj.object_type {
+                        ObjectType::Level => Level::from_raw(&raw_obj).map(|l| cache.store_level(l))
+                    };
+
+                    if let Err(err) = err {
+                        println!("Unexpected error while constructing object {:?}: {:?}", raw_obj.object_type, err)
                     }
                 }
             })
@@ -97,7 +111,7 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
 
     fn refresh_one<F>(&self, future: F)
         where
-            F: Future<Item=GDObject, Error=GDError> + 'static
+            F: Future<Item=RawObject, Error=GDError> + 'static
     {
         let sender = self.sender.clone();
         let future = future
@@ -109,7 +123,7 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
 
     fn refresh_many<F>(&self, future: F)
         where
-            F: Future<Item=Vec<GDObject>, Error=GDError> + 'static
+            F: Future<Item=Vec<RawObject>, Error=GDError> + 'static
     {
         let sender = self.sender.clone();
         let future = future

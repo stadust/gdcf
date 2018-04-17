@@ -11,7 +11,6 @@ use gdcf::cache::CacheConfig;
 use gdcf::cache::CachedObject;
 use gdcf::model::PartialLevel;
 use gdcf::model::Level;
-use gdcf::api::request::LevelsRequest;
 
 use gdrs::GDClientImpl;
 
@@ -45,7 +44,7 @@ fn main() {
     //println!("{:?}", serde_json::to_string(&filter));
     //println!("{:?}", serde_urlencoded::to_string(filter));
 
-    //core.run(Thing {});
+    core.run(Thing {});
 }
 
 struct Thing;

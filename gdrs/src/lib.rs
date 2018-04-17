@@ -18,7 +18,6 @@ pub mod parse;
 use std::str;
 
 use gdcf::api::{GDClient, GDError};
-use gdcf::model::GDObject;
 use gdcf::api::request::level::LevelRequest;
 use gdcf::api::request::level::LevelsRequest;
 
@@ -37,6 +36,7 @@ use hyper::StatusCode;
 
 use ser::LevelRequestRem;
 use ser::LevelsRequestRem;
+use gdcf::model::RawObject;
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -78,9 +78,8 @@ impl GDClient for GDClientImpl {
         self.client.handle()
     }
 
-    fn level(&self, req: LevelRequest) -> Box<Future<Item=GDObject, Error=GDError> + 'static> {
-        //let req = prepare_request!("downloadGJLevel22", req);
-        let req = self.make_request("donwloadGJLevel22", Req::DownloadLevel(req));
+    fn level(&self, req: LevelRequest) -> Box<Future<Item=RawObject, Error=GDError> + 'static> {
+        let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
     }
