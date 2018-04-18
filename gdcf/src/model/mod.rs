@@ -1,5 +1,6 @@
 pub mod level;
 pub mod song;
+mod de;
 
 use std::str::FromStr;
 

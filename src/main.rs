@@ -20,6 +20,7 @@ use futures::Future;
 use futures::Async;
 use gdcf::api::request::level::SongFilter;
 use gdrs::Req;
+use gdcf::model::song::NewgroundSong;
 
 fn main() {
     let mut core = Core::new().unwrap();
@@ -36,10 +37,10 @@ fn main() {
         gdcf.level(i);
     }*/
 
-   /* let filter = SearchOptions::new()
-        .uncompleted()
-        .custom_song(1)
-        .featured();*/
+    /* let filter = SearchOptions::new()
+         .uncompleted()
+         .custom_song(1)
+         .featured();*/
 
     //println!("{:?}", serde_json::to_string(&filter));
     //println!("{:?}", serde_urlencoded::to_string(filter));
@@ -79,5 +80,13 @@ impl Cache for DummyCache {
 
     fn store_level(&mut self, level: Level) {
         println!("{:?}", level);
+    }
+
+    fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundSong>> {
+        unimplemented!()
+    }
+
+    fn store_song(&mut self, song: NewgroundSong) {
+        unimplemented!()
     }
 }

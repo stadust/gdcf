@@ -5,6 +5,7 @@ use std;
 
 use model::{GameVersion, ValueError, ObjectType, RawObject, FromRawObject};
 use model::song::MainSong;
+use model::de;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(ser, derive(Serialize))]
@@ -272,61 +273,5 @@ impl From<DemonRating> for i32 {
             DemonRating::Extreme => 5,
             DemonRating::Unknown => std::i32::MAX
         }
-    }
-}
-
-mod de {
-    use model::RawObject;
-    use model::LevelRating;
-    use model::ValueError;
-
-    use std::str::FromStr;
-    use std::num::ParseIntError;
-    use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
-
-    pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
-        let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
-        let rating: i32 = raw_obj.get(9)?;
-
-        if is_demon {
-            Ok(LevelRating::Demon(rating.into()))
-        } else {
-            Ok(rating.into())
-        }
-    }
-
-    pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>, ValueError> {
-        if raw_obj.get::<u64>(35)? == 0 {
-            Ok(Some(MAIN_SONGS.get(raw_obj.get::<usize>(12)?).unwrap_or(&UNKNOWN)))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub(super) fn custom_song(raw_obj: &RawObject) -> Result<Option<u64>, ValueError> {
-        let custom = raw_obj.get(35)?;
-
-        if custom != 0 {
-            Ok(Some(custom))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub(super) fn default_to_none<T>(value: &String) -> Result<Option<T>, <T as FromStr>::Err>
-        where
-            T: FromStr + Default + PartialEq
-    {
-        let value: T = value.parse()?;
-
-        if value == Default::default() {
-            Ok(None)
-        } else {
-            Ok(Some(value))
-        }
-    }
-
-    pub(super) fn int_to_bool(value: &String) -> Result<bool, ParseIntError> {
-        Ok(value.parse::<u8>()? != 0)
     }
 }
