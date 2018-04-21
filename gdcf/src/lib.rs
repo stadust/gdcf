@@ -1,6 +1,7 @@
 #![feature(try_from)]
 #![feature(box_syntax)]
 #![feature(attr_literals)]
+#![feature(never_type)]
 
 #[macro_use]
 #[cfg(ser)]
@@ -22,13 +23,15 @@ extern crate gdcf_derive;
 use futures::Future;
 
 use cache::Cache;
-use model::Level;
+use model::{Level, PartialLevel};
+use model::song::NewgroundsSong;
 use model::ObjectType;
 use model::FromRawObject;
 
 use api::client::GDClient;
 use api::request::level::LevelRequest;
 use api::GDError;
+use api::request::Request;
 
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
@@ -38,6 +41,7 @@ use std::sync::Arc;
 use std::sync::MutexGuard;
 use model::RawObject;
 use std::sync::mpsc::Receiver;
+use api::request::LevelsRequest;
 
 pub mod cache;
 pub mod model;
@@ -51,6 +55,47 @@ pub struct Gdcf<'a, A: 'a, C: 'static>
     cache: Arc<Mutex<C>>,
     client: &'a A,
     sender: Sender<RawObject>,
+}
+
+macro_rules! lookup {
+    ($self: expr, $lookup: ident, $req: expr) => {
+        {
+            let cache = $self.cache();
+            let cached = cache.$lookup(&$req);
+            let expired = cached.as_ref()
+                .map_or(true, |co| cache.is_expired(co));
+
+            (cached, expired)
+        }
+    }
+}
+
+macro_rules! retrieve_one {
+    ($name:ident, $req_type:tt, $lookup:ident, $api:tt) => {
+        pub fn $name(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
+            let (cached, expired) = lookup!(self, $lookup, req);
+
+            if expired {
+                self.refresh_one(self.client.$api(req));
+            }
+
+            cached.map(|co| co.extract())
+        }
+    }
+}
+
+macro_rules! retrieve_many {
+    ($name:ident, $req_type:tt, $lookup:ident, $api:tt) => {
+        pub fn $name(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
+            let (cached, expired) = lookup!(self, $lookup, req);
+
+            if expired {
+                self.refresh_many(self.client.$api(req));
+            }
+
+            cached.map(|co| co.extract())
+        }
+    }
 }
 
 impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
@@ -70,7 +115,9 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
                     let mut cache = mutex.lock().unwrap();
 
                     let err = match raw_obj.object_type {
-                        ObjectType::Level => Level::from_raw(&raw_obj).map(|l| cache.store_level(l))
+                        ObjectType::Level => Level::from_raw(&raw_obj).map(|l| cache.store_level(l)),
+                        ObjectType::PartialLevel => PartialLevel::from_raw(&raw_obj).map(|l| cache.store_partial_level(l)),
+                        ObjectType::NewgroundsSong => NewgroundsSong::from_raw(&raw_obj).map(|s| cache.store_song(s))
                     };
 
                     if let Err(err) = err {
@@ -91,23 +138,8 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
         self.cache.lock().unwrap()
     }
 
-    pub fn level(&self, lid: u64) -> Option<Level>
-    {
-        let (cached, expired) = {
-            let cache = self.cache();
-            let cached = cache.lookup_level(lid);
-            let expired = cached.as_ref()
-                .map_or(true, |co| cache.is_expired(co));
-
-            (cached, expired)
-        };
-
-        if expired {
-            self.refresh_one(self.client.level(LevelRequest::new(lid)));
-        }
-
-        cached.map(|co| co.extract())
-    }
+    retrieve_one!(level, LevelRequest, lookup_level, level);
+    retrieve_many!(levels, LevelsRequest, lookup_partial_levels, levels);
 
     fn refresh_one<F>(&self, future: F)
         where
@@ -116,7 +148,7 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
         let sender = self.sender.clone();
         let future = future
             .map(move |obj| sender.send(obj).unwrap())
-            .map_err(|e| println!("Unexpected error while retrieving level for cache: {:?}", e));
+            .map_err(|e| println!("Unexpected error while retrieving data for cache: {:?}", e));
 
         self.client.handle().spawn(future)
     }
@@ -128,7 +160,7 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
         let sender = self.sender.clone();
         let future = future
             .map(move |objs| objs.into_iter().for_each(|obj| sender.send(obj).unwrap()))
-            .map_err(|e| println!("Unexpected error while retrieving level for cache: {:?}", e));
+            .map_err(|e| println!("Unexpected error while retrieving data for cache: {:?}", e));
 
         self.client.handle().spawn(future)
     }

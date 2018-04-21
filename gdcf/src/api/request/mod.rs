@@ -1,10 +1,12 @@
 use model::GameVersion;
 
+#[macro_use]
+mod macros;
 pub mod level;
 
 pub use self::level::{LevelRequest, LevelsRequest};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {
     pub game_version: GameVersion,
     pub binary_version: GameVersion,
@@ -33,4 +35,8 @@ impl Default for BaseRequest {
     fn default() -> Self {
         BaseRequest::gd_21()
     }
+}
+
+pub trait Request {
+    type Result;
 }

@@ -89,6 +89,7 @@ pub(super) fn search_filters<S>(filters: &SearchFilters, serializer: S) -> Resul
     map.serialize_entry("twoPlayer", &(filters.two_player as u8))?;
     map.serialize_entry("coins", &(filters.coins as u8))?;
     map.serialize_entry("epic", &(filters.epic as u8))?;
+    map.serialize_entry("star", &(filters.rated as u8))?;
 
     match filters.song {
         Some(SongFilter::Main(id)) => map.serialize_entry("song", &id)?,

@@ -9,33 +9,33 @@ pub struct MainSong {
 }
 
 #[derive(Debug, FromRawObject)]
-pub struct NewgroundSong {
+pub struct NewgroundsSong {
     #[raw_data(index = 1)]
-    song_id: u64,
+    pub song_id: u64,
 
     #[raw_data(index = 2)]
-    name: String,
+    pub name: String,
 
     // Index 3 has unknown usage
 
     #[raw_data(index = 4)]
-    artist: String,
+    pub artist: String,
 
     #[raw_data(index = 5)]
-    filesize: u64,
+    pub filesize: f64,
 
     // Index 6 has unknown usage
 
-    #[raw_data(index = 7)]
-    alt_artist: String,
+    #[raw_data(index = 7, deserialize_with = "de::into_option", default)]
+    pub alt_artist: Option<String>,
 
-    #[raw_data(index = 8, deserialize_with="de::int_to_bool")]
-    banned: bool,
+    #[raw_data(index = 8, deserialize_with = "de::int_to_bool")]
+    pub banned: bool,
 
     // Index 9 is unused
 
     #[raw_data(index = 10)]
-    link: String,
+    pub link: String,
 
 }
 

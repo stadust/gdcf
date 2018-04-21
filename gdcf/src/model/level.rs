@@ -3,11 +3,11 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 use std;
 
-use model::{GameVersion, ValueError, ObjectType, RawObject, FromRawObject};
+use model::{GameVersion, ValueError, RawObject, FromRawObject};
 use model::song::MainSong;
 use model::de;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]
 pub enum LevelLength {
     Tiny,
@@ -18,7 +18,7 @@ pub enum LevelLength {
     Unknown,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]
 pub enum LevelRating {
     Auto,
@@ -32,7 +32,7 @@ pub enum LevelRating {
     Unknown,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]
 pub enum DemonRating {
     Easy,

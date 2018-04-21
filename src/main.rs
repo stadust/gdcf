@@ -5,6 +5,7 @@ extern crate tokio_core;
 extern crate futures;
 extern crate serde_urlencoded;
 extern crate serde_json;
+extern crate gdcf_dbcache;
 
 use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
@@ -18,32 +19,29 @@ use tokio_core::reactor::Core;
 use gdcf::Gdcf;
 use futures::Future;
 use futures::Async;
-use gdcf::api::request::level::SongFilter;
-use gdrs::Req;
-use gdcf::model::song::NewgroundSong;
+use gdcf::model::song::NewgroundsSong;
+use gdcf::api::request::LevelsRequest;
+use gdcf::api::request::LevelRequest;
+use gdcf::api::request::level::SearchFilters;
+
+use gdcf_dbcache::cache::DatabaseCache;
 
 fn main() {
     let mut core = Core::new().unwrap();
     let client = GDClientImpl::new(&core.handle());
-    let cache = DummyCache {};
+    let cache = DatabaseCache::new("postgres://gdcf:gdcf@localhost/gdcf");
 
     let gdcf = Gdcf::new(cache, &client);
 
-    gdcf.level(39976494);
-    gdcf.level(1);
-    gdcf.level(3150);
+    let lev_req = LevelsRequest::default()
+        .search("High Life".into())
+        .filter(SearchFilters::default()
+            .rated()
+            .uncompleted());
 
-    /*for i in 10000..10010 {
-        gdcf.level(i);
-    }*/
-
-    /* let filter = SearchOptions::new()
-         .uncompleted()
-         .custom_song(1)
-         .featured();*/
-
-    //println!("{:?}", serde_json::to_string(&filter));
-    //println!("{:?}", serde_urlencoded::to_string(filter));
+    gdcf.levels(lev_req);
+    gdcf.level(11774780.into());
+    gdcf.level(11849346.into());
 
     core.run(Thing {});
 }
@@ -56,37 +54,5 @@ impl Future for Thing {
 
     fn poll(&mut self) -> Result<Async<()>, ()> {
         Ok(Async::NotReady)
-    }
-}
-
-struct DummyCache;
-
-impl Cache for DummyCache {
-    fn config(&self) -> CacheConfig {
-        CacheConfig {
-            invalidate_after: 0
-        }
-    }
-
-    fn lookup_partial_level(&self, lid: u64) -> Option<CachedObject<PartialLevel>> {
-        None
-    }
-
-    fn store_partial_level(&mut self, level: PartialLevel) {}
-
-    fn lookup_level(&self, lid: u64) -> Option<CachedObject<Level>> {
-        None
-    }
-
-    fn store_level(&mut self, level: Level) {
-        println!("{:?}", level);
-    }
-
-    fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundSong>> {
-        unimplemented!()
-    }
-
-    fn store_song(&mut self, song: NewgroundSong) {
-        unimplemented!()
     }
 }

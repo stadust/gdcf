@@ -2,7 +2,6 @@ use gdcf::model::GameVersion;
 use gdcf::api::request::BaseRequest;
 
 use ser;
-use gdcf::api::request::LevelRequest;
 
 pub(super) mod level;
 

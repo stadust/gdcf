@@ -3,7 +3,6 @@
   <component name="CargoProjects">
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
     <cargoProject FILE="$PROJECT_DIR$/gdrs/Cargo.toml" />
-    <cargoProject FILE="$PROJECT_DIR$/gdcf_postgres/Cargo.toml" />
     <cargoProject FILE="$PROJECT_DIR$/gdcf/Cargo.toml" />
     <cargoProject FILE="$PROJECT_DIR$/gdcf_derive/Cargo.toml" />
   </component>

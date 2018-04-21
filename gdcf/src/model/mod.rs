@@ -9,15 +9,17 @@ use std::error::Error;
 use std::iter;
 use std::marker::Sized;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GameVersion {
     Unknown,
     Version { minor: u8, major: u8 },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ObjectType {
-    Level
+    PartialLevel,
+    Level,
+    NewgroundsSong,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
