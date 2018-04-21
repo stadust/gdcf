@@ -48,8 +48,6 @@ fn parse_fragment<'a, P>(obj_type: ObjectType, fragment: &'a str, seperator: P) 
     where
         P: Pattern<'a>
 {
-    println!("{}", fragment);
-
     let mut iter = fragment.split(seperator);
     let mut raw_obj = RawObject::new(obj_type);
 

@@ -35,7 +35,7 @@ pub enum ValueError
 {
     IndexOutOfBounds(usize),
     NoValue(usize),
-    Parse(usize, Box<Error>),
+    Parse(usize, String, Box<Error>),
 }
 
 #[derive(Debug)]
@@ -67,7 +67,7 @@ impl RawObject {
                 match *value {
                     Value::Value(ref string) => match string.parse() {
                         Ok(parsed) => Ok(parsed),
-                        Err(err) => Err(ValueError::Parse(idx, box err))
+                        Err(err) => Err(ValueError::Parse(idx, string.clone(), box err))
                     },
                     Value::NotProvided => Err(ValueError::NoValue(idx))
                 }
@@ -84,7 +84,7 @@ impl RawObject {
             None => Err(ValueError::IndexOutOfBounds(idx)),
             Some(value) => {
                 match *value {
-                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, box err)),
+                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err)),
                     Value::NotProvided => Err(ValueError::NoValue(idx))
                 }
             }
@@ -100,7 +100,7 @@ impl RawObject {
             None => Ok(default),
             Some(value) => {
                 match *value {
-                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, box err)),
+                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err)),
                     Value::NotProvided => Ok(default)
                 }
             }
@@ -117,7 +117,7 @@ impl RawObject {
             None => Ok(Default::default()),
             Some(value) => {
                 match *value {
-                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, box err)),
+                    Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err)),
                     Value::NotProvided => Ok(Default::default())
                 }
             }
@@ -135,7 +135,7 @@ impl RawObject {
                 match *value {
                     Value::Value(ref string) => match string.parse() {
                         Ok(parsed) => Ok(parsed),
-                        Err(err) => Err(ValueError::Parse(idx, box err))
+                        Err(err) => Err(ValueError::Parse(idx, string.clone(), box err))
                     },
                     Value::NotProvided => Ok(default)
                 }

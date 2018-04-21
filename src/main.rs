@@ -34,9 +34,8 @@ fn main() {
     let gdcf = Gdcf::new(cache, &client);
 
     let lev_req = LevelsRequest::default()
-        .search("High Life".into())
+        .search("Silent Club".into())
         .filter(SearchFilters::default()
-            .rated()
             .uncompleted());
 
     gdcf.levels(lev_req);

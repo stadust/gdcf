@@ -43,6 +43,14 @@ pub enum DemonRating {
     Unknown,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(ser, derive(Serialize))]
+pub enum Featured {
+    NotFeatured,
+    Unfeatured,
+    Featured(u32),
+}
+
 #[derive(Debug, FromRawObject)]
 pub struct PartialLevel {
     #[raw_data(index = 1)]
@@ -51,8 +59,8 @@ pub struct PartialLevel {
     #[raw_data(index = 2)]
     name: String,
 
-    #[raw_data(index = 3)]
-    description: String,
+    #[raw_data(index = 3, default)]
+    description: Option<String>,
 
     // Index 4 not provided for partial levels
 
@@ -91,8 +99,8 @@ pub struct PartialLevel {
     stars: u8,
 
     /// 0 if the request isn't featured, otherwise an arbitrary value that indicates the ranking on the featured list.
-    #[raw_data(index = 19)]
-    featured_weight: u32,
+    #[raw_data(index = 19, deserialize_with = "de::featured")]
+    featured: Featured,
 
     #[raw_data(index = 25, deserialize_with = "de::int_to_bool", default = false)]
     is_auto: bool,

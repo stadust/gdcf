@@ -5,6 +5,7 @@ use model::ValueError;
 use std::str::FromStr;
 use std::num::ParseIntError;
 use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
+use model::level::Featured;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -44,4 +45,14 @@ pub(super) fn int_to_bool(value: &String) -> Result<bool, ParseIntError> {
 
 pub(super) fn into_option(value: &String) -> Result<Option<String>, !> {
     Ok(Some(value.clone()))
+}
+
+pub(super) fn featured(value: &String) -> Result<Featured, ParseIntError> {
+    let value: i32 = value.parse()?;
+
+    Ok(match value {
+        -1 => Featured::Unfeatured,
+        0 => Featured::NotFeatured,
+        _ => Featured::Featured(value as u32)
+    })
 }
