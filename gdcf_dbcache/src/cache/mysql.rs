@@ -1,8 +1,10 @@
 use diesel::mysql::MysqlConnection;
 use diesel::Connection;
+use cache::DatabaseCacheConfig;
 
 pub struct DatabaseCache {
-    pub(super) connection: MysqlConnection
+    pub(super) connection: MysqlConnection,
+    pub(super) config: DatabaseCacheConfig
 }
 
 pub fn connect(url: &str) -> MysqlConnection {

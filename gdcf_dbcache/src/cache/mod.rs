@@ -27,22 +27,45 @@ use gdcf::model::Level;
 use gdcf::model::song::NewgroundsSong;
 
 use schema::song;
-use schema::Cached;
+use schema::DBCached;
 use schema::song::Song;
 
+use chrono::Duration;
+
+pub struct DatabaseCacheConfig {
+    invalidate_after: Duration,
+    url: &'static str,
+}
+
+impl CacheConfig for DatabaseCacheConfig {
+    fn invalidate_after(&self) -> Duration {
+        self.invalidate_after
+    }
+}
+
+impl DatabaseCacheConfig {
+    pub fn new(url: &'static str, invalidate_after: Duration) -> DatabaseCacheConfig {
+        DatabaseCacheConfig {
+            invalidate_after,
+            url,
+        }
+    }
+}
+
 impl DatabaseCache {
-    pub fn new(url: &str) -> DatabaseCache {
+    pub fn new(config: DatabaseCacheConfig) -> DatabaseCache {
         DatabaseCache {
-            connection: connect(url)
+            connection: connect(config.url),
+            config,
         }
     }
 }
 
 impl Cache for DatabaseCache {
-    fn config(&self) -> CacheConfig {
-        CacheConfig {
-            invalidate_after: 0
-        }
+    type Config = DatabaseCacheConfig;
+
+    fn config(&self) -> &DatabaseCacheConfig {
+        &self.config
     }
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Option<CachedObject<Vec<PartialLevel>>> {
@@ -67,11 +90,10 @@ impl Cache for DatabaseCache {
 
     fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundsSong>> {
         Song::get(newground_id, &self.connection)
-            .map(|Song(song)| CachedObject::new(song, 0))
     }
 
     fn store_song(&mut self, song: NewgroundsSong) {
         println!("Caching: {:?}", song);
-        song::update_or_insert(song, &self.connection);
+        Song::insert(song, &self.connection);
     }
 }

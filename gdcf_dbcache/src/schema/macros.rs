@@ -35,11 +35,11 @@ macro_rules! backend_abstraction {
 macro_rules! pg_insert {
     ($closure: expr) => {
         #[cfg(feature = "postgres")]
-        fn insert<Conn>(self, conn: &Conn)
+        fn insert<Conn>(obj: Self::Inner, conn: &Conn)
             where
                 Conn: Connection<Backend=_Backend>
         {
-            let values = $closure(self);
+            let values = $closure(obj);
 
             insert_into(newgrounds_song)
                 .values(&values)
@@ -54,16 +54,48 @@ macro_rules! pg_insert {
 
 #[macro_export]
 macro_rules! insert {
-    ($closure: expr, $db: expr) => {
-        #[cfg(feature = $db)]
-        fn insert<Conn>(self, conn: &Conn)
+    ($closure: expr, $($db: expr),*) => {
+        #[cfg(any($(feature = $db),*))]
+        fn insert<Conn>(obj: Self::Inner, conn: &Conn)
             where
                 Conn: Connection<Backend=_Backend>
         {
             replace_into(newgrounds_song)
-                .values($closure(self))
+                .values($closure(obj))
                 .execute(conn)
                 .unwrap();
         }
     }
+}
+
+#[macro_export]
+macro_rules! into {
+    ($t1: ident, $t2: ty) => {
+        impl Into<CachedObject<$t2>> for $t1 {
+            fn into(self) -> CachedObject<$t2> {
+                let $t1(inner, first, last) = self;
+
+                CachedObject::new(inner, first, last)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! get {
+    ($closure: expr, $key: ty, $($db: expr),*) => {
+        #[cfg(any($(feature = $db),*))]
+        fn get<Conn>(key: $key, conn: &Conn) -> Option<CachedObject<Self::Inner>>
+            where
+                Conn: Connection<Backend=_Backend>
+        {
+            let result: Result<Self, _> = $closure(key)
+                .first(conn);
+
+            match result {
+                Ok(song) => Some(song.into()),
+                Err(_) => None
+            }
+        }
+    };
 }

@@ -4,6 +4,7 @@ version = "0.1.0"
 
 [dependencies]
 diesel = "^1.2.2"
+chrono = "^0.4.0"
 
 [dependencies.gdcf]
 path = "../gdcf"
@@ -11,6 +12,6 @@ path = "../gdcf"
 [features]
 default = []
 
-postgres = ["diesel/postgres"]
-mysql = ["diesel/mysql"]
-sqlite = ["diesel/sqlite"]
+postgres = ["diesel/postgres", "diesel/chrono"]
+mysql = ["diesel/mysql", "diesel/chrono"]
+sqlite = ["diesel/sqlite", "diesel/chrono"]

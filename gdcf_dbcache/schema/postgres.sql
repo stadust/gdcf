@@ -6,5 +6,7 @@ CREATE TABLE newgrounds_song (
     alt_artist TEXT NULL DEFAULT NULL,
     banned BOOLEAN NOT NULL DEFAULT false,
     download_link TEXT NOT NULL,
-    internal_id BIGINT UNIQUE NOT NULL
+    internal_id BIGINT UNIQUE NOT NULL,
+    first_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
+    last_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')
 );

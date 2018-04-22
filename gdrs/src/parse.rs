@@ -30,7 +30,7 @@ pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
         None => return Err(GDError::MalformedResponse)
     }
 
-    sections.next(); // ignore the creator section
+    sections.next(); // ignore the creator section (for now)
 
     match sections.next() {
         Some(section) => {

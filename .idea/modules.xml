@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/gd_caching_framework.iml" filepath="$PROJECT_DIR$/gd_caching_framework.iml" />
       <module fileurl="file://$PROJECT_DIR$/gdcf/gdcf.iml" filepath="$PROJECT_DIR$/gdcf/gdcf.iml" />
+      <module fileurl="file://$PROJECT_DIR$/gdcf_dbcache/gdcf_dbcache.iml" filepath="$PROJECT_DIR$/gdcf_dbcache/gdcf_dbcache.iml" />
       <module fileurl="file://$PROJECT_DIR$/gdcf_postgres/gdcf_dbcache.iml" filepath="$PROJECT_DIR$/gdcf_postgres/gdcf_dbcache.iml" />
       <module fileurl="file://$PROJECT_DIR$/gdcf_derive/gdcf_derive.iml" filepath="$PROJECT_DIR$/gdcf_derive/gdcf_derive.iml" />
       <module fileurl="file://$PROJECT_DIR$/gdrs/gdrs.iml" filepath="$PROJECT_DIR$/gdrs/gdrs.iml" />

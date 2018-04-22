@@ -9,7 +9,7 @@ use diesel::RunQueryDsl;
 use diesel::QueryDsl;
 use diesel::delete;
 
-use schema::Cached;
+use chrono::NaiveDateTime;
 
 table! {
     newgrounds_song (song_id) {
@@ -21,12 +21,14 @@ table! {
         banned -> Bool,
         download_link -> Text,
         internal_id -> BigInt,
+        first_cached_at -> Timestamp,
+        last_cached_at -> Timestamp,
     }
 }
 
 impl Queryable<newgrounds_song::SqlType, Pg> for Song
 {
-    type Row = (i64, String, String, f64, Option<String>, bool, String, i64);
+    type Row = (i64, String, String, f64, Option<String>, bool, String, i64, NaiveDateTime, NaiveDateTime);
 
     fn build(row: Self::Row) -> Self {
         Song(NewgroundsSong {
@@ -38,6 +40,6 @@ impl Queryable<newgrounds_song::SqlType, Pg> for Song
             banned: row.5,
             link: row.6,
             internal_id: row.7 as u64
-        })
+        }, row.8, row.9)
     }
 }

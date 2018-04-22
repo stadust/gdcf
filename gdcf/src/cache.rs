@@ -5,14 +5,21 @@ use model::level::PartialLevel;
 use model::song::NewgroundsSong;
 use api::request::LevelRequest;
 use api::request::LevelsRequest;
+use chrono::NaiveDateTime;
+use chrono::NaiveTime;
+use chrono::Utc;
+use chrono::DateTime;
+use chrono::Duration;
 
-pub struct CacheConfig {
-    pub invalidate_after: u64
+pub trait CacheConfig {
+    fn invalidate_after(&self) -> Duration;
 }
 
 pub trait Cache
 {
-    fn config(&self) -> CacheConfig;
+    type Config: CacheConfig;
+
+    fn config(&self) -> &Self::Config;
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Option<CachedObject<Vec<PartialLevel>>>;
     fn lookup_partial_level(&self, req: &LevelRequest) -> Option<CachedObject<PartialLevel>>;
@@ -25,21 +32,25 @@ pub trait Cache
     fn store_song(&mut self, song: NewgroundsSong);
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() - obj.cached_at > self.config().invalidate_after
+        let now = Utc::now();
+        let then = DateTime::<Utc>::from_utc(obj.last_cached_at(), Utc);
+
+        now - then > self.config().invalidate_after()
     }
 }
 
 #[derive(Debug)]
 pub struct CachedObject<T> {
-    cached_at: u64,
+    first_cached_at: NaiveDateTime,
+    last_cached_at: NaiveDateTime,
     obj: T,
 }
 
 impl<T> CachedObject<T> {
-    pub fn new(obj: T, cached_at: u64) -> Self { CachedObject { cached_at, obj } }
-    pub fn cached_at(&self) -> u64 { self.cached_at }
+    pub fn new(obj: T, first: NaiveDateTime, last: NaiveDateTime) -> Self {
+        CachedObject { first_cached_at: first, last_cached_at: last, obj }
+    }
+    pub fn last_cached_at(&self) -> NaiveDateTime { self.last_cached_at }
+    pub fn first_cached_at(&self) -> NaiveDateTime { self.first_cached_at }
     pub fn extract(self) -> T { self.obj }
 }

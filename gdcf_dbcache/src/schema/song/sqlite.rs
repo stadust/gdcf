@@ -5,6 +5,8 @@ use diesel::sqlite::Sqlite;
 use diesel::prelude::SqliteConnection;
 use diesel::insert_into;
 
+use chrono::NaiveDateTime;
+
 table! {
     newgrounds_song (song_id) {
         song_id -> BigInt,
@@ -15,12 +17,14 @@ table! {
         banned -> SmallInt,
         download_link -> Text,
         internal_id -> BigInt,
+        first_cached_at -> Timestamp,
+        last_cached_at -> Timestamp,
     }
 }
 
 impl Queryable<newgrounds_song::SqlType, Sqlite> for Song
 {
-    type Row = (i64, String, String, f64, Option<String>, i16, String, i64);
+    type Row = (i64, String, String, f64, Option<String>, i16, String, i64, NaiveDateTime, NaiveDateTime);
 
     fn build(row: Self::Row) -> Self {
         Song(NewgroundsSong {
@@ -32,6 +36,6 @@ impl Queryable<newgrounds_song::SqlType, Sqlite> for Song
             banned: row.5 != 0,
             link: row.6,
             internal_id: row.7 as u64,
-        })
+        }, row.8, row.9)
     }
 }

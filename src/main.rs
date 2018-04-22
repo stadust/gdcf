@@ -6,6 +6,7 @@ extern crate futures;
 extern crate serde_urlencoded;
 extern crate serde_json;
 extern crate gdcf_dbcache;
+extern crate chrono;
 
 use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
@@ -25,11 +26,15 @@ use gdcf::api::request::LevelRequest;
 use gdcf::api::request::level::SearchFilters;
 
 use gdcf_dbcache::cache::DatabaseCache;
+use gdcf_dbcache::cache::DatabaseCacheConfig;
+
+use chrono::Duration;
 
 fn main() {
     let mut core = Core::new().unwrap();
     let client = GDClientImpl::new(&core.handle());
-    let cache = DatabaseCache::new("postgres://gdcf:gdcf@localhost/gdcf");
+    let config = DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
+    let cache = DatabaseCache::new(config);
 
     let gdcf = Gdcf::new(cache, &client);
 

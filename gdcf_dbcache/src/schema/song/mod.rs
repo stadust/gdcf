@@ -7,55 +7,24 @@ use diesel::RunQueryDsl;
 use diesel::ExpressionMethods;
 use diesel::insert_into;
 
-use schema::Cached;
+use schema::DBCached;
+use gdcf::cache::CachedObject;
+use chrono::{NaiveDateTime, Utc};
 
 backend_abstraction!(newgrounds_song);
 
-pub struct Song(pub NewgroundsSong);
+pub struct Song(pub NewgroundsSong, pub NaiveDateTime, pub NaiveDateTime);
 
-pub fn update_or_insert<Conn>(song: NewgroundsSong, conn: &Conn)
-    where
-        Conn: Connection<Backend=_Backend>
-{
-    let new_song = Song(song);
-
-    match Song::get(new_song.0.song_id, conn) {
-        Some(cached) => cached.replace_with(new_song, conn),
-        None => new_song.insert(conn)
-    }
-}
+into!(Song, NewgroundsSong);
 
 
-impl Cached<_Backend, u64> for Song {
-    #[cfg(any(feature = "postgres", feature = "sqlite"))]
-    fn get<Conn>(sid: u64, conn: &Conn) -> Option<Self>
-        where
-            Conn: Connection<Backend=_Backend>
-    {
-        let result = newgrounds_song.find(sid as i64)
-            .first(conn);
+impl DBCached<_Backend, u64> for Song {
+    type Inner = NewgroundsSong;
 
-        match result {
-            Ok(song) => Some(song),
-            Err(_) => None
-        }
-    }
+    get!(|sid| newgrounds_song.find(sid as i64), u64, "postgres", "sqlite");
+    get!(|sid| newgrounds_song.find(sid), u64, "mysql");
 
-    #[cfg(feature = "mysql")]
-    fn get<Conn>(sid: u64, conn: &Conn) -> Option<Self>
-        where
-            Conn: Connection<Backend=_Backend>
-    {
-        let result = newgrounds_song.find(sid)
-            .first(conn);
-
-        match result {
-            Ok(song) => Some(song),
-            Err(_) => None
-        }
-    }
-
-    insert!(|Song(song)|{
+    insert!(|song: NewgroundsSong| {
         (
             song_id.eq(song.song_id as i64),
             song_name.eq(song.name),
@@ -64,24 +33,12 @@ impl Cached<_Backend, u64> for Song {
             song.alt_artist.map(|aa| alt_artist.eq(aa)),
             banned.eq(song.banned as i16),
             download_link.eq(song.link),
-            internal_id.eq(song.internal_id as i64)
+            internal_id.eq(song.internal_id as i64),
+            last_cached_at.eq(Utc::now().naive_utc())
         )
     }, "sqlite");
 
-    pg_insert!(|Song(song)| {
-        (
-            song_id.eq(song.song_id as i64),
-            song_name.eq(song.name),
-            artist.eq(song.artist),
-            filesize.eq(song.filesize),
-            song.alt_artist.map(|aa| alt_artist.eq(aa)),
-            banned.eq(song.banned),
-            download_link.eq(song.link),
-            internal_id.eq(song.internal_id as i64)
-        )
-    });
-
-    insert!(|Song(song)|{
+    insert!(|song: NewgroundsSong| {
         (
             song_id.eq(song.song_id),
             song_name.eq(song.name),
@@ -90,7 +47,22 @@ impl Cached<_Backend, u64> for Song {
             song.alt_artist.map(|aa| alt_artist.eq(aa)),
             banned.eq(song.banned),
             download_link.eq(song.link),
-            internal_id.eq(song.internal_id)
+            internal_id.eq(song.internal_id),
+            last_cached_at.eq(Utc::now().naive_utc())
         )
     }, "mysql");
+
+    pg_insert!(|song: NewgroundsSong| {
+        (
+            song_id.eq(song.song_id as i64),
+            song_name.eq(song.name),
+            artist.eq(song.artist),
+            filesize.eq(song.filesize),
+            song.alt_artist.map(|aa| alt_artist.eq(aa)),
+            banned.eq(song.banned),
+            download_link.eq(song.link),
+            internal_id.eq(song.internal_id as i64),
+            last_cached_at.eq(Utc::now().naive_utc())
+        )
+    });
 }

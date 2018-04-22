@@ -6,12 +6,13 @@ use schema::song::Song;
 use gdcf::model::song::NewgroundsSong;
 use diesel::mysql::MysqlConnection;
 use diesel::replace_into;
-use schema::Cached;
 use diesel::Connection;
 use diesel::delete;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use diesel::ExpressionMethods;
+
+use chrono::NaiveDateTime;
 
 table! {
     newgrounds_song (song_id) {
@@ -23,12 +24,14 @@ table! {
         banned -> Bool,
         download_link -> Text,
         internal_id -> Unsigned<BigInt>,
+        first_cached_at -> Timestamp,
+        last_cached_at -> Timestamp,
     }
 }
 
 impl Queryable<newgrounds_song::SqlType, Mysql> for Song
 {
-    type Row = (u64, String, String, f64, Option<String>, bool, String, u64);
+    type Row = (u64, String, String, f64, Option<String>, bool, String, u64, NaiveDateTime, NaiveDateTime);
 
     fn build(row: Self::Row) -> Self {
         Song(NewgroundsSong {
@@ -40,6 +43,6 @@ impl Queryable<newgrounds_song::SqlType, Mysql> for Song
             banned: row.5,
             link: row.6,
             internal_id: row.7,
-        })
+        }, row.8, row.9)
     }
 }
