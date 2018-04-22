@@ -59,7 +59,7 @@ pub struct PartialLevel {
     #[raw_data(index = 2)]
     name: String,
 
-    #[raw_data(index = 3, default)]
+    #[raw_data(index = 3, deserialize_with="de::into_option", default)]
     description: Option<String>,
 
     // Index 4 not provided for partial levels

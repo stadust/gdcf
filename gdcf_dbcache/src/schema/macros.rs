@@ -30,3 +30,40 @@ macro_rules! backend_abstraction {
         use diesel::sqlite::Sqlite as _Backend;
     }
 }
+
+#[macro_export]
+macro_rules! pg_insert {
+    ($closure: expr) => {
+        #[cfg(feature = "postgres")]
+        fn insert<Conn>(self, conn: &Conn)
+            where
+                Conn: Connection<Backend=_Backend>
+        {
+            let values = $closure(self);
+
+            insert_into(newgrounds_song)
+                .values(&values)
+                .on_conflict(song_id)
+                .do_update()
+                .set(values.clone())
+                .execute(conn)
+                .unwrap();
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! insert {
+    ($closure: expr, $db: expr) => {
+        #[cfg(feature = $db)]
+        fn insert<Conn>(self, conn: &Conn)
+            where
+                Conn: Connection<Backend=_Backend>
+        {
+            replace_into(newgrounds_song)
+                .values($closure(self))
+                .execute(conn)
+                .unwrap();
+        }
+    }
+}

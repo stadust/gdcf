@@ -22,7 +22,10 @@ pub trait Cached<Back: Backend, Prim>: Sized
 
     fn replace_with<Conn>(self, new: Self, conn: &Conn)
         where
-            Conn: Connection<Backend=Back>;
+            Conn: Connection<Backend=Back>
+    {
+        new.insert(conn);
+    }
 }
 
 pub fn now() -> u64 {

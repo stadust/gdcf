@@ -9,7 +9,7 @@ diesel = "^1.2.2"
 path = "../gdcf"
 
 [features]
-default = ["postgres"]
+default = []
 
 postgres = ["diesel/postgres"]
 mysql = ["diesel/mysql"]

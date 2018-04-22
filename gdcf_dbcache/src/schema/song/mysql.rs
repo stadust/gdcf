@@ -1,25 +1,34 @@
 use diesel::deserialize::Queryable;
-use schema::song::Song;
-use gdcf::model::song::NewgroundsSong;
 use diesel::mysql::Mysql;
+
+use schema::song::Song;
+
+use gdcf::model::song::NewgroundsSong;
 use diesel::mysql::MysqlConnection;
-use diesel::insert_into;
+use diesel::replace_into;
+use schema::Cached;
+use diesel::Connection;
+use diesel::delete;
+use diesel::QueryDsl;
+use diesel::RunQueryDsl;
+use diesel::ExpressionMethods;
 
 table! {
     newgrounds_song (song_id) {
         song_id -> Unsigned<BigInt>,
-        name -> Text,
+        song_name -> Text,
         artist -> Text,
         filesize -> Double,
         alt_artist -> Nullable<Text>,
         banned -> Bool,
-        link -> Text,
+        download_link -> Text,
+        internal_id -> Unsigned<BigInt>,
     }
 }
 
 impl Queryable<newgrounds_song::SqlType, Mysql> for Song
 {
-    type Row = (u64, String, String, f64, Option<String>, bool, String);
+    type Row = (u64, String, String, f64, Option<String>, bool, String, u64);
 
     fn build(row: Self::Row) -> Self {
         Song(NewgroundsSong {
@@ -30,23 +39,7 @@ impl Queryable<newgrounds_song::SqlType, Mysql> for Song
             alt_artist: row.4,
             banned: row.5,
             link: row.6,
+            internal_id: row.7,
         })
     }
-}
-
-pub fn insert(song: NewgroundsSong, conn: &MysqlConnection)
-{
-    use super::newgrounds_song::dsl::*;
-
-    insert_into(newgrounds_song)
-        .values((
-            song_id.eq(song.song_id),
-            name.eq(song.name),
-            artist.eq(song.artist),
-            filesize.eq(song.filesize),
-            song.alt_artist.map(|aa| alt_artist.eq(aa)),
-            banned.eq(song.banned),
-            link.eq(song.link)
-        ))
-        .execute(conn);
 }

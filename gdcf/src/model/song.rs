@@ -16,7 +16,8 @@ pub struct NewgroundsSong {
     #[raw_data(index = 2)]
     pub name: String,
 
-    // Index 3 has unknown usage
+    #[raw_data(index = 3)]
+    pub internal_id: u64,
 
     #[raw_data(index = 4)]
     pub artist: String,
