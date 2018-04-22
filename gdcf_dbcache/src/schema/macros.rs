@@ -83,9 +83,9 @@ macro_rules! into {
 
 #[macro_export]
 macro_rules! get {
-    ($closure: expr, $key: ty, $($db: expr),*) => {
+    ($closure: expr, $($db: expr),*) => {
         #[cfg(any($(feature = $db),*))]
-        fn get<Conn>(key: $key, conn: &Conn) -> Option<CachedObject<Self::Inner>>
+        fn get<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<CachedObject<Self::Inner>>
             where
                 Conn: Connection<Backend=_Backend>
         {

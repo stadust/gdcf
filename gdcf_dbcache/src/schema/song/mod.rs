@@ -18,11 +18,12 @@ pub struct Song(pub NewgroundsSong, pub NaiveDateTime, pub NaiveDateTime);
 into!(Song, NewgroundsSong);
 
 
-impl DBCached<_Backend, u64> for Song {
+impl DBCached<_Backend> for Song {
     type Inner = NewgroundsSong;
+    type SearchKey = u64;
 
-    get!(|sid| newgrounds_song.find(sid as i64), u64, "postgres", "sqlite");
-    get!(|sid| newgrounds_song.find(sid), u64, "mysql");
+    get!(|sid| newgrounds_song.find(sid as i64), "postgres", "sqlite");
+    get!(|sid| newgrounds_song.find(sid), "mysql");
 
     insert!(|song: NewgroundsSong| {
         (

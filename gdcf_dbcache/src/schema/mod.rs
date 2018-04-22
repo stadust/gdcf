@@ -12,11 +12,12 @@ mod macros;
 pub mod song;
 
 
-pub trait DBCached<Back: Backend, Prim>: Sized
+pub trait DBCached<Back: Backend>: Sized
 {
     type Inner;
+    type SearchKey;
 
-    fn get<Conn>(key: Prim, conn: &Conn) -> Option<CachedObject<Self::Inner>>
+    fn get<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<CachedObject<Self::Inner>>
         where
             Conn: Connection<Backend=Back>;
 
