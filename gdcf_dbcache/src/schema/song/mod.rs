@@ -7,22 +7,19 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use gdcf::cache::CachedObject;
 use gdcf::model::song::NewgroundsSong;
-use schema::DBCached;
+use schema::_O;
+use schema::Cached;
 
 backend_abstraction!(newgrounds_song);
 
-pub struct Song(pub NewgroundsSong, pub NaiveDateTime, pub NaiveDateTime);
-
-into!(Song, NewgroundsSong);
-
-impl DBCached<_Backend> for Song {
-    type Inner = NewgroundsSong;
+impl Cached<_Backend> for CachedObject<NewgroundsSong> {
     type SearchKey = u64;
+    type Inner = NewgroundsSong;
 
-    get!(|sid| newgrounds_song.find(sid as i64), "postgres", "sqlite");
-    get!(|sid| newgrounds_song.find(sid), "mysql");
+    retrieve!(|sid| newgrounds_song.find(sid as i64), "postgres", "sqlite");
+    retrieve!(|sid| newgrounds_song.find(sid), "mysql");
 
-    insert!(
+    store!(
         |song: NewgroundsSong| (
             song_id.eq(song.song_id as i64),
             song_name.eq(song.name),
@@ -37,7 +34,7 @@ impl DBCached<_Backend> for Song {
         "sqlite"
     );
 
-    insert!(
+    store!(
         |song: NewgroundsSong| (
             song_id.eq(song.song_id),
             song_name.eq(song.name),
@@ -52,7 +49,7 @@ impl DBCached<_Backend> for Song {
         "mysql"
     );
 
-    pg_insert!(|song: NewgroundsSong| (
+    pg_store!(|song: NewgroundsSong| (
         song_id.eq(song.song_id as i64),
         song_name.eq(song.name),
         artist.eq(song.artist),

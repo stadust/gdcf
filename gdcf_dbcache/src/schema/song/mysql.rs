@@ -1,9 +1,11 @@
 use diesel::deserialize::Queryable;
 use diesel::mysql::Mysql;
 
-use schema::song::Song;
+use schema::_O;
 
 use gdcf::model::song::NewgroundsSong;
+use gdcf::cache::CachedObject;
+
 use diesel::mysql::MysqlConnection;
 use diesel::replace_into;
 use diesel::Connection;
@@ -29,12 +31,12 @@ table! {
     }
 }
 
-impl Queryable<newgrounds_song::SqlType, Mysql> for Song
+impl Queryable<newgrounds_song::SqlType, Mysql> for _O<NewgroundsSong>
 {
     type Row = (u64, String, String, f64, Option<String>, bool, String, u64, NaiveDateTime, NaiveDateTime);
 
     fn build(row: Self::Row) -> Self {
-        Song(NewgroundsSong {
+        let song = NewgroundsSong {
             song_id: row.0,
             name: row.1,
             artist: row.2,
@@ -43,6 +45,8 @@ impl Queryable<newgrounds_song::SqlType, Mysql> for Song
             banned: row.5,
             link: row.6,
             internal_id: row.7,
-        }, row.8, row.9)
+        };
+
+        CachedObject::new(song, row.8, row.9).into()
     }
 }

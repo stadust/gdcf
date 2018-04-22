@@ -26,8 +26,7 @@ use gdcf::model::Level;
 use gdcf::model::PartialLevel;
 
 use schema::song;
-use schema::song::Song;
-use schema::DBCached;
+use schema::Cached;
 
 use chrono::Duration;
 
@@ -91,11 +90,11 @@ impl Cache for DatabaseCache {
     }
 
     fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundsSong>> {
-        Song::get(newground_id, &self.connection)
+        CachedObject::retrieve(newground_id, &self.connection)
     }
 
     fn store_song(&mut self, song: NewgroundsSong) {
         println!("Caching: {:?}", song);
-        Song::insert(song, &self.connection);
+        CachedObject::store(song, &self.connection);
     }
 }

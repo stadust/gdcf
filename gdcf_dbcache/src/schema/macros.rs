@@ -32,10 +32,10 @@ macro_rules! backend_abstraction {
 }
 
 #[macro_export]
-macro_rules! pg_insert {
+macro_rules! pg_store {
     ($closure:expr) => {
         #[cfg(feature = "postgres")]
-        fn insert<Conn>(obj: Self::Inner, conn: &Conn)
+        fn store<Conn>(obj: Self::Inner, conn: &Conn)
         where
             Conn: Connection<Backend = _Backend>,
         {
@@ -53,10 +53,10 @@ macro_rules! pg_insert {
 }
 
 #[macro_export]
-macro_rules! insert {
+macro_rules! store {
     ($closure: expr, $($db: expr),*) => {
         #[cfg(any($(feature = $db),*))]
-        fn insert<Conn>(obj: Self::Inner, conn: &Conn)
+        fn store<Conn>(obj: Self::Inner, conn: &Conn)
             where
                 Conn: Connection<Backend=_Backend>
         {
@@ -69,27 +69,14 @@ macro_rules! insert {
 }
 
 #[macro_export]
-macro_rules! into {
-    ($t1:ident, $t2:ty) => {
-        impl Into<CachedObject<$t2>> for $t1 {
-            fn into(self) -> CachedObject<$t2> {
-                let $t1(inner, first, last) = self;
-
-                CachedObject::new(inner, first, last)
-            }
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! get {
+macro_rules! retrieve {
     ($closure: expr, $($db: expr),*) => {
         #[cfg(any($(feature = $db),*))]
-        fn get<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<CachedObject<Self::Inner>>
+        fn retrieve<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<Self>
             where
                 Conn: Connection<Backend=_Backend>
         {
-            let result: Result<Self, _> = $closure(key)
+            let result: Result<_O<Self::Inner>, _> = $closure(key)
                 .first(conn);
 
             match result {
