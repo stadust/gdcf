@@ -1,11 +1,11 @@
-use std::convert::From;
-use std::str::FromStr;
-use std::num::ParseIntError;
 use std;
+use std::convert::From;
+use std::num::ParseIntError;
+use std::str::FromStr;
 
-use model::{GameVersion, ValueError, RawObject, FromRawObject};
-use model::song::MainSong;
 use model::de;
+use model::song::MainSong;
+use model::{FromRawObject, GameVersion, RawObject, ValueError};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]
@@ -59,11 +59,10 @@ pub struct PartialLevel {
     #[raw_data(index = 2)]
     name: String,
 
-    #[raw_data(index = 3, deserialize_with="de::into_option", default)]
+    #[raw_data(index = 3, deserialize_with = "de::into_option", default)]
     description: Option<String>,
 
     // Index 4 not provided for partial levels
-
     #[raw_data(index = 5)]
     version: u32,
 
@@ -108,7 +107,6 @@ pub struct PartialLevel {
     // Index 27 is not provided for partial levels
     // Index 28 is not provided for partial levels
     // Index 29 is not provided for partial levels
-
     #[raw_data(index = 30, deserialize_with = "de::default_to_none")]
     copy_of: Option<u64>,
 
@@ -116,7 +114,6 @@ pub struct PartialLevel {
     custom_song_id: Option<u64>,
 
     // Index 36 is not provided for partial levels
-
     #[raw_data(index = 37)]
     coin_amount: u8,
 
@@ -136,7 +133,6 @@ pub struct PartialLevel {
 
     #[raw_data(index = 45)]
     object_amount: u32,
-
     // Index 46 has unknown usage
     //#[raw_data(index = 46)]
     //index_46: String,
@@ -166,7 +162,6 @@ pub struct Level {
     /// Index: 29
     #[raw_data(index = 29)]
     time_since_update: String,
-
     // Index 36 has unknown usage
     //#[raw_data(index = 36)]
     //index_36: String,
@@ -181,7 +176,10 @@ impl FromStr for GameVersion {
         if version == 10 {
             Ok(GameVersion::Unknown)
         } else {
-            Ok(GameVersion::Version { major: (version / 10) as u8, minor: (version % 10) as u8 })
+            Ok(GameVersion::Version {
+                major: (version / 10) as u8,
+                minor: (version % 10) as u8,
+            })
         }
     }
 }
@@ -190,7 +188,7 @@ impl ToString for GameVersion {
     fn to_string(&self) -> String {
         match *self {
             GameVersion::Unknown => String::from("10"),
-            GameVersion::Version { minor, major } => (minor + 10 * major).to_string()
+            GameVersion::Version { minor, major } => (minor + 10 * major).to_string(),
         }
     }
 }
@@ -201,16 +199,14 @@ impl FromStr for LevelLength {
     fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
         let length = s.parse()?;
 
-        Ok(
-            match length {
-                0 => LevelLength::Tiny,
-                1 => LevelLength::Short,
-                2 => LevelLength::Medium,
-                3 => LevelLength::Long,
-                4 => LevelLength::ExtraLong,
-                _ => LevelLength::Unknown
-            }
-        )
+        Ok(match length {
+            0 => LevelLength::Tiny,
+            1 => LevelLength::Short,
+            2 => LevelLength::Medium,
+            3 => LevelLength::Long,
+            4 => LevelLength::ExtraLong,
+            _ => LevelLength::Unknown,
+        })
     }
 }
 
@@ -222,7 +218,7 @@ impl From<LevelLength> for i32 {
             LevelLength::Medium => 2,
             LevelLength::Long => 3,
             LevelLength::ExtraLong => 4,
-            LevelLength::Unknown => std::i32::MAX
+            LevelLength::Unknown => std::i32::MAX,
         }
     }
 }
@@ -236,7 +232,7 @@ impl From<i32> for LevelRating {
             30 => LevelRating::Hard,
             40 => LevelRating::Harder,
             50 => LevelRating::Insane,
-            _ => LevelRating::Unknown
+            _ => LevelRating::Unknown,
         }
     }
 }
@@ -252,11 +248,10 @@ impl From<LevelRating> for i32 {
             LevelRating::Hard => 3,
             LevelRating::Harder => 4,
             LevelRating::Insane => 5,
-            LevelRating::Unknown => std::i32::MAX
+            LevelRating::Unknown => std::i32::MAX,
         }
     }
 }
-
 
 impl From<i32> for DemonRating {
     fn from(value: i32) -> DemonRating {
@@ -266,7 +261,7 @@ impl From<i32> for DemonRating {
             30 => DemonRating::Hard,
             40 => DemonRating::Insane,
             50 => DemonRating::Extreme,
-            _ => DemonRating::Unknown
+            _ => DemonRating::Unknown,
         }
     }
 }
@@ -279,7 +274,7 @@ impl From<DemonRating> for i32 {
             DemonRating::Hard => 3,
             DemonRating::Insane => 4,
             DemonRating::Extreme => 5,
-            DemonRating::Unknown => std::i32::MAX
+            DemonRating::Unknown => std::i32::MAX,
         }
     }
 }

@@ -1,14 +1,14 @@
-use gdcf::api::request::LevelRequest;
-use gdcf::api::request::BaseRequest;
-use gdcf::api::request::level::LevelsRequest;
 use gdcf::api::request::level::LevelRequestType;
-use gdcf::model::LevelRating;
+use gdcf::api::request::level::LevelsRequest;
+use gdcf::api::request::level::SearchFilters;
+use gdcf::api::request::BaseRequest;
+use gdcf::api::request::LevelRequest;
 use gdcf::model::DemonRating;
 use gdcf::model::LevelLength;
-use gdcf::api::request::level::SearchFilters;
+use gdcf::model::LevelRating;
 
-use ser;
 use super::BaseRequestRem;
+use ser;
 
 #[derive(Serialize)]
 #[serde(remote = "LevelRequest")]
@@ -25,7 +25,6 @@ pub struct LevelRequestRem {
     #[serde(serialize_with = "ser::bool_to_int", rename = "extras")]
     extra: bool,
 }
-
 
 #[derive(Debug, Default, Serialize)]
 #[serde(remote = "LevelsRequest")]
@@ -45,7 +44,11 @@ pub struct LevelsRequestRem {
     #[serde(rename = "diff", serialize_with = "ser::rating_vec")]
     ratings: Vec<LevelRating>,
 
-    #[serde(rename = "demonFilter", skip_serializing_if = "Option::is_none", serialize_with = "ser::demon_rating")]
+    #[serde(
+        rename = "demonFilter",
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "ser::demon_rating"
+    )]
     pub demon_rating: Option<DemonRating>,
 
     pub page: u32,

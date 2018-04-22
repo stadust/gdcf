@@ -5,7 +5,7 @@ use cache::DatabaseCacheConfig;
 
 pub struct DatabaseCache {
     pub(super) connection: PgConnection,
-    pub(super) config: DatabaseCacheConfig
+    pub(super) config: DatabaseCacheConfig,
 }
 
 pub fn connect(url: &str) -> PgConnection {

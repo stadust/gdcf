@@ -1,11 +1,11 @@
-use model::RawObject;
 use model::LevelRating;
+use model::RawObject;
 use model::ValueError;
 
-use std::str::FromStr;
-use std::num::ParseIntError;
-use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
 use model::level::Featured;
+use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
+use std::num::ParseIntError;
+use std::str::FromStr;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -20,15 +20,19 @@ pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueErro
 
 pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>, ValueError> {
     if raw_obj.get::<u64>(35)? == 0 {
-        Ok(Some(MAIN_SONGS.get(raw_obj.get::<usize>(12)?).unwrap_or(&UNKNOWN)))
+        Ok(Some(
+            MAIN_SONGS
+                .get(raw_obj.get::<usize>(12)?)
+                .unwrap_or(&UNKNOWN),
+        ))
     } else {
         Ok(None)
     }
 }
 
 pub(super) fn default_to_none<T>(value: &String) -> Result<Option<T>, <T as FromStr>::Err>
-    where
-        T: FromStr + Default + PartialEq
+where
+    T: FromStr + Default + PartialEq,
 {
     let value: T = value.parse()?;
 
@@ -53,6 +57,6 @@ pub(super) fn featured(value: &String) -> Result<Featured, ParseIntError> {
     Ok(match value {
         -1 => Featured::Unfeatured,
         0 => Featured::NotFeatured,
-        _ => Featured::Featured(value as u32)
+        _ => Featured::Featured(value as u32),
     })
 }

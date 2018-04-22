@@ -16,19 +16,18 @@ mod sqlite;
 #[cfg(feature = "sqlite")]
 pub use self::sqlite::*;
 
-
+use gdcf::api::request::LevelRequest;
+use gdcf::api::request::LevelsRequest;
 use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
-use gdcf::api::request::LevelsRequest;
 use gdcf::cache::CachedObject;
-use gdcf::model::PartialLevel;
-use gdcf::api::request::LevelRequest;
-use gdcf::model::Level;
 use gdcf::model::song::NewgroundsSong;
+use gdcf::model::Level;
+use gdcf::model::PartialLevel;
 
 use schema::song;
-use schema::DBCached;
 use schema::song::Song;
+use schema::DBCached;
 
 use chrono::Duration;
 
@@ -68,7 +67,10 @@ impl Cache for DatabaseCache {
         &self.config
     }
 
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Option<CachedObject<Vec<PartialLevel>>> {
+    fn lookup_partial_levels(
+        &self,
+        req: &LevelsRequest,
+    ) -> Option<CachedObject<Vec<PartialLevel>>> {
         None
     }
 

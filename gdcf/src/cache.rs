@@ -1,22 +1,21 @@
 use model::level::Level;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-use model::level::PartialLevel;
-use model::song::NewgroundsSong;
 use api::request::LevelRequest;
 use api::request::LevelsRequest;
+use chrono::DateTime;
+use chrono::Duration;
 use chrono::NaiveDateTime;
 use chrono::NaiveTime;
 use chrono::Utc;
-use chrono::DateTime;
-use chrono::Duration;
+use model::level::PartialLevel;
+use model::song::NewgroundsSong;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;
 }
 
-pub trait Cache
-{
+pub trait Cache {
     type Config: CacheConfig;
 
     fn config(&self) -> &Self::Config;
@@ -48,9 +47,19 @@ pub struct CachedObject<T> {
 
 impl<T> CachedObject<T> {
     pub fn new(obj: T, first: NaiveDateTime, last: NaiveDateTime) -> Self {
-        CachedObject { first_cached_at: first, last_cached_at: last, obj }
+        CachedObject {
+            first_cached_at: first,
+            last_cached_at: last,
+            obj,
+        }
     }
-    pub fn last_cached_at(&self) -> NaiveDateTime { self.last_cached_at }
-    pub fn first_cached_at(&self) -> NaiveDateTime { self.first_cached_at }
-    pub fn extract(self) -> T { self.obj }
+    pub fn last_cached_at(&self) -> NaiveDateTime {
+        self.last_cached_at
+    }
+    pub fn first_cached_at(&self) -> NaiveDateTime {
+        self.first_cached_at
+    }
+    pub fn extract(self) -> T {
+        self.obj
+    }
 }

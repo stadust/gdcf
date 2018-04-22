@@ -1,5 +1,5 @@
-use model::{FromRawObject, RawObject, ValueError};
 use model::de;
+use model::{FromRawObject, RawObject, ValueError};
 
 #[derive(Debug)]
 pub struct MainSong {
@@ -26,7 +26,6 @@ pub struct NewgroundsSong {
     pub filesize: f64,
 
     // Index 6 has unknown usage
-
     #[raw_data(index = 7, deserialize_with = "de::into_option", default)]
     pub alt_artist: Option<String>,
 
@@ -34,10 +33,8 @@ pub struct NewgroundsSong {
     pub banned: bool,
 
     // Index 9 is unused
-
     #[raw_data(index = 10)]
     pub link: String,
-
 }
 
 impl MainSong {
@@ -74,6 +71,9 @@ lazy_static! {
         MainSong::new(19, "Deadlocked", "F-777"),
         MainSong::new(20, "Fingerdash", "MDK"),
     ];
-
-    pub static ref UNKNOWN: MainSong = MainSong::new(0xFF, "The song was added after the release of GDCF you're using", "Please either update to the newest version, or bug stadust about adding the new songs");
+    pub static ref UNKNOWN: MainSong = MainSong::new(
+        0xFF,
+        "The song was added after the release of GDCF you're using",
+        "Please either update to the newest version, or bug stadust about adding the new songs"
+    );
 }

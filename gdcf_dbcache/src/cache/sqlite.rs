@@ -1,6 +1,6 @@
+use cache::DatabaseCacheConfig;
 use diesel::sqlite::SqliteConnection;
 use diesel::Connection;
-use cache::DatabaseCacheConfig;
 
 pub struct DatabaseCache {
     pub(super) connection: SqliteConnection,

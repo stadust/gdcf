@@ -1,8 +1,8 @@
-use gdcf::model::RawObject;
 use gdcf::api::GDError;
+use gdcf::model::RawObject;
 
-use std::str::pattern::Pattern;
 use gdcf::model::ObjectType;
+use std::str::pattern::Pattern;
 
 pub fn level(body: &str) -> Result<RawObject, GDError> {
     check_resp!(body);
@@ -11,7 +11,7 @@ pub fn level(body: &str) -> Result<RawObject, GDError> {
 
     match sections.next() {
         Some(section) => parse_fragment(ObjectType::Level, section, ":"),
-        None => Err(GDError::MalformedResponse)
+        None => Err(GDError::MalformedResponse),
     }
 }
 
@@ -27,7 +27,7 @@ pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
                 result.push(parse_fragment(ObjectType::PartialLevel, fragment, ":")?);
             }
         }
-        None => return Err(GDError::MalformedResponse)
+        None => return Err(GDError::MalformedResponse),
     }
 
     sections.next(); // ignore the creator section (for now)
@@ -38,15 +38,19 @@ pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
                 result.push(parse_fragment(ObjectType::NewgroundsSong, fragment, "~|~")?);
             }
         }
-        None => return Err(GDError::MalformedResponse)
+        None => return Err(GDError::MalformedResponse),
     }
 
     Ok(result)
 }
 
-fn parse_fragment<'a, P>(obj_type: ObjectType, fragment: &'a str, seperator: P) -> Result<RawObject, GDError>
-    where
-        P: Pattern<'a>
+fn parse_fragment<'a, P>(
+    obj_type: ObjectType,
+    fragment: &'a str,
+    seperator: P,
+) -> Result<RawObject, GDError>
+where
+    P: Pattern<'a>,
 {
     let mut iter = fragment.split(seperator);
     let mut raw_obj = RawObject::new(obj_type);
@@ -54,12 +58,12 @@ fn parse_fragment<'a, P>(obj_type: ObjectType, fragment: &'a str, seperator: P) 
     while let Some(idx) = iter.next() {
         let idx = match idx.parse() {
             Err(_) => return Err(GDError::MalformedResponse),
-            Ok(idx) => idx
+            Ok(idx) => idx,
         };
 
         let value = match iter.next() {
             Some(value) => value,
-            None => return Err(GDError::MalformedResponse)
+            None => return Err(GDError::MalformedResponse),
         };
 
         raw_obj.set(idx, value.into());

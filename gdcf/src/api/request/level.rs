@@ -1,13 +1,13 @@
 #[cfg(ser)]
-use serde::{Serializer, Serialize};
+use serde::{Serialize, Serializer};
 
 use api::request::BaseRequest;
-use model::LevelRating;
-use model::LevelLength;
-use model::DemonRating;
 use api::request::Request;
-use model::PartialLevel;
+use model::DemonRating;
 use model::Level;
+use model::LevelLength;
+use model::LevelRating;
+use model::PartialLevel;
 
 #[derive(Debug, Default)]
 pub struct LevelRequest {
@@ -200,7 +200,7 @@ impl From<LevelRequestType> for i32 {
             LevelRequestType::Unknown13 => 13,
             LevelRequestType::Unknown14 => 14,
             LevelRequestType::Unknown15 => 15,
-            LevelRequestType::HallOfFame => 16
+            LevelRequestType::HallOfFame => 16,
         }
     }
 }

@@ -25,34 +25,34 @@ extern crate gdcf_derive;
 use futures::Future;
 
 use cache::Cache;
-use model::{Level, PartialLevel};
 use model::song::NewgroundsSong;
-use model::ObjectType;
 use model::FromRawObject;
+use model::ObjectType;
+use model::{Level, PartialLevel};
 
 use api::client::GDClient;
 use api::request::level::LevelRequest;
-use api::GDError;
 use api::request::Request;
+use api::GDError;
 
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-use std::thread;
-use std::sync::Mutex;
-use std::sync::Arc;
-use std::sync::MutexGuard;
-use model::RawObject;
-use std::sync::mpsc::Receiver;
 use api::request::LevelsRequest;
+use model::RawObject;
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
+use std::thread;
 
+pub mod api;
 pub mod cache;
 pub mod model;
-pub mod api;
 
 pub struct Gdcf<'a, A: 'a, C: 'static>
-    where
-        A: GDClient,
-        C: Cache + Send
+where
+    A: GDClient,
+    C: Cache + Send,
 {
     cache: Arc<Mutex<C>>,
     client: &'a A,
@@ -60,16 +60,13 @@ pub struct Gdcf<'a, A: 'a, C: 'static>
 }
 
 macro_rules! lookup {
-    ($self: expr, $lookup: ident, $req: expr) => {
-        {
-            let cache = $self.cache();
-            let cached = cache.$lookup(&$req);
-            let expired = cached.as_ref()
-                .map_or(true, |co| cache.is_expired(co));
+    ($self:expr, $lookup:ident, $req:expr) => {{
+        let cache = $self.cache();
+        let cached = cache.$lookup(&$req);
+        let expired = cached.as_ref().map_or(true, |co| cache.is_expired(co));
 
-            (cached, expired)
-        }
-    }
+        (cached, expired)
+    }};
 }
 
 macro_rules! retrieve_one {
@@ -101,9 +98,9 @@ macro_rules! retrieve_many {
 }
 
 impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
-    where
-        A: GDClient,
-        C: Cache + Send
+where
+    A: GDClient,
+    C: Cache + Send,
 {
     pub fn new(cache: C, client: &A) -> Gdcf<A, C> {
         let (tx, rx): (Sender<RawObject>, Receiver<RawObject>) = mpsc::channel();
@@ -117,13 +114,22 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
                     let mut cache = mutex.lock().unwrap();
 
                     let err = match raw_obj.object_type {
-                        ObjectType::Level => Level::from_raw(&raw_obj).map(|l| cache.store_level(l)),
-                        ObjectType::PartialLevel => PartialLevel::from_raw(&raw_obj).map(|l| cache.store_partial_level(l)),
-                        ObjectType::NewgroundsSong => NewgroundsSong::from_raw(&raw_obj).map(|s| cache.store_song(s))
+                        ObjectType::Level => {
+                            Level::from_raw(&raw_obj).map(|l| cache.store_level(l))
+                        }
+                        ObjectType::PartialLevel => {
+                            PartialLevel::from_raw(&raw_obj).map(|l| cache.store_partial_level(l))
+                        }
+                        ObjectType::NewgroundsSong => {
+                            NewgroundsSong::from_raw(&raw_obj).map(|s| cache.store_song(s))
+                        }
                     };
 
                     if let Err(err) = err {
-                        println!("Unexpected error while constructing object {:?}: {:?}", raw_obj.object_type, err)
+                        println!(
+                            "Unexpected error while constructing object {:?}: {:?}",
+                            raw_obj.object_type, err
+                        )
                     }
                 }
             })
@@ -144,8 +150,8 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
     retrieve_many!(levels, LevelsRequest, lookup_partial_levels, levels);
 
     fn refresh_one<F>(&self, future: F)
-        where
-            F: Future<Item=RawObject, Error=GDError> + 'static
+    where
+        F: Future<Item = RawObject, Error = GDError> + 'static,
     {
         let sender = self.sender.clone();
         let future = future
@@ -156,8 +162,8 @@ impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
     }
 
     fn refresh_many<F>(&self, future: F)
-        where
-            F: Future<Item=Vec<RawObject>, Error=GDError> + 'static
+    where
+        F: Future<Item = Vec<RawObject>, Error = GDError> + 'static,
     {
         let sender = self.sender.clone();
         let future = future

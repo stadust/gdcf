@@ -14,7 +14,11 @@ pub struct BaseRequest {
 }
 
 impl BaseRequest {
-    pub fn new(game_version: GameVersion, binary_version: GameVersion, secret: String) -> BaseRequest {
+    pub fn new(
+        game_version: GameVersion,
+        binary_version: GameVersion,
+        secret: String,
+    ) -> BaseRequest {
         BaseRequest {
             game_version,
             binary_version,

@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 pub trait Join: Iterator {
     fn join(self, seperator: &str) -> String
-        where
-            Self::Item: Display,
-            Self: Sized,
+    where
+        Self::Item: Display,
+        Self: Sized,
     {
         let mut result = String::new();
         let mut sep = "";
@@ -18,9 +18,9 @@ pub trait Join: Iterator {
     }
 
     fn join_quoted(self, seperator: &str) -> String
-        where
-            Self::Item: Display,
-            Self: Sized,
+    where
+        Self::Item: Display,
+        Self: Sized,
     {
         let mut result = String::new();
         let mut sep = "";
@@ -35,6 +35,7 @@ pub trait Join: Iterator {
 }
 
 impl<I> Join for I
-    where
-        I: Iterator,
-{}
+where
+    I: Iterator,
+{
+}
