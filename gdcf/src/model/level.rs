@@ -86,7 +86,7 @@ pub struct PartialLevel {
     gd_version: GameVersion,
 
     #[raw_data(index = 14)]
-    likes: u32,
+    likes: i32,
 
     #[raw_data(index = 15)]
     length: LevelLength,
