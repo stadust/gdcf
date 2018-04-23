@@ -52,7 +52,7 @@ macro_rules! retrieve_one {
                         let integrity_req = concat_idents!($api, _integrity)(&*cache.lock().unwrap(), &raw_object)?;
 
                         if let Some(req) = integrity_req {
-                            info!("Integrity for result is not given, making integrity request {}", req)
+                            warn!("Integrity for result is not given, making integrity request {}", req)
 
                             store_many(sender.clone(), req.make(&*client.lock().unwrap()))
                                 .map(|_| sender.send(raw_object).unwrap());

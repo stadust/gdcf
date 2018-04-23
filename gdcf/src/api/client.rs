@@ -1,7 +1,5 @@
 use futures::Future;
 
-use tokio_core::reactor::Handle;
-
 use api::request::level::LevelRequest;
 use api::request::LevelsRequest;
 use api::GDError;

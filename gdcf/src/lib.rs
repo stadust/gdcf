@@ -16,8 +16,6 @@ extern crate lazy_static;
 
 extern crate futures;
 
-extern crate tokio_core;
-
 extern crate chrono;
 
 #[macro_use]
@@ -50,7 +48,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use std::thread;
-use tokio_core::reactor::Handle;
 
 #[macro_use]
 mod macros;
