@@ -1,15 +1,7 @@
-use model::level::Level;
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 
-use api::request::LevelRequest;
-use api::request::LevelsRequest;
-use chrono::DateTime;
-use chrono::Duration;
-use chrono::NaiveDateTime;
-use chrono::NaiveTime;
-use chrono::Utc;
-use model::level::PartialLevel;
-use model::song::NewgroundsSong;
-use std::time::{SystemTime, UNIX_EPOCH};
+use model::{PartialLevel, Level, NewgroundsSong};
+use api::request::{LevelRequest, LevelsRequest};
 
 type Lookup<T> = Option<CachedObject<T>>;
 

@@ -2,12 +2,13 @@ mod de;
 pub mod level;
 pub mod song;
 
-use std::str::FromStr;
-
 pub use self::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
+pub use self::song::{NewgroundsSong, MainSong};
+
 use std::error::Error;
 use std::iter;
 use std::marker::Sized;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GameVersion {
@@ -56,9 +57,9 @@ impl RawObject {
     }
 
     pub fn get<T: 'static>(&self, idx: usize) -> Result<T, ValueError>
-    where
-        T: FromStr,
-        <T as FromStr>::Err: Error,
+        where
+            T: FromStr,
+            <T as FromStr>::Err: Error,
     {
         match self.values.get(idx) {
             None => Err(ValueError::IndexOutOfBounds(idx)),
@@ -73,9 +74,9 @@ impl RawObject {
     }
 
     pub fn get_with<T, E: 'static, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
-    where
-        E: Error,
-        F: Fn(&String) -> Result<T, E>,
+        where
+            E: Error,
+            F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Err(ValueError::IndexOutOfBounds(idx)),
@@ -94,9 +95,9 @@ impl RawObject {
         f: F,
         default: T,
     ) -> Result<T, ValueError>
-    where
-        E: Error,
-        F: Fn(&String) -> Result<T, E>,
+        where
+            E: Error,
+            F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(default),
@@ -110,10 +111,10 @@ impl RawObject {
     }
 
     pub fn get_with_or_default<T, E: 'static, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
-    where
-        T: Default,
-        E: Error,
-        F: Fn(&String) -> Result<T, E>,
+        where
+            T: Default,
+            E: Error,
+            F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(Default::default()),
@@ -127,9 +128,9 @@ impl RawObject {
     }
 
     pub fn get_or<T: 'static>(&self, idx: usize, default: T) -> Result<T, ValueError>
-    where
-        T: FromStr,
-        <T as FromStr>::Err: Error,
+        where
+            T: FromStr,
+            <T as FromStr>::Err: Error,
     {
         match self.values.get(idx) {
             None => Ok(default),
@@ -144,9 +145,9 @@ impl RawObject {
     }
 
     pub fn get_or_default<T: 'static>(&self, idx: usize) -> Result<T, ValueError>
-    where
-        T: FromStr + Default,
-        <T as FromStr>::Err: Error,
+        where
+            T: FromStr + Default,
+            <T as FromStr>::Err: Error,
     {
         self.get_or(idx, Default::default())
     }

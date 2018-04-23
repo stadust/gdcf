@@ -1,14 +1,12 @@
+use model::de;
+use model::{FromRawObject, GameVersion, RawObject, ValueError, MainSong};
+
 use std;
+use std::fmt::{Display, Formatter, Error};
 use std::convert::From;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use model::de;
-use model::song::MainSong;
-use model::{FromRawObject, GameVersion, RawObject, ValueError};
-use std::fmt::Display;
-use std::fmt::Error;
-use std::fmt::Formatter;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]

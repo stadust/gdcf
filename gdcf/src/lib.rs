@@ -4,49 +4,34 @@
 #![feature(never_type)]
 #![feature(concat_idents)]
 
-#[macro_use]
 #[cfg(ser)]
+#[macro_use]
 extern crate serde_derive;
-
 #[cfg(ser)]
 extern crate serde;
 
 #[macro_use]
 extern crate lazy_static;
-
 extern crate futures;
-
 extern crate chrono;
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 extern crate gdcf_derive;
 
-#[macro_use]
-extern crate log;
-
 use futures::Future;
-use futures::IntoFuture;
 
 use cache::Cache;
-use model::song::NewgroundsSong;
-use model::FromRawObject;
-use model::ObjectType;
-use model::{Level, PartialLevel};
+use model::{FromRawObject, ObjectType, RawObject};
 
 use api::client::ApiClient;
-use api::request::level::LevelRequest;
-use api::request::Request;
 use api::GDError;
-use api::request::MakeRequest;
+use api::request::{Request, MakeRequest, LevelsRequest, LevelRequest};
 
-use api::request::LevelsRequest;
-use model::RawObject;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::MutexGuard;
+use std::sync::mpsc::{self, Sender, Receiver};
+use std::sync::{Arc, Mutex, MutexGuard};
+
 use std::thread;
 
 #[macro_use]
@@ -71,6 +56,8 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
         C: Cache + Send,
 {
     pub fn new(cache: C, client: A) -> Gdcf<A, C> {
+        debug!("Created new GDCF");
+
         let (tx, rx): (Sender<RawObject>, Receiver<RawObject>) = mpsc::channel();
         let cache_mutex = Arc::new(Mutex::new(cache));
         let client_mutex = Arc::new(Mutex::new(client));
@@ -79,6 +66,8 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
             let mutex = Arc::clone(&cache_mutex);
 
             thread::spawn(move || {
+                info!("Started background cache manager thread");
+
                 for raw_obj in rx {
                     let mut cache = mutex.lock().unwrap();
 
@@ -135,7 +124,7 @@ fn store_many<F>(sender: Sender<RawObject>, future: F) -> impl Future<Item=(), E
         .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
 }
 
-#[cfg(ensure_cache_integrity)]
+#[cfg(feature = "ensure_cache_integrity")]
 fn level_integrity<C: Cache>(cache: &C, raw_level: &RawObject) -> Result<Option<LevelsRequest>, GDError> {
     use api::request::level::SearchFilters;
 

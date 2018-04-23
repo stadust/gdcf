@@ -10,7 +10,7 @@ macro_rules! lookup {
     }};
 }
 
-#[cfg(not(ensure_cache_integrity))]
+#[cfg(not(feature = "ensure_cache_integrity"))]
 macro_rules! retrieve_one {
     ($api: ident, $req_type: tt, $lookup: ident) => {
         pub fn $api(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
@@ -32,16 +32,17 @@ macro_rules! retrieve_one {
 }
 
 
-#[cfg(ensure_cache_integrity)]
+#[cfg(feature = "ensure_cache_integrity")]
 macro_rules! retrieve_one {
     ($api: ident, $req_type: tt, $lookup: ident) => {
         pub fn $api(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
-            debug!("Received request {}", req);
+            let req_str = format!("{}", req);
+            debug!("Received request {}", req_str);
 
             let (cached, expired) = lookup!(self, $lookup, req);
 
             if expired {
-                info!("Cache entry for {} is either expired or non existant, refreshing!", req);
+                info!("Cache entry for {} is either expired or non existant, refreshing!", req_str);
 
                 let cache = Arc::clone(&self.cache);
                 let client = Arc::clone(&self.client);
@@ -52,11 +53,14 @@ macro_rules! retrieve_one {
                         let integrity_req = concat_idents!($api, _integrity)(&*cache.lock().unwrap(), &raw_object)?;
 
                         if let Some(req) = integrity_req {
-                            warn!("Integrity for result is not given, making integrity request {}", req)
+                            warn!("Integrity for result of {} is not given, making integrity request {}", req_str, req);
 
-                            store_many(sender.clone(), req.make(&*client.lock().unwrap()))
-                                .map(|_| sender.send(raw_object).unwrap());
+                            let future = store_many(sender.clone(), req.make(&*client.lock().unwrap()))
+                                .map(move |_| sender.send(raw_object).unwrap());
+
+                            client.lock().unwrap().spawn(future);
                         } else {
+                            debug!("Result of {} does not compromise cache integrity, proceeding!", req_str);
                             sender.send(raw_object).unwrap()
                         }
 
@@ -95,7 +99,7 @@ macro_rules! store {
     ($cache: expr, $store: ident, $raw_obj: expr) => {
         {
             FromRawObject::from_raw(&$raw_obj).map(|constructed|{
-                debug!("Caching {}!", constructed);
+                debug!("Caching {}", constructed);
                 $cache.$store(constructed)
             })
         }

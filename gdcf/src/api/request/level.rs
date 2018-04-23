@@ -1,21 +1,14 @@
 #[cfg(ser)]
 use serde::{Serialize, Serializer};
 
-use api::request::BaseRequest;
-use api::request::Request;
-use model::DemonRating;
-use model::Level;
-use model::LevelLength;
-use model::LevelRating;
-use model::PartialLevel;
-use api::request::MakeRequest;
-use api::ApiClient;
-use api::GDError;
-use model::RawObject;
 use futures::Future;
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::fmt::Error;
+
+use api::request::{BaseRequest, Request, MakeRequest};
+use api::{ApiClient, GDError};
+
+use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel, RawObject};
+
+use std::fmt::{Display, Formatter, Error};
 
 #[derive(Debug, Default)]
 pub struct LevelRequest {
@@ -251,6 +244,9 @@ impl Display for LevelRequest {
 
 impl Display for LevelsRequest {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "LevelsRequest(...)")
+        match self.request_type {
+            LevelRequestType::Search => write!(f, "LevelsRequest(Search={}, page={})", self.search_string, self.page),
+            _ => write!(f, "LevelsRequest({:?}, page={})", self.request_type, self.page),
+        }
     }
 }

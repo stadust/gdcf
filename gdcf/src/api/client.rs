@@ -1,8 +1,8 @@
 use futures::Future;
 
-use api::request::level::LevelRequest;
-use api::request::LevelsRequest;
+use api::request::{LevelsRequest, LevelRequest};
 use api::GDError;
+
 use model::RawObject;
 
 type One = Box<Future<Item=RawObject, Error=GDError> + 'static>;

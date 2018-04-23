@@ -1,8 +1,7 @@
 use model::de;
 use model::{FromRawObject, RawObject, ValueError};
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::fmt::Error;
+
+use std::fmt::{Display, Formatter, Error};
 
 #[derive(Debug)]
 pub struct MainSong {

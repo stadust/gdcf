@@ -1,9 +1,7 @@
-use model::LevelRating;
-use model::RawObject;
-use model::ValueError;
-
+use model::{LevelRating, RawObject, ValueError};
 use model::level::Featured;
 use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
+
 use std::num::ParseIntError;
 use std::str::FromStr;
 
@@ -30,9 +28,10 @@ pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>
     }
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub(super) fn default_to_none<T>(value: &String) -> Result<Option<T>, <T as FromStr>::Err>
-where
-    T: FromStr + Default + PartialEq,
+    where
+        T: FromStr + Default + PartialEq,
 {
     let value: T = value.parse()?;
 
@@ -43,14 +42,17 @@ where
     }
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub(super) fn int_to_bool(value: &String) -> Result<bool, ParseIntError> {
     Ok(value.parse::<u8>()? != 0)
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub(super) fn into_option(value: &String) -> Result<Option<String>, !> {
     Ok(Some(value.clone()))
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub(super) fn featured(value: &String) -> Result<Featured, ParseIntError> {
     let value: i32 = value.parse()?;
 

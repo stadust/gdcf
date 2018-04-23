@@ -1,14 +1,13 @@
-use model::GameVersion;
-
 #[macro_use]
 mod macros;
 pub mod level;
 
 pub use self::level::{LevelRequest, LevelsRequest};
-use api::ApiClient;
+use model::GameVersion;
+
+use api::{ApiClient, GDError};
+
 use futures::Future;
-use model::RawObject;
-use api::GDError;
 
 #[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {

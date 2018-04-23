@@ -2,7 +2,9 @@ pub mod client;
 pub mod request;
 
 pub use self::client::ApiClient;
+
 use model::ValueError;
+
 use std::str::Utf8Error;
 
 #[derive(Debug)]

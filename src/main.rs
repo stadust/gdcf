@@ -35,9 +35,11 @@ fn main() {
         .search("Under Lavaland".into())
         .filter(SearchFilters::default().featured().uncompleted());
 
-    gdcf.level(11774780.into());
-    gdcf.levels(lev_req);
-    gdcf.level(11849346.into());
+    //gdcf.level(11774780.into());
+    //gdcf.levels(lev_req);
+    //gdcf.level(11849346.into());
+
+    gdcf.level(44325129.into());
 
     core.run(Thing {});
 }

@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! setter {
     ($name: ident, $field: ident, $t: ty) => {
         pub fn $name(mut self, arg0: $t) -> Self {
