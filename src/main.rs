@@ -7,8 +7,9 @@ extern crate gdcf_dbcache;
 extern crate serde_json;
 extern crate serde_urlencoded;
 extern crate tokio_core;
+extern crate env_logger;
 
-use gdrs::GDClientImpl;
+use gdrs::BoomlingsClient;
 
 use chrono::Duration;
 use futures::Async;
@@ -21,20 +22,21 @@ use gdcf_dbcache::cache::DatabaseCacheConfig;
 use tokio_core::reactor::Core;
 
 fn main() {
+    env_logger::init();
+
     let mut core = Core::new().unwrap();
-    let client = GDClientImpl::new(&core.handle());
-    let config =
-        DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
+    let client = BoomlingsClient::new(&core.handle());
+    let config = DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
     let cache = DatabaseCache::new(config);
 
-    let gdcf = Gdcf::new(cache, &client);
+    let gdcf = Gdcf::new(cache, client);
 
     let lev_req = LevelsRequest::default()
         .search("Under Lavaland".into())
         .filter(SearchFilters::default().featured().uncompleted());
 
-    gdcf.levels(lev_req);
     gdcf.level(11774780.into());
+    gdcf.levels(lev_req);
     gdcf.level(11849346.into());
 
     core.run(Thing {});

@@ -7,12 +7,14 @@ use api::request::LevelsRequest;
 use api::GDError;
 use model::RawObject;
 
-pub trait GDClient {
-    fn handle(&self) -> &Handle;
+type One = Box<Future<Item=RawObject, Error=GDError> + 'static>;
+type Many = Box<Future<Item=Vec<RawObject>, Error=GDError> + 'static>;
 
-    fn level(&self, req: LevelRequest) -> Box<Future<Item = RawObject, Error = GDError> + 'static>;
-    fn levels(
-        &self,
-        req: LevelsRequest,
-    ) -> Box<Future<Item = Vec<RawObject>, Error = GDError> + 'static>;
+pub trait ApiClient {
+    fn level(&self, req: LevelRequest) -> One;
+    fn levels(&self, req: LevelsRequest) -> Many;
+
+    fn spawn<F>(&self, f: F)
+        where
+            F: Future<Item=(), Error=()> + 'static;
 }

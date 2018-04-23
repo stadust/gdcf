@@ -49,15 +49,17 @@ impl Cached<_Backend> for CachedObject<NewgroundsSong> {
         "mysql"
     );
 
-    pg_store!(|song: NewgroundsSong| (
-        song_id.eq(song.song_id as i64),
-        song_name.eq(song.name),
-        artist.eq(song.artist),
-        filesize.eq(song.filesize),
-        song.alt_artist.map(|aa| alt_artist.eq(aa)),
-        banned.eq(song.banned),
-        download_link.eq(song.link),
-        internal_id.eq(song.internal_id as i64),
-        last_cached_at.eq(Utc::now().naive_utc())
-    ));
+    pg_store!(
+        |song: NewgroundsSong| (
+            song_id.eq(song.song_id as i64),
+            song_name.eq(song.name),
+            artist.eq(song.artist),
+            filesize.eq(song.filesize),
+            song.alt_artist.map(|aa| alt_artist.eq(aa)),
+            banned.eq(song.banned),
+            download_link.eq(song.link),
+            internal_id.eq(song.internal_id as i64),
+            last_cached_at.eq(Utc::now().naive_utc())
+        )
+    );
 }

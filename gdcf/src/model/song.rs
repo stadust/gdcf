@@ -1,5 +1,8 @@
 use model::de;
 use model::{FromRawObject, RawObject, ValueError};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
 #[derive(Debug)]
 pub struct MainSong {
@@ -76,4 +79,10 @@ lazy_static! {
         "The song was added after the release of GDCF you're using",
         "Please either update to the newest version, or bug stadust about adding the new songs"
     );
+}
+
+impl Display for NewgroundsSong {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "NewgroundsSong({}, {} by {})", self.song_id, self.name, self.artist)
+    }
 }

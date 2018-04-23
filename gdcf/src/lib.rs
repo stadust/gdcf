@@ -2,6 +2,7 @@
 #![feature(box_syntax)]
 #![feature(attr_literals)]
 #![feature(never_type)]
+#![feature(concat_idents)]
 
 #[macro_use]
 #[cfg(ser)]
@@ -22,7 +23,11 @@ extern crate chrono;
 #[macro_use]
 extern crate gdcf_derive;
 
+#[macro_use]
+extern crate log;
+
 use futures::Future;
+use futures::IntoFuture;
 
 use cache::Cache;
 use model::song::NewgroundsSong;
@@ -30,10 +35,11 @@ use model::FromRawObject;
 use model::ObjectType;
 use model::{Level, PartialLevel};
 
-use api::client::GDClient;
+use api::client::ApiClient;
 use api::request::level::LevelRequest;
 use api::request::Request;
 use api::GDError;
+use api::request::MakeRequest;
 
 use api::request::LevelsRequest;
 use model::RawObject;
@@ -44,89 +50,51 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use std::thread;
+use tokio_core::reactor::Handle;
 
+#[macro_use]
+mod macros;
 pub mod api;
 pub mod cache;
 pub mod model;
 
-pub struct Gdcf<'a, A: 'a, C: 'static>
-where
-    A: GDClient,
-    C: Cache + Send,
+pub struct Gdcf<A: 'static, C: 'static>
+    where
+        A: ApiClient,
+        C: Cache + Send,
 {
     cache: Arc<Mutex<C>>,
-    client: &'a A,
+    client: Arc<Mutex<A>>,
     sender: Sender<RawObject>,
 }
 
-macro_rules! lookup {
-    ($self:expr, $lookup:ident, $req:expr) => {{
-        let cache = $self.cache();
-        let cached = cache.$lookup(&$req);
-        let expired = cached.as_ref().map_or(true, |co| cache.is_expired(co));
-
-        (cached, expired)
-    }};
-}
-
-macro_rules! retrieve_one {
-    ($name:ident, $req_type:tt, $lookup:ident, $api:tt) => {
-        pub fn $name(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
-            let (cached, expired) = lookup!(self, $lookup, req);
-
-            if expired {
-                self.refresh_one(self.client.$api(req));
-            }
-
-            cached.map(|co| co.extract())
-        }
-    }
-}
-
-macro_rules! retrieve_many {
-    ($name:ident, $req_type:tt, $lookup:ident, $api:tt) => {
-        pub fn $name(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
-            let (cached, expired) = lookup!(self, $lookup, req);
-
-            if expired {
-                self.refresh_many(self.client.$api(req));
-            }
-
-            cached.map(|co| co.extract())
-        }
-    }
-}
-
-impl<'a, A: 'a, C: 'static> Gdcf<'a, A, C>
-where
-    A: GDClient,
-    C: Cache + Send,
+impl<A: 'static, C: 'static> Gdcf<A, C>
+    where
+        A: ApiClient,
+        C: Cache + Send,
 {
-    pub fn new(cache: C, client: &A) -> Gdcf<A, C> {
+    pub fn new(cache: C, client: A) -> Gdcf<A, C> {
         let (tx, rx): (Sender<RawObject>, Receiver<RawObject>) = mpsc::channel();
-        let mutex = Arc::new(Mutex::new(cache));
+        let cache_mutex = Arc::new(Mutex::new(cache));
+        let client_mutex = Arc::new(Mutex::new(client));
 
         let handle = {
-            let mutex = Arc::clone(&mutex);
+            let mutex = Arc::clone(&cache_mutex);
 
             thread::spawn(move || {
                 for raw_obj in rx {
                     let mut cache = mutex.lock().unwrap();
 
+                    debug!("Received a {:?}, attempting to cache", raw_obj.object_type);
+
                     let err = match raw_obj.object_type {
-                        ObjectType::Level => {
-                            Level::from_raw(&raw_obj).map(|l| cache.store_level(l))
-                        }
-                        ObjectType::PartialLevel => {
-                            PartialLevel::from_raw(&raw_obj).map(|l| cache.store_partial_level(l))
-                        }
-                        ObjectType::NewgroundsSong => {
-                            NewgroundsSong::from_raw(&raw_obj).map(|s| cache.store_song(s))
-                        }
+                        ObjectType::Level => store!(cache, store_level, raw_obj),
+                        ObjectType::PartialLevel => store!(cache, store_partial_level, raw_obj),
+                        ObjectType::NewgroundsSong => store!(cache, store_song, raw_obj)
                     };
 
                     if let Err(err) = err {
-                        println!(
+                        error!(
                             "Unexpected error while constructing object {:?}: {:?}",
                             raw_obj.object_type, err
                         )
@@ -136,8 +104,8 @@ where
         };
 
         Gdcf {
-            cache: mutex,
-            client,
+            cache: cache_mutex,
+            client: client_mutex,
             sender: tx,
         }
     }
@@ -146,30 +114,48 @@ where
         self.cache.lock().unwrap()
     }
 
-    retrieve_one!(level, LevelRequest, lookup_level, level);
-    retrieve_many!(levels, LevelsRequest, lookup_partial_levels, levels);
+    pub fn client(&self) -> MutexGuard<A> { self.client.lock().unwrap() }
 
-    fn refresh_one<F>(&self, future: F)
+    retrieve_one!(level, LevelRequest, lookup_level);
+    retrieve_many!(levels, LevelsRequest, lookup_partial_levels);
+}
+
+fn store_one<F>(sender: Sender<RawObject>, future: F) -> impl Future<Item=(), Error=()> + 'static
     where
-        F: Future<Item = RawObject, Error = GDError> + 'static,
-    {
-        let sender = self.sender.clone();
-        let future = future
-            .map(move |obj| sender.send(obj).unwrap())
-            .map_err(|e| println!("Unexpected error while retrieving data for cache: {:?}", e));
+        F: Future<Item=RawObject, Error=GDError> + 'static,
+{
+    future
+        .map(move |obj| sender.send(obj).unwrap())
+        .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
+}
 
-        self.client.handle().spawn(future)
-    }
-
-    fn refresh_many<F>(&self, future: F)
+fn store_many<F>(sender: Sender<RawObject>, future: F) -> impl Future<Item=(), Error=()> + 'static
     where
-        F: Future<Item = Vec<RawObject>, Error = GDError> + 'static,
-    {
-        let sender = self.sender.clone();
-        let future = future
-            .map(move |objs| objs.into_iter().for_each(|obj| sender.send(obj).unwrap()))
-            .map_err(|e| println!("Unexpected error while retrieving data for cache: {:?}", e));
+        F: Future<Item=Vec<RawObject>, Error=GDError> + 'static,
+{
+    future
+        .map(move |objs| objs.into_iter().for_each(|obj| sender.send(obj).unwrap()))
+        .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
+}
 
-        self.client.handle().spawn(future)
+#[cfg(ensure_cache_integrity)]
+fn level_integrity<C: Cache>(cache: &C, raw_level: &RawObject) -> Result<Option<LevelsRequest>, GDError> {
+    use api::request::level::SearchFilters;
+
+    let song_id: u64 = raw_level.get(35)?;
+
+    if song_id != 0 {
+        let existing = cache.lookup_song(song_id);
+
+        if existing.is_none() {
+            Ok(Some(LevelsRequest::default()
+                .search(raw_level.get(1)?)
+                .filter(SearchFilters::default()
+                    .custom_song(song_id))))
+        } else {
+            Ok(None)
+        }
+    } else {
+        Ok(None)
     }
 }

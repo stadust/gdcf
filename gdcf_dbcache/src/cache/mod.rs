@@ -78,7 +78,7 @@ impl Cache for DatabaseCache {
     }
 
     fn store_partial_level(&mut self, level: PartialLevel) {
-        println!("Caching: {:?}", level);
+
     }
 
     fn lookup_level(&self, req: &LevelRequest) -> Option<CachedObject<Level>> {
@@ -86,7 +86,7 @@ impl Cache for DatabaseCache {
     }
 
     fn store_level(&mut self, level: Level) {
-        println!("Caching: {:?}", level);
+
     }
 
     fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundsSong>> {
@@ -94,7 +94,6 @@ impl Cache for DatabaseCache {
     }
 
     fn store_song(&mut self, song: NewgroundsSong) {
-        println!("Caching: {:?}", song);
         CachedObject::store(song, &self.connection);
     }
 }

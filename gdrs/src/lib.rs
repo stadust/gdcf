@@ -19,7 +19,7 @@ use std::str;
 
 use gdcf::api::request::level::LevelRequest;
 use gdcf::api::request::level::LevelsRequest;
-use gdcf::api::{GDClient, GDError};
+use gdcf::api::{ApiClient, GDError};
 
 use futures::Future;
 use futures::Stream;
@@ -48,13 +48,13 @@ pub enum Req {
     GetLevels(LevelsRequest),
 }
 
-pub struct GDClientImpl {
+pub struct BoomlingsClient {
     client: Client<HttpConnector>,
 }
 
-impl GDClientImpl {
-    pub fn new(handle: &Handle) -> GDClientImpl {
-        GDClientImpl {
+impl BoomlingsClient {
+    pub fn new(handle: &Handle) -> BoomlingsClient {
+        BoomlingsClient {
             client: Client::new(handle),
         }
     }
@@ -62,8 +62,6 @@ impl GDClientImpl {
     fn make_request(&self, endpoint: &str, req: Req) -> Request {
         let body = serde_urlencoded::to_string(req).unwrap();
         let mut req = Request::new(Method::Post, endpoint!(endpoint));
-
-        println!("Making request {} to endpoint {}", body, endpoint);
 
         req.headers_mut().set(ContentType::form_url_encoded());
         req.headers_mut().set(ContentLength(body.len() as u64));
@@ -73,21 +71,24 @@ impl GDClientImpl {
     }
 }
 
-impl GDClient for GDClientImpl {
-    fn handle(&self) -> &Handle {
-        self.client.handle()
-    }
-
-    fn level(&self, req: LevelRequest) -> Box<Future<Item = RawObject, Error = GDError> + 'static> {
+impl ApiClient for BoomlingsClient {
+    fn level(&self, req: LevelRequest) -> Box<Future<Item=RawObject, Error=GDError> + 'static> {
         let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
     }
 
-    fn levels(&self, req: LevelsRequest) -> Box<Future<Item = Vec<RawObject>, Error = GDError>> {
+    fn levels(&self, req: LevelsRequest) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
         let req = self.make_request("getGJLevels21", Req::GetLevels(req));
 
         prepare_future!(self.client.request(req), parse::levels)
+    }
+
+    fn spawn<F>(&self, f: F)
+        where
+            F: Future<Item=(), Error=()> + 'static
+    {
+        self.client.handle().spawn(f);
     }
 }
 

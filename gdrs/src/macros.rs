@@ -11,7 +11,6 @@ macro_rules! prepare_future {
         let future = $future
             .map_err(|err| convert_error(err))
             .and_then(|resp| {
-                println!("Got a response {:?}", resp);
                 match resp.status() {
                     StatusCode::InternalServerError => Err(GDError::InternalServerError),
                     StatusCode::NotFound => Err(GDError::ServersDown),

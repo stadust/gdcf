@@ -11,6 +11,8 @@ use model::level::PartialLevel;
 use model::song::NewgroundsSong;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+type Lookup<T> = Option<CachedObject<T>>;
+
 pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;
 }
@@ -20,14 +22,14 @@ pub trait Cache {
 
     fn config(&self) -> &Self::Config;
 
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Option<CachedObject<Vec<PartialLevel>>>;
-    fn lookup_partial_level(&self, req: &LevelRequest) -> Option<CachedObject<PartialLevel>>;
+    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>>;
+    fn lookup_partial_level(&self, req: &LevelRequest) -> Lookup<PartialLevel>;
     fn store_partial_level(&mut self, level: PartialLevel);
 
-    fn lookup_level(&self, req: &LevelRequest) -> Option<CachedObject<Level>>;
+    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level>;
     fn store_level(&mut self, level: Level);
 
-    fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundsSong>>;
+    fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong>;
     fn store_song(&mut self, song: NewgroundsSong);
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
@@ -53,12 +55,15 @@ impl<T> CachedObject<T> {
             obj,
         }
     }
+
     pub fn last_cached_at(&self) -> NaiveDateTime {
         self.last_cached_at
     }
+
     pub fn first_cached_at(&self) -> NaiveDateTime {
         self.first_cached_at
     }
+
     pub fn extract(self) -> T {
         self.obj
     }

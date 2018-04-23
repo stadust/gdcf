@@ -6,6 +6,9 @@ use std::str::FromStr;
 use model::de;
 use model::song::MainSong;
 use model::{FromRawObject, GameVersion, RawObject, ValueError};
+use std::fmt::Display;
+use std::fmt::Error;
+use std::fmt::Formatter;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(ser, derive(Serialize))]
@@ -276,5 +279,17 @@ impl From<DemonRating> for i32 {
             DemonRating::Extreme => 5,
             DemonRating::Unknown => std::i32::MAX,
         }
+    }
+}
+
+impl Display for PartialLevel {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "PartialLevel({}, {})", self.lid, self.name)
+    }
+}
+
+impl Display for Level {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "Level({}, {})", self.base.lid, self.base.name)
     }
 }

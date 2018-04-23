@@ -5,6 +5,10 @@ mod macros;
 pub mod level;
 
 pub use self::level::{LevelRequest, LevelsRequest};
+use api::ApiClient;
+use futures::Future;
+use model::RawObject;
+use api::GDError;
 
 #[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {
@@ -43,4 +47,10 @@ impl Default for BaseRequest {
 
 pub trait Request {
     type Result;
+}
+
+pub(crate) trait MakeRequest: Request {
+    type Item;
+
+    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=Self::Item, Error=GDError> + 'static>;
 }

@@ -8,6 +8,14 @@ use model::Level;
 use model::LevelLength;
 use model::LevelRating;
 use model::PartialLevel;
+use api::request::MakeRequest;
+use api::ApiClient;
+use api::GDError;
+use model::RawObject;
+use futures::Future;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
 #[derive(Debug, Default)]
 pub struct LevelRequest {
@@ -217,4 +225,32 @@ impl Request for LevelRequest {
 
 impl Request for LevelsRequest {
     type Result = Vec<PartialLevel>;
+}
+
+impl MakeRequest for LevelRequest {
+    type Item = RawObject;
+
+    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=RawObject, Error=GDError>> {
+        client.level(self)
+    }
+}
+
+impl MakeRequest for LevelsRequest {
+    type Item = Vec<RawObject>;
+
+    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+        client.levels(self)
+    }
+}
+
+impl Display for LevelRequest {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "LevelRequest({})", self.level_id)
+    }
+}
+
+impl Display for LevelsRequest {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "LevelsRequest(...)")
+    }
 }
