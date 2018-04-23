@@ -128,30 +128,15 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
                 let cache = &*cache.lock().unwrap();
                 let client = &*client.lock().unwrap();
 
-                let integrity_futures = match resp {
-                    ProcessedResponse::One(ref obj) => {
-                        if let Some(ireq) = ensure_integrity(cache, obj)? {
-                            warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
+                let mut integrity_futures = Vec::new();
 
-                            vec![store(sender.clone(), ireq.make(client))]
-                        } else {
-                            Vec::new()
-                        }
-                    },
-                    ProcessedResponse::Many(ref objs) => {
-                        let mut futures = Vec::new();
+                for obj in resp.iter() {
+                    if let Some(ireq) = ensure_integrity(cache, obj)? {
+                        warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
 
-                        for obj in objs {
-                            if let Some(ireq) = ensure_integrity(cache, obj)? {
-                                warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
-
-                                futures.push(store(sender.clone(), ireq.make(client)))
-                            }
-                        }
-
-                        futures
+                        integrity_futures.push(store(sender.clone(), ireq.make(client)))
                     }
-                };
+                }
 
                 if !integrity_futures.is_empty() {
                     let future = join_all(integrity_futures)
