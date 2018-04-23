@@ -3,19 +3,20 @@ use gdcf::model::RawObject;
 
 use gdcf::model::ObjectType;
 use std::str::pattern::Pattern;
+use gdcf::api::response::ProcessedResponse;
 
-pub fn level(body: &str) -> Result<RawObject, GDError> {
+pub fn level(body: &str) -> Result<ProcessedResponse, GDError> {
     check_resp!(body);
 
     let mut sections = body.split("#");
 
     match sections.next() {
-        Some(section) => parse_fragment(ObjectType::Level, section, ":"),
+        Some(section) => parse_fragment(ObjectType::Level, section, ":").map(ProcessedResponse::One),
         None => Err(GDError::MalformedResponse),
     }
 }
 
-pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
+pub fn levels(body: &str) -> Result<ProcessedResponse, GDError> {
     check_resp!(body);
 
     let mut result = Vec::new();
@@ -41,7 +42,7 @@ pub fn levels(body: &str) -> Result<Vec<RawObject>, GDError> {
         None => return Err(GDError::MalformedResponse),
     }
 
-    Ok(result)
+    Ok(ProcessedResponse::Many(result))
 }
 
 fn parse_fragment<'a, P>(

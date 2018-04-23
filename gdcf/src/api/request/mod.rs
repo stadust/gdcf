@@ -6,8 +6,10 @@ pub use self::level::{LevelRequest, LevelsRequest};
 use model::GameVersion;
 
 use api::{ApiClient, GDError};
+use api::client::ApiFuture;
 
 use futures::Future;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {
@@ -44,12 +46,10 @@ impl Default for BaseRequest {
     }
 }
 
-pub trait Request {
+pub trait Request: Display {
     type Result;
 }
 
 pub(crate) trait MakeRequest: Request {
-    type Item;
-
-    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=Self::Item, Error=GDError> + 'static>;
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture;
 }

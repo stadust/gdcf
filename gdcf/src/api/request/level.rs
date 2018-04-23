@@ -5,6 +5,7 @@ use futures::Future;
 
 use api::request::{BaseRequest, Request, MakeRequest};
 use api::{ApiClient, GDError};
+use api::client::ApiFuture;
 
 use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel, RawObject};
 
@@ -221,17 +222,13 @@ impl Request for LevelsRequest {
 }
 
 impl MakeRequest for LevelRequest {
-    type Item = RawObject;
-
-    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=RawObject, Error=GDError>> {
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture {
         client.level(&self)
     }
 }
 
 impl MakeRequest for LevelsRequest {
-    type Item = Vec<RawObject>;
-
-    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture {
         client.levels(&self)
     }
 }

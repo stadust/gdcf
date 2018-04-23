@@ -21,6 +21,7 @@ extern crate log;
 extern crate gdcf_derive;
 
 use futures::Future;
+use futures::future::join_all;
 
 use cache::Cache;
 use model::{FromRawObject, ObjectType, RawObject};
@@ -33,6 +34,7 @@ use std::sync::mpsc::{self, Sender, Receiver};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use std::thread;
+use api::response::ProcessedResponse;
 
 #[macro_use]
 mod macros;
@@ -102,46 +104,116 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
 
     pub fn client(&self) -> MutexGuard<A> { self.client.lock().unwrap() }
 
-    retrieve_one!(level, LevelRequest, lookup_level);
-    retrieve_many!(levels, LevelsRequest, lookup_partial_levels);
+    gdcf!(level, LevelRequest, lookup_level);
+    gdcf!(levels, LevelsRequest, lookup_partial_levels);
+
+    #[cfg(not(feature = "ensure_cache_integrity"))]
+    fn refresh<R: MakeRequest + 'static>(&self, req: R) {
+        let future = req.make(&*self.client());
+
+        self.client().spawn(store(self.sender.clone(), future));
+    }
+
+
+    #[cfg(feature = "ensure_cache_integrity")]
+    fn refresh<R: MakeRequest + 'static>(&self, req: R) {
+        info!("Cache entry for {} is either expired or non existant, refreshing!", req);
+
+        let cache = Arc::clone(&self.cache);
+        let client = Arc::clone(&self.client);
+        let sender = self.sender.clone();
+
+        let future = req.make(&*self.client())
+            .and_then(move |resp| {
+                let cache = &*cache.lock().unwrap();
+                let client = &*client.lock().unwrap();
+
+                let integrity_futures = match resp {
+                    ProcessedResponse::One(ref obj) => {
+                        if let Some(ireq) = ensure_integrity(cache, obj)? {
+                            warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
+
+                            vec![store(sender.clone(), ireq.make(client))]
+                        } else {
+                            Vec::new()
+                        }
+                    },
+                    ProcessedResponse::Many(ref objs) => {
+                        let mut futures = Vec::new();
+
+                        for obj in objs {
+                            if let Some(ireq) = ensure_integrity(cache, obj)? {
+                                warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
+
+                                futures.push(store(sender.clone(), ireq.make(client)))
+                            }
+                        }
+
+                        futures
+                    }
+                };
+
+                if !integrity_futures.is_empty() {
+                    let future = join_all(integrity_futures)
+                        .map(move |_| send(&sender, resp));
+
+                    client.spawn(future);
+                } else {
+                    debug!("Result of {} does not compromise cache integrity, proceeding!", req);
+                    send(&sender, resp);
+                }
+
+                Ok(())
+            })
+            .map_err(|e| error!("Unexpected error while retrieving integrity data for cache: {:?}", e));
+
+        self.client().spawn(future);
+    }
 }
 
-fn store_one<F>(sender: Sender<RawObject>, future: F) -> impl Future<Item=(), Error=()> + 'static
+fn send(sender: &Sender<RawObject>, resp: ProcessedResponse) {
+    match resp {
+        ProcessedResponse::One(obj) => sender.send(obj).unwrap(), // TODO: error
+        ProcessedResponse::Many(objs) => {
+            for obj in objs {
+                sender.send(obj).unwrap() // TODO: error
+            }
+        }
+    }
+}
+
+fn store<F>(sender: Sender<RawObject>, f: F) -> impl Future<Item=(), Error=()> + 'static
     where
-        F: Future<Item=RawObject, Error=GDError> + 'static,
+        F: Future<Item=ProcessedResponse, Error=GDError> + 'static
 {
-    future
-        .map(move |obj| sender.send(obj).unwrap())
+    f.map(move |resp| send(&sender.clone(), resp))
         .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
 }
 
-fn store_many<F>(sender: Sender<RawObject>, future: F) -> impl Future<Item=(), Error=()> + 'static
-    where
-        F: Future<Item=Vec<RawObject>, Error=GDError> + 'static,
-{
-    future
-        .map(move |objs| objs.into_iter().for_each(|obj| sender.send(obj).unwrap()))
-        .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
-}
 
 #[cfg(feature = "ensure_cache_integrity")]
-fn level_integrity<C: Cache>(cache: &C, raw_level: &RawObject) -> Result<Option<LevelsRequest>, GDError> {
+fn ensure_integrity<C: Cache>(cache: &C, raw: &RawObject) -> Result<Option<impl MakeRequest>, GDError> {
     use api::request::level::SearchFilters;
 
-    let song_id: u64 = raw_level.get(35)?;
+    match raw.object_type {
+        ObjectType::Level => {
+            let song_id: u64 = raw.get(35)?;
 
-    if song_id != 0 {
-        let existing = cache.lookup_song(song_id);
+            if song_id != 0 {
+                let existing = cache.lookup_song(song_id);
 
-        if existing.is_none() {
-            Ok(Some(LevelsRequest::default()
-                .search(raw_level.get(1)?)
-                .filter(SearchFilters::default()
-                    .custom_song(song_id))))
-        } else {
-            Ok(None)
-        }
-    } else {
-        Ok(None)
+                if existing.is_none() {
+                    Ok(Some(LevelsRequest::default()
+                        .search(raw.get(1)?)
+                        .filter(SearchFilters::default()
+                            .custom_song(song_id))))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Ok(None)
+            }
+        },
+        _ => Ok(None)
     }
 }

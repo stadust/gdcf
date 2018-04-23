@@ -37,6 +37,7 @@ use hyper::StatusCode;
 use gdcf::model::RawObject;
 use ser::LevelRequestRem;
 use ser::LevelsRequestRem;
+use gdcf::api::response::ProcessedResponse;
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -72,13 +73,13 @@ impl BoomlingsClient {
 }
 
 impl ApiClient for BoomlingsClient {
-    fn level(&self, req: &LevelRequest) -> Box<Future<Item=RawObject, Error=GDError> + 'static> {
+    fn level(&self, req: &LevelRequest) -> Box<Future<Item=ProcessedResponse, Error=GDError> + 'static> {
         let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
     }
 
-    fn levels(&self, req: &LevelsRequest) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+    fn levels(&self, req: &LevelsRequest) -> Box<Future<Item=ProcessedResponse, Error=GDError>> {
         let req = self.make_request("getGJLevels21", Req::GetLevels(req));
 
         prepare_future!(self.client.request(req), parse::levels)
