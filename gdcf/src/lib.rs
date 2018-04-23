@@ -114,17 +114,21 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
         self.client().spawn(store(self.sender.clone(), future));
     }
 
-
     #[cfg(feature = "ensure_cache_integrity")]
     fn refresh<R: MakeRequest + 'static>(&self, req: R) {
-        info!("Cache entry for {} is either expired or non existant, refreshing!", req);
-
         let cache = Arc::clone(&self.cache);
         let client = Arc::clone(&self.client);
         let sender = self.sender.clone();
 
         let future = req.make(&*self.client())
-            .and_then(move |resp| {
+            .then(move |result| {
+                let resp = match result {
+                    Err(e) => {
+                        return Ok(error!("Unexpected error while processing api response to request {}: {:?}", req, e))
+                    },
+                    Ok(resp) => resp
+                };
+
                 let cache = &*cache.lock().unwrap();
                 let client = &*client.lock().unwrap();
 
@@ -150,7 +154,7 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
 
                 Ok(())
             })
-            .map_err(|e| error!("Unexpected error while retrieving integrity data for cache: {:?}", e));
+            .map_err(|e: GDError| error!("Unexpected error while retrieving integrity data for cache: {:?}", e));
 
         self.client().spawn(future);
     }
@@ -158,10 +162,15 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
 
 fn send(sender: &Sender<RawObject>, resp: ProcessedResponse) {
     match resp {
-        ProcessedResponse::One(obj) => sender.send(obj).unwrap(), // TODO: error
+        ProcessedResponse::One(obj) => {
+            sender.send(obj)
+                .map_err(|e| error!("Unexpected error while sending object to cache manager thread: {:?}", e));
+        }
+
         ProcessedResponse::Many(objs) => {
             for obj in objs {
-                sender.send(obj).unwrap() // TODO: error
+                sender.send(obj)
+                    .map_err(|e| error!("Unexpected error while sending object to cache manager thread: {:?}", e));
             }
         }
     }
@@ -185,9 +194,7 @@ fn ensure_integrity<C: Cache>(cache: &C, raw: &RawObject) -> Result<Option<impl 
             let song_id: u64 = raw.get(35)?;
 
             if song_id != 0 {
-                let existing = cache.lookup_song(song_id);
-
-                if existing.is_none() {
+                if cache.lookup_song(song_id).is_none() {
                     Ok(Some(LevelsRequest::default()
                         .search(raw.get(1)?)
                         .filter(SearchFilters::default()
@@ -198,7 +205,7 @@ fn ensure_integrity<C: Cache>(cache: &C, raw: &RawObject) -> Result<Option<impl 
             } else {
                 Ok(None)
             }
-        },
+        }
         _ => Ok(None)
     }
 }

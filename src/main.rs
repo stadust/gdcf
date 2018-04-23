@@ -25,21 +25,16 @@ fn main() {
     env_logger::init();
 
     let mut core = Core::new().unwrap();
+
     let client = BoomlingsClient::new(&core.handle());
     let config = DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
     let cache = DatabaseCache::new(config);
 
     let gdcf = Gdcf::new(cache, client);
 
-    let lev_req = LevelsRequest::default()
-        .search("Under Lavaland".into())
-        .filter(SearchFilters::default().featured().uncompleted());
-
-    //gdcf.level(11774780.into());
-    //gdcf.levels(lev_req);
-    //gdcf.level(11849346.into());
-
-    gdcf.level(44325129.into());
+    for level in vec![39242117u64, 41038290, 43744687, 9] {
+        gdcf.level(level.into());
+    }
 
     core.run(Thing {});
 }
