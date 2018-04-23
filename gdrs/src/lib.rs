@@ -40,12 +40,12 @@ use ser::LevelsRequestRem;
 
 #[derive(Serialize)]
 #[serde(untagged)]
-pub enum Req {
+pub enum Req<'a> {
     #[serde(with = "LevelRequestRem")]
-    DownloadLevel(LevelRequest),
+    DownloadLevel(&'a LevelRequest),
 
     #[serde(with = "LevelsRequestRem")]
-    GetLevels(LevelsRequest),
+    GetLevels(&'a LevelsRequest),
 }
 
 pub struct BoomlingsClient {
@@ -72,13 +72,13 @@ impl BoomlingsClient {
 }
 
 impl ApiClient for BoomlingsClient {
-    fn level(&self, req: LevelRequest) -> Box<Future<Item=RawObject, Error=GDError> + 'static> {
+    fn level(&self, req: &LevelRequest) -> Box<Future<Item=RawObject, Error=GDError> + 'static> {
         let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
 
         prepare_future!(self.client.request(req), parse::level)
     }
 
-    fn levels(&self, req: LevelsRequest) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+    fn levels(&self, req: &LevelsRequest) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
         let req = self.make_request("getGJLevels21", Req::GetLevels(req));
 
         prepare_future!(self.client.request(req), parse::levels)

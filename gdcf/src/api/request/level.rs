@@ -223,16 +223,16 @@ impl Request for LevelsRequest {
 impl MakeRequest for LevelRequest {
     type Item = RawObject;
 
-    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=RawObject, Error=GDError>> {
-        client.level(self)
+    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=RawObject, Error=GDError>> {
+        client.level(&self)
     }
 }
 
 impl MakeRequest for LevelsRequest {
     type Item = Vec<RawObject>;
 
-    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
-        client.levels(self)
+    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=Vec<RawObject>, Error=GDError>> {
+        client.levels(&self)
     }
 }
 

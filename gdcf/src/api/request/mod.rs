@@ -51,5 +51,5 @@ pub trait Request {
 pub(crate) trait MakeRequest: Request {
     type Item;
 
-    fn make<C: ApiClient>(self, client: &C) -> Box<Future<Item=Self::Item, Error=GDError> + 'static>;
+    fn make<C: ApiClient>(&self, client: &C) -> Box<Future<Item=Self::Item, Error=GDError> + 'static>;
 }
