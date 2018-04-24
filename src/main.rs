@@ -32,7 +32,7 @@ fn main() {
 
     let gdcf = Gdcf::new(cache, client);
 
-    for level in vec![39242117u64, 41038290, 43744687, 9] {
+    for level in vec![44802267u64, 43120057, 9] {
         gdcf.level(level.into());
     }
 

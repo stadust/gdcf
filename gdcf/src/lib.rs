@@ -120,11 +120,14 @@ impl<A: 'static, C: 'static> Gdcf<A, C>
         let client = Arc::clone(&self.client);
         let sender = self.sender.clone();
 
+        // TODO: we kinda wanna catch all the object creation/cache insertion errors here, so we can make even strong integrity gurantees
+        // That means we must construct the objects on this side again, and not over on the cache thread
+
         let future = req.make(&*self.client())
             .then(move |result| {
                 let resp = match result {
                     Err(e) => {
-                        return Ok(error!("Unexpected error while processing api response to request {}: {:?}", req, e))
+                        return Ok(error!("Unexpected error while processing api response to request {}: {:?}", req, e)) // TODO: this is kinda silly
                     },
                     Ok(resp) => resp
                 };
