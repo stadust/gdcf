@@ -16,4 +16,3 @@ ser = [
     "serde",
     "serde_derive"
 ]
-ensure_cache_integrity = []

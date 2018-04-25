@@ -30,6 +30,8 @@ use api::client::ApiClient;
 use api::GDError;
 use api::request::{Request, MakeRequest, LevelsRequest, LevelRequest};
 
+use ext::{ApiClientExt, CacheExt};
+
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -38,157 +40,155 @@ use api::response::ProcessedResponse;
 
 #[macro_use]
 mod macros;
+mod ext;
+
 pub mod api;
 pub mod cache;
 pub mod model;
 
-pub struct Gdcf<A: 'static, C: 'static>
-    where
-        A: ApiClient,
-        C: Cache + Send,
-{
-    cache: Arc<Mutex<C>>,
-    client: Arc<Mutex<A>>,
-    sender: Sender<RawObject>,
-}
+pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
+    fn client(&self) -> MutexGuard<A>;
+    fn cache(&self) -> MutexGuard<C>;
 
-impl<A: 'static, C: 'static> Gdcf<A, C>
-    where
-        A: ApiClient,
-        C: Cache + Send,
-{
-    pub fn new(cache: C, client: A) -> Gdcf<A, C> {
-        debug!("Created new GDCF");
-
-        let (tx, rx): (Sender<RawObject>, Receiver<RawObject>) = mpsc::channel();
-        let cache_mutex = Arc::new(Mutex::new(cache));
-        let client_mutex = Arc::new(Mutex::new(client));
-
-        let handle = {
-            let mutex = Arc::clone(&cache_mutex);
-
-            thread::spawn(move || {
-                info!("Started background cache manager thread");
-
-                for raw_obj in rx {
-                    let mut cache = mutex.lock().unwrap();
-
-                    debug!("Received a {:?}, attempting to cache", raw_obj.object_type);
-
-                    let err = match raw_obj.object_type {
-                        ObjectType::Level => store!(cache, store_level, raw_obj),
-                        ObjectType::PartialLevel => store!(cache, store_partial_level, raw_obj),
-                        ObjectType::NewgroundsSong => store!(cache, store_song, raw_obj)
-                    };
-
-                    if let Err(err) = err {
-                        error!(
-                            "Unexpected error while constructing object {:?}: {:?}",
-                            raw_obj.object_type, err
-                        )
-                    }
-                }
-            })
-        };
-
-        Gdcf {
-            cache: cache_mutex,
-            client: client_mutex,
-            sender: tx,
-        }
-    }
-
-    pub fn cache(&self) -> MutexGuard<C> {
-        self.cache.lock().unwrap()
-    }
-
-    pub fn client(&self) -> MutexGuard<A> { self.client.lock().unwrap() }
+    fn refresh<R: MakeRequest + 'static>(&self, request: R);
 
     gdcf!(level, LevelRequest, lookup_level);
     gdcf!(levels, LevelsRequest, lookup_partial_levels);
+}
 
-    #[cfg(not(feature = "ensure_cache_integrity"))]
-    fn refresh<R: MakeRequest + 'static>(&self, req: R) {
-        let future = req.make(&*self.client());
+pub struct CacheManager<A: ApiClient + 'static, C: Cache + 'static> {
+    client: Arc<Mutex<A>>,
+    cache: Arc<Mutex<C>>,
+}
 
-        self.client().spawn(store(self.sender.clone(), future));
+pub struct ConsistentCacheManager<A: ApiClient + 'static, C: Cache + 'static> {
+    client: Arc<Mutex<A>>,
+    cache: Arc<Mutex<C>>,
+}
+
+impl<A: ApiClient + 'static, C: Cache + 'static> CacheManager<A, C> {
+    pub fn new(client: A, cache: C) -> CacheManager<A, C> {
+        info!("Created new CacheManager");
+
+        CacheManager {
+            client: Arc::new(Mutex::new(client)),
+            cache: Arc::new(Mutex::new(cache)),
+        }
+    }
+}
+
+impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
+    pub fn new(client: A, cache: C) -> ConsistentCacheManager<A, C> {
+        info!("Created new ConsistentCacheManager");
+
+        ConsistentCacheManager {
+            client: Arc::new(Mutex::new(client)),
+            cache: Arc::new(Mutex::new(cache)),
+        }
+    }
+}
+
+impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, C> {
+    fn client(&self) -> MutexGuard<A> {
+        self.client.lock().unwrap()
     }
 
-    #[cfg(feature = "ensure_cache_integrity")]
-    fn refresh<R: MakeRequest + 'static>(&self, req: R) {
-        let cache = Arc::clone(&self.cache);
-        let client = Arc::clone(&self.client);
-        let sender = self.sender.clone();
+    fn cache(&self) -> MutexGuard<C> {
+        self.cache.lock().unwrap()
+    }
 
-        // TODO: we kinda wanna catch all the object creation/cache insertion errors here, so we can make even strong integrity gurantees
-        // That means we must construct the objects on this side again, and not over on the cache thread
+    fn refresh<R: MakeRequest + 'static>(&self, request: R) {
+        info!("Cache entry for {} is either expired or non existant, refreshing!", request);
 
-        let future = req.make(&*self.client())
-            .then(move |result| {
-                let resp = match result {
-                    Err(e) => {
-                        return Ok(error!("Unexpected error while processing api response to request {}: {:?}", req, e)) // TODO: this is kinda silly
-                    },
-                    Ok(resp) => resp
+        let client = self.client();
+        let future = store_result(client.make(request), self.cache.clone());
+
+        client.spawn(future);
+    }
+}
+
+impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheManager<A, C> {
+    fn client(&self) -> MutexGuard<A> {
+        self.client.lock().unwrap()
+    }
+
+    fn cache(&self) -> MutexGuard<C> {
+        self.cache.lock().unwrap()
+    }
+
+    fn refresh<R: MakeRequest + 'static>(&self, request: R) {
+        info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
+
+        let client = self.client();
+        let client_mutex = self.client.clone();
+        let cache_mutex = self.cache.clone();
+
+        let request_string = format!("{}", request);
+
+        let future = client.make(request)
+            .and_then(move |response| {
+                let client = &*client_mutex.lock().unwrap();
+                let integrity_futures = {
+                    let cache = &*cache_mutex.lock().unwrap();
+
+                    let mut integrity_futures = Vec::new();
+
+                    for raw_object in response.iter() {
+                        match ensure_integrity(cache, raw_object) {
+                            Ok(Some(integrity_request)) => {
+                                warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
+
+                                integrity_futures.push(store_result(client.make(integrity_request), cache_mutex.clone()));
+                            }
+
+                            Err(err) => {
+                                return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
+                            }
+
+                            _ => ()
+                        }
+                    }
+
+                    integrity_futures
                 };
 
-                let cache = &*cache.lock().unwrap();
-                let client = &*client.lock().unwrap();
+                if !integrity_futures.is_empty() {
+                    let integrity_future = join_all(integrity_futures)
+                        .map(move |_| {
+                            let mut cache = cache_mutex.lock().unwrap();
 
-                let mut integrity_futures = Vec::new();
+                            for raw_object in response.iter() {
+                                cache.store_raw(raw_object);
+                            }
+                        })
+                        .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
 
-                for obj in resp.iter() {
-                    if let Some(ireq) = ensure_integrity(cache, obj)? {
-                        warn!("Integrity for result of {} is not given, making integrity request {}", req, ireq);
+                    client.spawn(integrity_future);
+                } else {
+                    debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
 
-                        integrity_futures.push(store(sender.clone(), ireq.make(client)))
+                    for raw_object in response.iter() {
+                        cache_mutex.lock().unwrap().store_raw(raw_object);
                     }
                 }
 
-                if !integrity_futures.is_empty() {
-                    let future = join_all(integrity_futures)
-                        .map(move |_| send(&sender, resp));
-
-                    client.spawn(future);
-                } else {
-                    debug!("Result of {} does not compromise cache integrity, proceeding!", req);
-                    send(&sender, resp);
-                }
-
                 Ok(())
-            })
-            .map_err(|e: GDError| error!("Unexpected error while retrieving integrity data for cache: {:?}", e));
+            });
 
-        self.client().spawn(future);
+        client.spawn(future);
     }
 }
 
-fn send(sender: &Sender<RawObject>, resp: ProcessedResponse) {
-    match resp {
-        ProcessedResponse::One(obj) => {
-            sender.send(obj)
-                .map_err(|e| error!("Unexpected error while sending object to cache manager thread: {:?}", e));
-        }
+fn store_result<F: Future<Item=ProcessedResponse, Error=()> + 'static, C: Cache>(f: F, mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> {
+    f.map(move |response| {
+        let mut cache = mutex.lock().unwrap();
 
-        ProcessedResponse::Many(objs) => {
-            for obj in objs {
-                sender.send(obj)
-                    .map_err(|e| error!("Unexpected error while sending object to cache manager thread: {:?}", e));
-            }
+        for raw_object in response.iter() {
+            cache.store_raw(raw_object);
         }
-    }
+    })
 }
 
-fn store<F>(sender: Sender<RawObject>, f: F) -> impl Future<Item=(), Error=()> + 'static
-    where
-        F: Future<Item=ProcessedResponse, Error=GDError> + 'static
-{
-    f.map(move |resp| send(&sender.clone(), resp))
-        .map_err(|e| error!("Unexpected error while retrieving data for cache: {:?}", e))
-}
-
-
-#[cfg(feature = "ensure_cache_integrity")]
 fn ensure_integrity<C: Cache>(cache: &C, raw: &RawObject) -> Result<Option<impl MakeRequest>, GDError> {
     use api::request::level::SearchFilters;
 

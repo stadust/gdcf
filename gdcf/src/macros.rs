@@ -12,14 +12,12 @@ macro_rules! lookup {
 
 macro_rules! gdcf {
     ($api: ident, $req_type: tt, $lookup: ident) => {
-        pub fn $api(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
+        fn $api(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
             debug!("Received request {}", req);
 
             let (cached, expired) = lookup!(self, $lookup, req);
 
             if expired {
-                info!("Cache entry for {} is either expired or non existant, refreshing!", req);
-
                 self.refresh(req);
             }
 

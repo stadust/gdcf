@@ -50,6 +50,6 @@ pub trait Request: Display {
     type Result;
 }
 
-pub(crate) trait MakeRequest: Request {
+pub trait MakeRequest: Request {
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture;
 }

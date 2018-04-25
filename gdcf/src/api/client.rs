@@ -5,10 +5,11 @@ use api::response::ProcessedResponse;
 use api::GDError;
 
 use model::RawObject;
+use api::request::MakeRequest;
 
 pub type ApiFuture = Box<Future<Item=ProcessedResponse, Error=GDError> + 'static>;
 
-pub trait ApiClient {
+pub trait ApiClient: Sized {
     fn level(&self, req: &LevelRequest) -> ApiFuture;
     fn levels(&self, req: &LevelsRequest) -> ApiFuture;
 

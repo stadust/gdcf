@@ -20,6 +20,8 @@ use gdcf::Gdcf;
 use gdcf_dbcache::cache::DatabaseCache;
 use gdcf_dbcache::cache::DatabaseCacheConfig;
 use tokio_core::reactor::Core;
+use gdcf::CacheManager;
+use gdcf::ConsistentCacheManager;
 
 fn main() {
     env_logger::init();
@@ -30,7 +32,7 @@ fn main() {
     let config = DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
     let cache = DatabaseCache::new(config);
 
-    let gdcf = Gdcf::new(cache, client);
+    let gdcf = ConsistentCacheManager::new(client, cache);
 
     for level in vec![44802267u64, 43120057, 9] {
         gdcf.level(level.into());
