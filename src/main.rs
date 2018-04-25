@@ -34,7 +34,7 @@ fn main() {
 
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    for level in vec![44802267u64, 43120057, 9] {
+    for level in 100000..100020u64 {
         gdcf.level(level.into());
     }
 

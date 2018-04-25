@@ -1,5 +1,5 @@
-#[cfg(ser)]
-use serde::{Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::{Serialize, Serializer, Deserialize};
 
 use futures::Future;
 

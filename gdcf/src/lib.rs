@@ -4,10 +4,10 @@
 #![feature(never_type)]
 #![feature(concat_idents)]
 
-#[cfg(ser)]
+#[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(ser)]
+#[cfg(feature = "serde")]
 extern crate serde;
 
 #[macro_use]
