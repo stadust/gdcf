@@ -13,9 +13,13 @@ pub(crate) trait ApiClientExt: ApiClient {
 }
 
 pub(crate) trait CacheExt: Cache {
-    fn store_raw(&mut self, raw_object: &RawObject) {
-        debug!("Received a {:?}, attempting to cache", raw_object.object_type);
+    fn store_all<'a>(&mut self, objects: impl Iterator<Item=&'a RawObject>) {
+        for raw_object in objects {
+            self.store_raw(raw_object);
+        }
+    }
 
+    fn store_raw(&mut self, raw_object: &RawObject) {
         let err = match raw_object.object_type {
             ObjectType::Level => store!(self, store_level, raw_object),
             ObjectType::PartialLevel => store!(self, store_partial_level, raw_object),

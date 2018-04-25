@@ -30,7 +30,7 @@ macro_rules! store {
     ($cache: expr, $store: ident, $raw_obj: expr) => {
         {
             FromRawObject::from_raw(&$raw_obj).map(|constructed|{
-                debug!("Caching {}", constructed);
+                info!("Caching {}", constructed);
                 $cache.$store(constructed)
             })
         }
@@ -51,4 +51,9 @@ macro_rules! setter {
             self
         }
     }
+}
+
+macro_rules! lock {
+    (@$mutex: expr) => {&*$mutex.lock().unwrap()};
+    ($mutex: expr) => {$mutex.lock().unwrap()};
 }

@@ -4,40 +4,31 @@
 #![feature(never_type)]
 #![feature(concat_idents)]
 
+extern crate chrono;
+extern crate futures;
+#[macro_use]
+extern crate gdcf_derive;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
+extern crate percent_encoding;
+#[cfg(feature = "deser")]
+extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "deser")]
-extern crate serde;
-
-#[macro_use]
-extern crate lazy_static;
-extern crate percent_encoding;
-extern crate futures;
-extern crate chrono;
-#[macro_use]
-extern crate log;
-
-#[macro_use]
-extern crate gdcf_derive;
-
-use futures::Future;
-use futures::future::join_all;
-
-use cache::Cache;
-use model::{FromRawObject, ObjectType, RawObject};
 
 use api::client::ApiClient;
 use api::GDError;
-use api::request::{Request, MakeRequest, LevelsRequest, LevelRequest};
-
-use ext::{ApiClientExt, CacheExt};
-
-use std::sync::mpsc::{self, Sender, Receiver};
-use std::sync::{Arc, Mutex, MutexGuard};
-
-use std::thread;
+use api::request::{LevelRequest, LevelsRequest, MakeRequest, Request};
 use api::response::ProcessedResponse;
+use cache::Cache;
+use ext::{ApiClientExt, CacheExt};
+use futures::Future;
+use futures::future::join_all;
+use model::{FromRawObject, ObjectType, RawObject};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 #[macro_use]
 mod macros;
@@ -120,63 +111,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
     fn refresh<R: MakeRequest + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
 
-        let client = self.client();
-        let client_mutex = self.client.clone();
-        let cache_mutex = self.cache.clone();
-
-        let request_string = format!("{}", request);
-
-        let future = client.make(request)
-            .and_then(move |response| {
-                let client = &*client_mutex.lock().unwrap();
-                let integrity_futures = {
-                    let cache = &*cache_mutex.lock().unwrap();
-
-                    let mut integrity_futures = Vec::new();
-
-                    for raw_object in response.iter() {
-                        match ensure_integrity(cache, raw_object) {
-                            Ok(Some(integrity_request)) => {
-                                warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
-
-                                integrity_futures.push(store_result(client.make(integrity_request), cache_mutex.clone()));
-                            }
-
-                            Err(err) => {
-                                return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
-                            }
-
-                            _ => ()
-                        }
-                    }
-
-                    integrity_futures
-                };
-
-                if !integrity_futures.is_empty() {
-                    let integrity_future = join_all(integrity_futures)
-                        .map(move |_| {
-                            let mut cache = cache_mutex.lock().unwrap();
-
-                            for raw_object in response.iter() {
-                                cache.store_raw(raw_object);
-                            }
-                        })
-                        .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
-
-                    client.spawn(integrity_future);
-                } else {
-                    debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
-
-                    for raw_object in response.iter() {
-                        cache_mutex.lock().unwrap().store_raw(raw_object);
-                    }
-                }
-
-                Ok(())
-            });
-
-        client.spawn(future);
+        self.client().spawn(with_integrity(request, self.client.clone(), self.cache.clone()));
     }
 }
 
@@ -187,6 +122,58 @@ fn store_result<F: Future<Item=ProcessedResponse, Error=()> + 'static, C: Cache>
         for raw_object in response.iter() {
             cache.store_raw(raw_object);
         }
+    })
+}
+
+fn with_integrity<A, C, R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> + 'static
+    where
+        R: MakeRequest + 'static,
+        A: ApiClient + 'static,
+        C: Cache + 'static
+{
+    let request_string = format!("{}", request);
+    let request_future = client_mutex.lock().unwrap().make(request);
+
+    request_future.and_then(move |response| {
+        let integrity_futures = {
+            let mut integrity_futures = Vec::new();
+
+            for raw_object in response.iter() {
+                match ensure_integrity(lock!(@cache_mutex), raw_object) {
+                    Ok(Some(integrity_request)) => {
+                        warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
+
+                        let future = with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
+
+                        integrity_futures.push(future);
+                    }
+
+                    Err(err) => {
+                        return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
+                    }
+
+                    _ => ()
+                }
+            }
+
+            integrity_futures
+        };
+
+        if !integrity_futures.is_empty() {
+            let integrity_future = join_all(integrity_futures)
+                .map(move |_| {
+                    debug!("Successfully stored all data relevant for integrity!");
+                    lock!(cache_mutex).store_all(response.iter());
+                })
+                .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
+
+            lock!(client_mutex).spawn(integrity_future);
+        } else {
+            debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
+            lock!(cache_mutex).store_all(response.iter());
+        }
+
+        Ok(())
     })
 }
 
