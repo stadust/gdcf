@@ -1,8 +1,6 @@
-#[macro_use]
-mod macros;
 pub mod level;
 
-pub use self::level::{LevelRequest, LevelsRequest};
+pub use self::level::{LevelRequest, LevelsRequest, SearchFilters, LevelRequestType, SongFilter};
 use model::GameVersion;
 
 use api::{ApiClient, GDError};
@@ -46,8 +44,12 @@ impl Default for BaseRequest {
     }
 }
 
-pub trait Request: Display {
+pub trait Request: Display + Default {
     type Result;
+
+    fn new() -> Self {
+        Default::default()
+    }
 }
 
 pub trait MakeRequest: Request {

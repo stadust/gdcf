@@ -12,6 +12,7 @@ extern crate serde;
 
 #[macro_use]
 extern crate lazy_static;
+extern crate percent_encoding;
 extern crate futures;
 extern crate chrono;
 #[macro_use]

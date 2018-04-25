@@ -10,6 +10,7 @@ gdcf_derive = { path = "../gdcf_derive" }
 lazy_static = "1.0"
 chrono = "^0.4.0"
 log = "^0.4.0"
+percent-encoding = "^1.0.1"
 
 [features]
 deser = [

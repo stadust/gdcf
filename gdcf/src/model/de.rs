@@ -4,6 +4,7 @@ use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
 
 use std::num::ParseIntError;
 use std::str::FromStr;
+use percent_encoding::percent_decode;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -61,4 +62,9 @@ pub(super) fn featured(value: &String) -> Result<Featured, ParseIntError> {
         0 => Featured::NotFeatured,
         _ => Featured::Featured(value as u32),
     })
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+pub(super) fn url(value: &String) -> Result<String, !> {
+    Ok(percent_decode(value.as_bytes()).decode_utf8().unwrap().to_string())
 }

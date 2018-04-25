@@ -9,19 +9,18 @@ extern crate serde_urlencoded;
 extern crate tokio_core;
 extern crate env_logger;
 
-use gdrs::BoomlingsClient;
-
 use chrono::Duration;
-use futures::Async;
-use futures::Future;
-use gdcf::api::request::level::SearchFilters;
-use gdcf::api::request::LevelsRequest;
-use gdcf::Gdcf;
-use gdcf_dbcache::cache::DatabaseCache;
-use gdcf_dbcache::cache::DatabaseCacheConfig;
+
+use futures::{Async, Future};
+
 use tokio_core::reactor::Core;
-use gdcf::CacheManager;
-use gdcf::ConsistentCacheManager;
+
+use gdcf::api::request::{Request, LevelRequest};
+use gdcf::{Gdcf, ConsistentCacheManager};
+
+use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
+
+use gdrs::BoomlingsClient;
 
 fn main() {
     env_logger::init();
@@ -34,11 +33,17 @@ fn main() {
 
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    for level in 100000..100020u64 {
-        gdcf.level(level.into());
+    let levels = vec![38786978u64, 38515466u64, 39599737u64];
+
+    for level in levels.into_iter() {
+        gdcf.level(LevelRequest::new(level));
     }
 
-    core.run(Thing {});
+    core.run(until_all_done());
+}
+
+pub fn until_all_done() -> impl Future<Item=(), Error=()> {
+    Thing {}
 }
 
 struct Thing;

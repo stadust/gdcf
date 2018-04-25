@@ -38,7 +38,7 @@ pub struct NewgroundsSong {
     pub index_8: i32,
 
     // Index 9 is unused
-    #[raw_data(index = 10)]
+    #[raw_data(index = 10, deserialize_with = "de::url")]
     pub link: String,
 }
 
