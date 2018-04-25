@@ -19,7 +19,7 @@ pub struct NewgroundsSong {
     pub name: String,
 
     #[raw_data(index = 3)]
-    pub internal_id: u64,
+    pub index_3: u64,
 
     #[raw_data(index = 4)]
     pub artist: String,
@@ -27,12 +27,15 @@ pub struct NewgroundsSong {
     #[raw_data(index = 5)]
     pub filesize: f64,
 
+    #[raw_data(index = 6, deserialize_with = "de::into_option", default)]
+    pub index_6: Option<String>,
+
     // Index 6 has unknown usage
     #[raw_data(index = 7, deserialize_with = "de::into_option", default)]
-    pub alt_artist: Option<String>,
+    pub index_7: Option<String>,
 
-    #[raw_data(index = 8, deserialize_with = "de::int_to_bool")]
-    pub banned: bool,
+    #[raw_data(index = 8)]
+    pub index_8: i32,
 
     // Index 9 is unused
     #[raw_data(index = 10)]

@@ -23,12 +23,13 @@ impl Cached<_Backend> for CachedObject<NewgroundsSong> {
         |song: NewgroundsSong| (
             song_id.eq(song.song_id as i64),
             song_name.eq(song.name),
+            index_3.eq(song.index_3 as i64),
             artist.eq(song.artist),
             filesize.eq(song.filesize),
-            song.alt_artist.map(|aa| alt_artist.eq(aa)),
-            banned.eq(song.banned as i16),
+            song.index_6.map(|i|index_6.eq(i)),
+            song.index_7.map(|i|index_7.eq(i)),
+            index_8.eq(song.index_8),
             download_link.eq(song.link),
-            internal_id.eq(song.internal_id as i64),
             last_cached_at.eq(Utc::now().naive_utc())
         ),
         "sqlite"
@@ -38,12 +39,13 @@ impl Cached<_Backend> for CachedObject<NewgroundsSong> {
         |song: NewgroundsSong| (
             song_id.eq(song.song_id),
             song_name.eq(song.name),
+            index_3.eq(song.index_3),
             artist.eq(song.artist),
             filesize.eq(song.filesize),
-            song.alt_artist.map(|aa| alt_artist.eq(aa)),
-            banned.eq(song.banned),
+            song.index_6.map(|i|index_6.eq(i)),
+            song.index_7.map(|i|index_7.eq(i)),
+            index_8.eq(song.index_8),
             download_link.eq(song.link),
-            internal_id.eq(song.internal_id),
             last_cached_at.eq(Utc::now().naive_utc())
         ),
         "mysql"
@@ -53,12 +55,13 @@ impl Cached<_Backend> for CachedObject<NewgroundsSong> {
         |song: NewgroundsSong| (
             song_id.eq(song.song_id as i64),
             song_name.eq(song.name),
+            index_3.eq(song.index_3 as i64),
             artist.eq(song.artist),
             filesize.eq(song.filesize),
-            song.alt_artist.map(|aa| alt_artist.eq(aa)),
-            banned.eq(song.banned),
+            song.index_6.map(|i|index_6.eq(i)),
+            song.index_7.map(|i|index_7.eq(i)),
+            index_8.eq(song.index_8),
             download_link.eq(song.link),
-            internal_id.eq(song.internal_id as i64),
             last_cached_at.eq(Utc::now().naive_utc())
         )
     );

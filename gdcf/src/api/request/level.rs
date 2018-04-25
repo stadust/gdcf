@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "deser")]
 use serde::{Serialize, Serializer, Deserialize};
 
 use futures::Future;

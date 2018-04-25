@@ -17,12 +17,13 @@ table! {
     newgrounds_song (song_id) {
         song_id -> BigInt,
         song_name -> Text,
+        index_3 -> BigInt,
         artist -> Text,
         filesize -> Double,
-        alt_artist -> Nullable<Text>,
-        banned -> Bool,
+        index_6 -> Nullable<Text>,
+        index_7 -> Nullable<Text>,
+        index_8 -> Integer,
         download_link -> Text,
-        internal_id -> BigInt,
         first_cached_at -> Timestamp,
         last_cached_at -> Timestamp,
     }
@@ -30,20 +31,21 @@ table! {
 
 impl Queryable<newgrounds_song::SqlType, Pg> for _O<NewgroundsSong>
 {
-    type Row = (i64, String, String, f64, Option<String>, bool, String, i64, NaiveDateTime, NaiveDateTime);
+    type Row = (i64, String, i64, String, f64, Option<String>, Option<String>, i32, String, NaiveDateTime, NaiveDateTime);
 
     fn build(row: Self::Row) -> Self {
         let song = NewgroundsSong {
             song_id: row.0 as u64,
             name: row.1,
-            artist: row.2,
-            filesize: row.3,
-            alt_artist: row.4,
-            banned: row.5,
-            link: row.6,
-            internal_id: row.7 as u64,
+            index_3: row.2 as u64,
+            artist: row.3,
+            filesize: row.4,
+            index_6: row.5,
+            index_7: row.6,
+            index_8: row.7,
+            link: row.8,
         };
 
-        CachedObject::new(song, row.8, row.9).into()
+        CachedObject::new(song, row.9, row.10).into()
     }
 }
