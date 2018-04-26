@@ -95,7 +95,7 @@ impl ApiClient for BoomlingsClient {
 
 fn convert_error(error: Error) -> GDError {
     match error {
-        Error::Timeout | Error::Closed | Error::Cancel(_) => GDError::Timeout,
+        Error::Timeout | Error::Closed | Error::Cancel(_) => GDError::Connection,
         Error::Utf8(err) => err.into(),
         _ => GDError::Unspecified,
     }

@@ -12,7 +12,7 @@ use std::str::Utf8Error;
 pub enum GDError {
     InternalServerError,
     ServersDown,
-    Timeout,
+    Connection,
 
     NoData,
 
