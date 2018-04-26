@@ -135,29 +135,25 @@ fn with_integrity<A, C, R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex:
     let request_future = client_mutex.lock().unwrap().make(request);
 
     request_future.and_then(move |response| {
-        let integrity_futures = {
-            let mut integrity_futures = Vec::new();
+        let mut integrity_futures = Vec::new();
 
-            for raw_object in response.iter() {
-                match ensure_integrity(lock!(@cache_mutex), raw_object) {
-                    Ok(Some(integrity_request)) => {
-                        warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
+        for raw_object in response.iter() {
+            match ensure_integrity(lock!(@cache_mutex), raw_object) {
+                Ok(Some(integrity_request)) => {
+                    warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
 
-                        let future = with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
+                    let future = with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
 
-                        integrity_futures.push(future);
-                    }
-
-                    Err(err) => {
-                        return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
-                    }
-
-                    _ => ()
+                    integrity_futures.push(future);
                 }
-            }
 
-            integrity_futures
-        };
+                Err(err) => {
+                    return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
+                }
+
+                _ => ()
+            }
+        }
 
         if !integrity_futures.is_empty() {
             let integrity_future = join_all(integrity_futures)
