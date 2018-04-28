@@ -5,6 +5,8 @@ use chrono::NaiveDateTime;
 use gdcf::cache::CachedObject;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use gdcf::error::CacheError;
+use diesel::result::Error;
 
 #[macro_use]
 mod macros;
@@ -15,11 +17,11 @@ pub trait Cached<Back: Backend>: Sized {
     type SearchKey;
     type Inner;
 
-    fn retrieve<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<Self>
+    fn retrieve<Conn>(key: Self::SearchKey, conn: &Conn) -> Result<Self, Error>
         where
             Conn: Connection<Backend=Back>;
 
-    fn store<Conn>(obj: Self::Inner, conn: &Conn)
+    fn store<Conn>(obj: Self::Inner, conn: &Conn) -> Result<(), Error>
         where
             Conn: Connection<Backend=Back>;
 }

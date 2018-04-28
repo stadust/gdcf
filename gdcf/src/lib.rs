@@ -69,7 +69,7 @@ use api::client::ApiClient;
 use api::request::{LevelRequest, LevelsRequest, MakeRequest, Request};
 use api::response::ProcessedResponse;
 use cache::Cache;
-use error::GdcfError;
+use error::{GdcfError, CacheError};
 use ext::{ApiClientExt, CacheExt};
 use futures::Future;
 use futures::future::join_all;
@@ -148,7 +148,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                 let song_id: u64 = raw.get(35)?;
 
                 if song_id != 0 {
-                    if cache.lookup_song(song_id).is_none() {
+                    if let Err(CacheError::CacheMiss) = cache.lookup_song(song_id) {
                         Ok(Some(LevelsRequest::default()
                             .search(raw.get(1)?)
                             .filter(SearchFilters::default()

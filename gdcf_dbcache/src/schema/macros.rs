@@ -35,7 +35,7 @@ macro_rules! backend_abstraction {
 macro_rules! pg_store {
     ($closure:expr) => {
         #[cfg(feature = "postgres")]
-        fn store<Conn>(obj: Self::Inner, conn: &Conn)
+        fn store<Conn>(obj: Self::Inner, conn: &Conn) -> Result<(), Error>
         where
             Conn: Connection<Backend = _Backend>,
         {
@@ -47,7 +47,7 @@ macro_rules! pg_store {
                 .do_update()
                 .set(values.clone())
                 .execute(conn)
-                .unwrap();
+                .map(|_|())
         }
     };
 }
@@ -56,14 +56,14 @@ macro_rules! pg_store {
 macro_rules! store {
     ($closure: expr, $($db: expr),*) => {
         #[cfg(any($(feature = $db),*))]
-        fn store<Conn>(obj: Self::Inner, conn: &Conn)
+        fn store<Conn>(obj: Self::Inner, conn: &Conn) -> Result<(), Error>
             where
                 Conn: Connection<Backend=_Backend>
         {
             replace_into(newgrounds_song)
                 .values($closure(obj))
                 .execute(conn)
-                .unwrap();
+                .map(|_|())
         }
     }
 }
@@ -72,17 +72,13 @@ macro_rules! store {
 macro_rules! retrieve {
     ($closure: expr, $($db: expr),*) => {
         #[cfg(any($(feature = $db),*))]
-        fn retrieve<Conn>(key: Self::SearchKey, conn: &Conn) -> Option<Self>
+        fn retrieve<Conn>(key: Self::SearchKey, conn: &Conn) -> Result<Self, Error>
             where
                 Conn: Connection<Backend=_Backend>
         {
-            let result: Result<_O<Self::Inner>, _> = $closure(key)
-                .first(conn);
-
-            match result {
-                Ok(song) => Some(song.into()),
-                Err(_) => None
-            }
+            $closure(key)
+                .first(conn)
+                .map(|song: _O<Self::Inner>| song.into())
         }
     };
 }

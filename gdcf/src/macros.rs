@@ -1,27 +1,36 @@
 macro_rules! lookup {
     ($self: expr, $lookup: ident, $req: expr) => {{
-        debug!("Initiating cache lookup for {}", $req);
 
-        let cache = $self.cache();
-        let cached = cache.$lookup(&$req);
-        let expired = cached.as_ref().map_or(true, |co| cache.is_expired(co));
+        let cached = cache.$lookup(&$req)?;
 
-        (cached, expired)
+        (cached, cache.is_expired(cached))
     }};
 }
 
 macro_rules! gdcf {
     ($api: ident, $req_type: tt, $lookup: ident) => {
-        fn $api(&self, req: $req_type) -> Option<<$req_type as Request>::Result> {
-            debug!("Received request {}", req);
+        fn $api(&self, req: $req_type) -> Result<<$req_type as Request>::Result, CacheError<C::Err>> {
+            debug!("Received request {}, initiating cache lookup!", req);
 
-            let (cached, expired) = lookup!(self, $lookup, req);
+            let cache = self.cache();
 
-            if expired {
-                self.refresh(req);
+            match cache.$lookup(&req) {
+                Ok(cached) => {
+                    if cache.is_expired(&cached) {
+                        self.refresh(req)
+                    }
+
+                    Ok(cached.extract())
+                }
+
+                Err(CacheError::CacheMiss) => {
+                    self.refresh(req);
+
+                    Err(CacheError::CacheMiss)
+                }
+
+                Err(err) => Err(err)
             }
-
-            cached.map(|co| co.extract())
         }
     }
 }

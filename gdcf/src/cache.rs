@@ -3,8 +3,10 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use model::{PartialLevel, Level, NewgroundsSong};
 use api::request::{LevelRequest, LevelsRequest};
 use std::error::Error;
+use error::CacheError;
+use std::result;
 
-type Lookup<T> = Option<CachedObject<T>>;
+pub type Lookup<T, E> = result::Result<CachedObject<T>, CacheError<E>>;
 
 pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;
@@ -16,15 +18,14 @@ pub trait Cache {
 
     fn config(&self) -> &Self::Config;
 
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>>;
-    fn lookup_partial_level(&self, req: &LevelRequest) -> Lookup<PartialLevel>;
-    fn store_partial_level(&mut self, level: PartialLevel);
+    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err>;
+    fn store_partial_level(&mut self, level: PartialLevel) -> Result<(), CacheError<Self::Err>>;
 
-    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level>;
-    fn store_level(&mut self, level: Level);
+    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err>;
+    fn store_level(&mut self, level: Level) -> Result<(), CacheError<Self::Err>>;
 
-    fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong>;
-    fn store_song(&mut self, song: NewgroundsSong);
+    fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
+    fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>>;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
         let now = Utc::now();

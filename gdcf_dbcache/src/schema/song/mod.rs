@@ -5,6 +5,7 @@ use diesel::replace_into;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
+use diesel::result::Error;
 use gdcf::cache::CachedObject;
 use gdcf::model::song::NewgroundsSong;
 use schema::_O;

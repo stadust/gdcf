@@ -16,6 +16,7 @@ pub enum CacheError<E>
         E: Error
 {
     NoStore,
+    CacheMiss,
     Custom(E),
 }
 
@@ -57,7 +58,7 @@ impl<E> Display for CacheError<E>
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match *self {
-            CacheError::NoStore => write!(f, "{}", self.description()),
+            CacheError::NoStore | CacheError::CacheMiss => write!(f, "{}", self.description()),
             CacheError::Custom(ref inner) => write!(f, "{}", inner)
         }
     }
@@ -105,6 +106,7 @@ impl<E> Error for CacheError<E>
 {
     fn description(&self) -> &str {
         match *self {
+            CacheError::CacheMiss => "The requested item isn't cached",
             CacheError::NoStore => "The cache refused to store the provided data",
             CacheError::Custom(ref inner) => inner.description()
         }
