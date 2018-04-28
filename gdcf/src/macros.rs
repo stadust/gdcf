@@ -1,12 +1,3 @@
-macro_rules! lookup {
-    ($self: expr, $lookup: ident, $req: expr) => {{
-
-        let cached = cache.$lookup(&$req)?;
-
-        (cached, cache.is_expired(cached))
-    }};
-}
-
 macro_rules! gdcf {
     ($api: ident, $req_type: tt, $lookup: ident) => {
         fn $api(&self, req: $req_type) -> Result<<$req_type as Request>::Result, CacheError<C::Err>> {
