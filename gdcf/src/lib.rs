@@ -115,6 +115,19 @@ impl<A: ApiClient + 'static, C: Cache + 'static> CacheManager<A, C> {
             cache: Arc::new(Mutex::new(cache)),
         }
     }
+
+    fn store_result<F>(f: F, mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()>
+        where
+            F: Future<Item=ProcessedResponse, Error=()> + 'static
+    {
+        f.map(move |response| {
+            let mut cache = lock!(mutex);
+
+            for raw_object in response.iter() {
+                cache.store_raw(raw_object);
+            }
+        })
+    }
 }
 
 impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
@@ -150,22 +163,68 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
             _ => Ok(None)
         }
     }
+
+    fn with_integrity<R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> + 'static
+        where
+            R: MakeRequest + 'static,
+    {
+        let request_string = format!("{}", request);
+        let request_future = lock!(client_mutex).make(request);
+
+        request_future.and_then(move |response| {
+            let mut integrity_futures = Vec::new();
+
+            for raw_object in response.iter() {
+                match Self::ensure_integrity(lock!(@cache_mutex), raw_object) {
+                    Ok(Some(integrity_request)) => {
+                        warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
+
+                        let future = Self::with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
+
+                        integrity_futures.push(future);
+                    }
+
+                    Err(err) => {
+                        return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
+                    }
+
+                    _ => ()
+                }
+            }
+
+            if !integrity_futures.is_empty() {
+                let integrity_future = join_all(integrity_futures)
+                    .map(move |_| {
+                        debug!("Successfully stored all data relevant for integrity!");
+                        lock!(cache_mutex).store_all(response.iter());
+                    })
+                    .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
+
+                lock!(client_mutex).spawn(integrity_future);
+            } else {
+                debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
+                lock!(cache_mutex).store_all(response.iter());
+            }
+
+            Ok(())
+        })
+    }
 }
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, C> {
     fn client(&self) -> MutexGuard<A> {
-        self.client.lock().unwrap()
+        lock!(self.client)
     }
 
     fn cache(&self) -> MutexGuard<C> {
-        self.cache.lock().unwrap()
+        lock!(self.cache)
     }
 
     fn refresh<R: MakeRequest + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing!", request);
 
         let client = self.client();
-        let future = store_result(client.make(request), self.cache.clone());
+        let future = Self::store_result(client.make(request), self.cache.clone());
 
         client.spawn(future);
     }
@@ -173,77 +232,18 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, 
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheManager<A, C> {
     fn client(&self) -> MutexGuard<A> {
-        self.client.lock().unwrap()
+        lock!(self.client)
     }
 
     fn cache(&self) -> MutexGuard<C> {
-        self.cache.lock().unwrap()
+        lock!(self.cache)
     }
 
     fn refresh<R: MakeRequest + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
 
-        let future = with_integrity(request, self.client.clone(), self.cache.clone());
+        let future = Self::with_integrity(request, self.client.clone(), self.cache.clone());
 
         self.client().spawn(future);
     }
-}
-
-fn store_result<F: Future<Item=ProcessedResponse, Error=()> + 'static, C: Cache>(f: F, mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> {
-    f.map(move |response| {
-        let mut cache = mutex.lock().unwrap();
-
-        for raw_object in response.iter() {
-            cache.store_raw(raw_object);
-        }
-    })
-}
-
-fn with_integrity<A, C, R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> + 'static
-    where
-        R: MakeRequest + 'static,
-        A: ApiClient + 'static,
-        C: Cache + 'static
-{
-
-    let request_string = format!("{}", request);
-    let request_future = lock!(client_mutex).make(request);
-
-    request_future.and_then(move |response| {
-        let mut integrity_futures = Vec::new();
-
-        for raw_object in response.iter() {
-            match ConsistentCacheManager::<A, C>::ensure_integrity(lock!(@cache_mutex), raw_object) {
-                Ok(Some(integrity_request)) => {
-                    warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
-
-                    let future = with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
-
-                    integrity_futures.push(future);
-                }
-
-                Err(err) => {
-                    return Err(error!("Error while constructing integrity request for {}: {:?}", request_string, err));
-                }
-
-                _ => ()
-            }
-        }
-
-        if !integrity_futures.is_empty() {
-            let integrity_future = join_all(integrity_futures)
-                .map(move |_| {
-                    debug!("Successfully stored all data relevant for integrity!");
-                    lock!(cache_mutex).store_all(response.iter());
-                })
-                .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
-
-            lock!(client_mutex).spawn(integrity_future);
-        } else {
-            debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
-            lock!(cache_mutex).store_all(response.iter());
-        }
-
-        Ok(())
-    })
 }
