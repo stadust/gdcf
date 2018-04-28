@@ -10,6 +10,9 @@ use futures::Future;
 use std::fmt::Display;
 
 /// Base data included in every request made
+///
+/// The fields in this struct are only relevant when making a request to the `boomlings` servers.
+/// When using GDCF with a custom Geometry Dash API, they can safely be ignored.
 #[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {
     /// The version of the game client we're pretending to be

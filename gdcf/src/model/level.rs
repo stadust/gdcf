@@ -1,5 +1,7 @@
 use model::de;
-use model::{FromRawObject, GameVersion, RawObject, ValueError, MainSong};
+use model::{FromRawObject, GameVersion, RawObject, MainSong};
+
+use error::ValueError;
 
 use std;
 use std::fmt::{Display, Formatter, Error};

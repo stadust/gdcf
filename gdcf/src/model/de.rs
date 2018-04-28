@@ -1,6 +1,8 @@
-use model::{LevelRating, RawObject, ValueError};
+use model::{LevelRating, RawObject};
 use model::level::Featured;
 use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
+
+use error::ValueError;
 
 use std::num::ParseIntError;
 use std::str::FromStr;

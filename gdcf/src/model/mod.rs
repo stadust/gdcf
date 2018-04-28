@@ -9,6 +9,7 @@ use std::error::Error;
 use std::iter;
 use std::marker::Sized;
 use std::str::FromStr;
+use error::ValueError;
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GameVersion {
@@ -29,13 +30,6 @@ pub enum Value {
     NotProvided,
     /// The specified index has the given string value
     Value(String),
-}
-
-#[derive(Debug)]
-pub enum ValueError {
-    IndexOutOfBounds(usize),
-    NoValue(usize),
-    Parse(usize, String, Box<Error>),
 }
 
 #[derive(Debug)]

@@ -4,7 +4,7 @@ pub mod response;
 
 pub use self::client::ApiClient;
 
-use model::ValueError;
+use error::ValueError;
 
 use std::str::Utf8Error;
 

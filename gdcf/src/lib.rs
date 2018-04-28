@@ -1,12 +1,10 @@
-#![feature(try_from)]
 #![feature(box_syntax)]
 #![feature(attr_literals)]
 #![feature(never_type)]
-#![feature(concat_idents)]
 
 //! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
 //! It provides all the core traits required to implement an API Client and
-//! a cache which are used by implementation of the [`Gdcf`] trait.
+//! a cache which are used by implementations of the [`Gdcf`] trait.
 //!
 //! [`Gdcf`]: trait.Gdcf.html
 //!
@@ -18,6 +16,39 @@
 //! while refreshing the cache asynchronously, in the background. This ensures instant access
 //! to information such as level description that can be used easily even in environments where
 //! the slow response times and unreliable availability of RobTop's server would be unacceptable otherwise
+//!
+//! It further has the ability to ensure the integrity of its cached data, which means it can
+//! automatically generate more requests if it notices that, i.e., a level you just retrieved
+//! doesn't have its newgrounds song cached.
+//!
+//! # The API Client
+//!
+//! The API Client used by GDCF must provide access to all data returning endpoints of the boomlings
+//! API or an equivalent thereof. GDCF tries to abstract away as must as possible of RobTop's request
+//! and response formatting, to allow the use of alternate Geometry Dash APIs, like GDJSAPI.
+//! This also means GDCF does not include a default implementation of any client.
+//!
+//! ## Requests
+//!
+//! GDCF provides structs modelling all requests that can be made to the boomlings API in the
+//! [`request`] module. For further information on how to implement endpoints of custom
+//! APIs and use them with GDCF, see the documentation of that module
+//!
+//! [`request`]: api/request/index.html
+//!
+//! ## The data model
+//!
+//! GDCF models its data very closely to the way RobTop does. Due to the way RobTop's data is
+//! organized, it is impossible to use frameworks like serde to process them. In GDCF you can either
+//! choose to construct the objects yourself, or convert them to RobTop's indexed data format
+//! and have GDCF construct them for you.
+//!
+//! # The Cache
+//!
+//! The only assumption GDCF makes about its cache is that if the `store_` methods return an `Ok(...)`
+//! value, the data has been successfully cached. If your cache implementation chooses to not cache
+//! a specific type of data, it must return an `Err(...)` value, otherwise GDCF cannot uphold its
+//! integrity guarantees
 
 extern crate chrono;
 extern crate futures;
@@ -52,6 +83,7 @@ mod ext;
 pub mod api;
 pub mod cache;
 pub mod model;
+pub mod error;
 
 pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     fn client(&self) -> MutexGuard<A>;
