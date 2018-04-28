@@ -1,15 +1,14 @@
-mod de;
-pub mod level;
-pub mod song;
-
+use error::ValueError;
 pub use self::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
-pub use self::song::{NewgroundsSong, MainSong};
-
+pub use self::song::{MainSong, NewgroundsSong};
 use std::error::Error;
 use std::iter;
 use std::marker::Sized;
 use std::str::FromStr;
-use error::ValueError;
+
+mod de;
+pub mod level;
+pub mod song;
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GameVersion {
@@ -50,9 +49,9 @@ impl RawObject {
         }
     }
 
-    pub fn get<T: 'static>(&self, idx: usize) -> Result<T, ValueError>
+    pub fn get<T>(&self, idx: usize) -> Result<T, ValueError>
         where
-            T: FromStr,
+            T: FromStr + 'static,
             <T as FromStr>::Err: Error,
     {
         match self.values.get(idx) {
@@ -67,9 +66,9 @@ impl RawObject {
         }
     }
 
-    pub fn get_with<T, E: 'static, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
+    pub fn get_with<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
         where
-            E: Error,
+            E: Error + 'static,
             F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
@@ -83,14 +82,9 @@ impl RawObject {
         }
     }
 
-    pub fn get_with_or<T, E: 'static, F>(
-        &self,
-        idx: usize,
-        f: F,
-        default: T,
-    ) -> Result<T, ValueError>
+    pub fn get_with_or<T, E, F>(&self, idx: usize, f: F, default: T) -> Result<T, ValueError>
         where
-            E: Error,
+            E: Error + 'static,
             F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
@@ -104,10 +98,10 @@ impl RawObject {
         }
     }
 
-    pub fn get_with_or_default<T, E: 'static, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
+    pub fn get_with_or_default<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
         where
             T: Default,
-            E: Error,
+            E: Error + 'static,
             F: Fn(&String) -> Result<T, E>,
     {
         match self.values.get(idx) {
@@ -121,9 +115,9 @@ impl RawObject {
         }
     }
 
-    pub fn get_or<T: 'static>(&self, idx: usize, default: T) -> Result<T, ValueError>
+    pub fn get_or<T>(&self, idx: usize, default: T) -> Result<T, ValueError>
         where
-            T: FromStr,
+            T: FromStr + 'static,
             <T as FromStr>::Err: Error,
     {
         match self.values.get(idx) {
@@ -138,9 +132,9 @@ impl RawObject {
         }
     }
 
-    pub fn get_or_default<T: 'static>(&self, idx: usize) -> Result<T, ValueError>
+    pub fn get_or_default<T>(&self, idx: usize) -> Result<T, ValueError>
         where
-            T: FromStr + Default,
+            T: FromStr + Default + 'static,
             <T as FromStr>::Err: Error,
     {
         self.get_or(idx, Default::default())
