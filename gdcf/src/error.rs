@@ -24,6 +24,7 @@ pub enum ApiError<E>
     where
         E: Error
 {
+    InternalServerError,
     NoData,
     UnexpectedFormat,
     MalformedData(ValueError),
@@ -68,7 +69,7 @@ impl<E> Display for ApiError<E>
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match *self {
-            ApiError::NoData | ApiError::UnexpectedFormat => write!(f, "{}", self.description()),
+            ApiError::NoData | ApiError::UnexpectedFormat | ApiError::InternalServerError => write!(f, "{}", self.description()),
             ApiError::MalformedData(ref inner) => write!(f, "Malformed response data: {}", inner),
             ApiError::Custom(ref inner) => write!(f, "{}", inner)
         }
@@ -116,6 +117,7 @@ impl<E> Error for ApiError<E>
 {
     fn description(&self) -> &str {
         match *self {
+            ApiError::InternalServerError => "Internal server error",
             ApiError::NoData => "The response contained no data",
             ApiError::UnexpectedFormat => "The response format was unexpected",
             ApiError::MalformedData(ref inner) => inner.description(),
@@ -134,5 +136,44 @@ impl<A, C> Error for GdcfError<A, C>
             GdcfError::Cache(ref inner) => inner.description(),
             GdcfError::Api(ref inner) => inner.description()
         }
+    }
+}
+
+impl<E> From<ValueError> for ApiError<E>
+    where
+        E: Error
+{
+    fn from(inner: ValueError) -> Self {
+        ApiError::MalformedData(inner)
+    }
+}
+
+impl<A, C> From<ValueError> for GdcfError<A, C>
+    where
+        A: Error,
+        C: Error,
+{
+    fn from(inner: ValueError) -> Self {
+        GdcfError::Api(inner.into())
+    }
+}
+
+impl<A, C> From<ApiError<A>> for GdcfError<A, C>
+    where
+        A: Error,
+        C: Error,
+{
+    fn from(inner: ApiError<A>) -> Self {
+        GdcfError::Api(inner)
+    }
+}
+
+impl<A, C> From<CacheError<C>> for GdcfError<A, C>
+    where
+        A: Error,
+        C: Error,
+{
+    fn from(inner: CacheError<C>) -> Self {
+        GdcfError::Cache(inner)
     }
 }

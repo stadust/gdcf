@@ -3,7 +3,7 @@ pub mod level;
 pub use self::level::{LevelRequest, LevelsRequest, SearchFilters, LevelRequestType, SongFilter};
 use model::GameVersion;
 
-use api::{ApiClient, GDError};
+use api::ApiClient;
 use api::client::ApiFuture;
 
 use futures::Future;
@@ -73,5 +73,5 @@ pub trait Request: Display + Default {
 }
 
 pub trait MakeRequest: Request {
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture;
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err>;
 }

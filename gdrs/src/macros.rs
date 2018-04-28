@@ -9,19 +9,24 @@ macro_rules! endpoint {
 macro_rules! prepare_future {
     ($future:expr, $parser:expr) => {{
         let future = $future
-            .map_err(|err| convert_error(err))
+            .map_err(|err| ApiError::Custom(err))
             .and_then(|resp| {
                 match resp.status() {
-                    StatusCode::InternalServerError => Err(GDError::InternalServerError),
-                    StatusCode::NotFound => Err(GDError::ServersDown),
+                    StatusCode::InternalServerError => Err(ApiError::InternalServerError),
+                    StatusCode::NotFound => Err(ApiError::NoData),
                     _ => Ok(resp),
                 }
             })
             .and_then(|resp| {
                 resp.body()
                     .concat2()
-                    .map_err(|err| convert_error(err))
-                    .and_then(|body| $parser(str::from_utf8(&body)?))
+                    .map_err(|err| ApiError::Custom(err))
+                    .and_then(|body| {
+                        match str::from_utf8(&body) {
+                            Ok(body) => $parser(body),
+                            Err(_) => Err(ApiError::UnexpectedFormat),
+                        }
+                    })
             });
 
         Box::new(future)
@@ -31,7 +36,7 @@ macro_rules! prepare_future {
 macro_rules! check_resp {
     ($data:expr) => {{
         if $data == "-1" {
-            return Err(GDError::NoData);
+            return Err(ApiError::NoData);
         }
     }};
 }

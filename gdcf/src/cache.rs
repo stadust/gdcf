@@ -2,6 +2,7 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 
 use model::{PartialLevel, Level, NewgroundsSong};
 use api::request::{LevelRequest, LevelsRequest};
+use std::error::Error;
 
 type Lookup<T> = Option<CachedObject<T>>;
 
@@ -11,6 +12,7 @@ pub trait CacheConfig {
 
 pub trait Cache {
     type Config: CacheConfig;
+    type Err: Error + 'static;
 
     fn config(&self) -> &Self::Config;
 

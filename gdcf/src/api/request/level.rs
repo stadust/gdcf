@@ -4,7 +4,7 @@ use serde::{Serialize, Serializer, Deserialize};
 use futures::Future;
 
 use api::request::{BaseRequest, Request, MakeRequest};
-use api::{ApiClient, GDError};
+use api::ApiClient;
 use api::client::ApiFuture;
 
 use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel, RawObject};
@@ -222,13 +222,13 @@ impl Request for LevelsRequest {
 }
 
 impl MakeRequest for LevelRequest {
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture {
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.level(&self)
     }
 }
 
 impl MakeRequest for LevelsRequest {
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture {
+    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.levels(&self)
     }
 }

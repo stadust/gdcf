@@ -66,14 +66,15 @@ extern crate serde;
 extern crate serde_derive;
 
 use api::client::ApiClient;
-use api::GDError;
 use api::request::{LevelRequest, LevelsRequest, MakeRequest, Request};
 use api::response::ProcessedResponse;
 use cache::Cache;
+use error::GdcfError;
 use ext::{ApiClientExt, CacheExt};
 use futures::Future;
 use futures::future::join_all;
 use model::{FromRawObject, ObjectType, RawObject};
+use std::error::Error;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 #[macro_use]
@@ -125,6 +126,30 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
             cache: Arc::new(Mutex::new(cache)),
         }
     }
+
+    fn ensure_integrity(cache: &C, raw: &RawObject) -> Result<Option<impl MakeRequest>, GdcfError<A::Err, C::Err>> {
+        use api::request::level::SearchFilters;
+
+        match raw.object_type {
+            ObjectType::Level => {
+                let song_id: u64 = raw.get(35)?;
+
+                if song_id != 0 {
+                    if cache.lookup_song(song_id).is_none() {
+                        Ok(Some(LevelsRequest::default()
+                            .search(raw.get(1)?)
+                            .filter(SearchFilters::default()
+                                .custom_song(song_id))))
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            _ => Ok(None)
+        }
+    }
 }
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, C> {
@@ -158,7 +183,9 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
     fn refresh<R: MakeRequest + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
 
-        self.client().spawn(with_integrity(request, self.client.clone(), self.cache.clone()));
+        let future = with_integrity(request, self.client.clone(), self.cache.clone());
+
+        self.client().spawn(future);
     }
 }
 
@@ -178,14 +205,15 @@ fn with_integrity<A, C, R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex:
         A: ApiClient + 'static,
         C: Cache + 'static
 {
+
     let request_string = format!("{}", request);
-    let request_future = client_mutex.lock().unwrap().make(request);
+    let request_future = lock!(client_mutex).make(request);
 
     request_future.and_then(move |response| {
         let mut integrity_futures = Vec::new();
 
         for raw_object in response.iter() {
-            match ensure_integrity(lock!(@cache_mutex), raw_object) {
+            match ConsistentCacheManager::<A, C>::ensure_integrity(lock!(@cache_mutex), raw_object) {
                 Ok(Some(integrity_request)) => {
                     warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
 
@@ -218,28 +246,4 @@ fn with_integrity<A, C, R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex:
 
         Ok(())
     })
-}
-
-fn ensure_integrity<C: Cache>(cache: &C, raw: &RawObject) -> Result<Option<impl MakeRequest>, GDError> {
-    use api::request::level::SearchFilters;
-
-    match raw.object_type {
-        ObjectType::Level => {
-            let song_id: u64 = raw.get(35)?;
-
-            if song_id != 0 {
-                if cache.lookup_song(song_id).is_none() {
-                    Ok(Some(LevelsRequest::default()
-                        .search(raw.get(1)?)
-                        .filter(SearchFilters::default()
-                            .custom_song(song_id))))
-                } else {
-                    Ok(None)
-                }
-            } else {
-                Ok(None)
-            }
-        }
-        _ => Ok(None)
-    }
 }

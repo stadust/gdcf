@@ -61,6 +61,7 @@ impl DatabaseCache {
 
 impl Cache for DatabaseCache {
     type Config = DatabaseCacheConfig;
+    type Err = !;
 
     fn config(&self) -> &DatabaseCacheConfig {
         &self.config
