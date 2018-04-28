@@ -4,6 +4,21 @@
 #![feature(never_type)]
 #![feature(concat_idents)]
 
+//! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
+//! It provides all the core traits required to implement an API Client and
+//! a cache which are used by implementation of the [`Gdcf`] trait.
+//!
+//! [`Gdcf`]: trait.Gdcf.html
+//!
+//! # Geometry Dash Caching Framework
+//!
+//! The idea behind the Geometry Dash Caching Framework is to provide fast and reliable
+//! access to the resources provided by the Geometry Dash servers. It achieves this goal by caching all
+//! responses from the servers and only returning those cached responses when a request is attempted,
+//! while refreshing the cache asynchronously, in the background. This ensures instant access
+//! to information such as level description that can be used easily even in environments where
+//! the slow response times and unreliable availability of RobTop's server would be unacceptable otherwise
+
 extern crate chrono;
 extern crate futures;
 #[macro_use]

@@ -9,14 +9,29 @@ use api::client::ApiFuture;
 use futures::Future;
 use std::fmt::Display;
 
+/// Base data included in every request made
 #[derive(Debug, Clone, Hash)]
 pub struct BaseRequest {
+    /// The version of the game client we're pretending to be
+    ///
+    /// The value of this field doesn't matter, and the request will succeed regardless of
+    /// what it's been set to
     pub game_version: GameVersion,
+
+    /// Internal version of the game client we're pretending to be
+    ///
+    /// The value of this field doesn't matter, and the request will succeed regardless of
+    /// what it's been set to
     pub binary_version: GameVersion,
+
+    /// The current secret String the server uses to identify valid clients.
+    ///
+    /// Settings this field to an incorrect value will cause the request to fail
     pub secret: String,
 }
 
 impl BaseRequest {
+    /// Constructs a new `BaseRequest` with the given values.
     pub fn new(
         game_version: GameVersion,
         binary_version: GameVersion,
@@ -29,6 +44,8 @@ impl BaseRequest {
         }
     }
 
+    /// Constructs a `BaseRequest` instance that has all its fields set to the same
+    /// values a Geometry Dash 2.1 client would use
     pub fn gd_21() -> BaseRequest {
         BaseRequest::new(
             GameVersion::Version { major: 2, minor: 1 },
