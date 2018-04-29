@@ -28,15 +28,7 @@
 //! and response formatting, to allow the use of alternate Geometry Dash APIs, like GDJSAPI.
 //! This also means GDCF does not include a default implementation of any client.
 //!
-//! ## Requests
-//!
-//! GDCF provides structs modelling all requests that can be made to the boomlings API in the
-//! [`request`] module. For further information on how to implement endpoints of custom
-//! APIs and use them with GDCF, see the documentation of that module
-//!
-//! [`request`]: api/request/index.html
-//!
-//! ## The data model
+//! # The data model
 //!
 //! GDCF models its data very closely to the way RobTop does. Due to the way RobTop's data is
 //! organized, it is impossible to use frameworks like serde to process them. In GDCF you can either

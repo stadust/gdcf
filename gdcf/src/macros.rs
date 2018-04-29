@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! gdcf {
     ($api: ident, $req_type: tt, $lookup: ident) => {
         fn $api(&self, req: $req_type) -> Result<<$req_type as Request>::Result, CacheError<C::Err>> {
@@ -28,8 +29,8 @@ macro_rules! gdcf {
 
 macro_rules! setter {
     ($name: ident, $field: ident, $t: ty) => {
-        pub fn $name(mut self, arg0: $t) -> Self {
-            self.$field = arg0;
+        pub fn $name(mut self, $field: $t) -> Self {
+            self.$field = $field;
             self
         }
     };
@@ -37,6 +38,22 @@ macro_rules! setter {
     ($name: ident, $t: ty) => {
         pub fn $name(mut self, arg0: $t) -> Self {
             self.$name = arg0;
+            self
+        }
+    };
+
+    ($(#[$attr:meta])* $name: ident: $t: ty) => {
+        $(#[$attr])*
+        pub fn $name(mut self, $name: $t) -> Self {
+            self.$name = $name;
+            self
+        }
+    };
+
+    ($(#[$attr:meta])* $field:ident[$name: ident]: $t: ty) => {
+        $(#[$attr])*
+        pub fn $name(mut self, $field: $t) -> Self {
+            self.$field = $field;
             self
         }
     }

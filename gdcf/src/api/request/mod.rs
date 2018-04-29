@@ -1,12 +1,25 @@
-pub mod level;
+//! Module containing structs modelling the requests processable by the Geometry Dash servers
+//!
+//! Each struct in this module is modelled strictly after the requests made by the official
+//! Geometry Dash client.
+//!
+//! It further does not attempt to provide any (de)serialization for the request types,
+//! as there are simply no sensible defaults. When providing (de)serialization for requests,
+//! take a look at solutions like serde's remote types.
+//!
+//! # Creating custom request structs
+//!
+//! Libraries extending GDCF can define custom requests by implementing the [Request](trait.Request.html)
+//! trait. The [gdcf!](../../macro.gdcf.html) macro can then be used to generate the boilerplate code that
+//! links the request to a cache lookup, allowing it to be used with an implementation of the
+//! [Gdcf](../../trait.Gdcf.html) trait.
 
-pub use self::level::{LevelRequest, LevelsRequest, SearchFilters, LevelRequestType, SongFilter};
+use api::client::{ApiClient, ApiFuture};
 use model::GameVersion;
-
-use api::ApiClient;
-use api::client::ApiFuture;
-
+pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
 use std::fmt::Display;
+
+pub mod level;
 
 /// Base data included in every request made
 ///
@@ -34,11 +47,7 @@ pub struct BaseRequest {
 
 impl BaseRequest {
     /// Constructs a new `BaseRequest` with the given values.
-    pub fn new(
-        game_version: GameVersion,
-        binary_version: GameVersion,
-        secret: String,
-    ) -> BaseRequest {
+    pub fn new(game_version: GameVersion, binary_version: GameVersion, secret: String) -> BaseRequest {
         BaseRequest {
             game_version,
             binary_version,
@@ -63,12 +72,23 @@ impl Default for BaseRequest {
     }
 }
 
+/// Trait for types that are meant to be requests whose results can be cached by GDCF
 pub trait Request: Display + Default {
+    /// The result of the request
+    ///
+    /// This type needs to match with the return type of the database lookup the
+    /// request was connected with via the [gdcf!](../../macro.gdcf.html) macro.
     type Result;
 
+    /// Creates a default instance of this `Request`
     fn new() -> Self {
         Default::default()
     }
 
+    /// Makes this `Request` through the given `ApiClient`
+    ///
+    /// This method pretty much just exists so that GDCF can use static dispatch for
+    /// request types internally. You should never have to call this manually and instead
+    /// should use the methods provided by your implementation of `ApiClient`
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err>;
 }

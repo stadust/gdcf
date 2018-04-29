@@ -1,3 +1,5 @@
+//! Module containing request definitions for retrieving levels
+
 #[cfg(feature = "deser")]
 use serde::{Serialize, Serializer, Deserialize};
 
@@ -9,11 +11,23 @@ use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 
 use std::fmt::{Display, Formatter, Error};
 
+/// struct modelling a request to `downloadGJLevel22.php`.
+///
+/// In the Geometry Dash API, this endpoint is used to download a level from the servers
+/// and retrieve some additional information that isn't provided with the response to a
+/// [LevelsRequest](struct.LevelsRequest.html)
 #[derive(Debug, Default)]
 pub struct LevelRequest {
+    /// The base request data
     pub base: BaseRequest,
+
+    /// The ID of the level to download
     pub level_id: u64,
+
+    /// Some weird field the Geometry Dash Client sends along
     pub inc: bool,
+
+    /// Some weird field the Geometry Dash Client sends along
     pub extra: bool,
 }
 
@@ -131,6 +145,10 @@ impl SearchFilters {
 }
 
 impl LevelRequest {
+    /// Constructs a new `LevelRequest` to retrieve the level with the given id
+    ///
+    /// Uses a default [BaseRequest](../struct.BaseRequest.html), and sets the `inc` field to
+    /// `true` and `extra` to `false`, as are the default values set the by the Geometry Dash Client
     pub fn new(level_id: u64) -> LevelRequest {
         LevelRequest {
             base: BaseRequest::default(),
@@ -140,9 +158,26 @@ impl LevelRequest {
         }
     }
 
-    setter!(with_base, base, BaseRequest);
-    setter!(inc, bool);
-    setter!(extra, bool);
+    setter! {
+        /// Sets the `BaseRequest` to be used
+        ///
+        /// Allows builder-style creation of requests
+        base[with_base]: BaseRequest
+    }
+
+    setter! {
+        /// Sets the value of the `inc` field
+        ///
+        /// Allows builder-style creation of requests
+        inc: bool
+    }
+
+    setter! {
+        /// Sets the value of the `extra` field
+        ///
+        /// Allows builder-style creation of requests
+        extra: bool
+    }
 }
 
 impl LevelsRequest {
