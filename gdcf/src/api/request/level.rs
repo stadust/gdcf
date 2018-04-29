@@ -1,7 +1,7 @@
 #[cfg(feature = "deser")]
 use serde::{Serialize, Serializer, Deserialize};
 
-use api::request::{BaseRequest, Request, MakeRequest};
+use api::request::{BaseRequest, Request};
 use api::ApiClient;
 use api::client::ApiFuture;
 
@@ -217,19 +217,15 @@ impl From<u64> for LevelRequest {
 
 impl Request for LevelRequest {
     type Result = Level;
-}
 
-impl Request for LevelsRequest {
-    type Result = Vec<PartialLevel>;
-}
-
-impl MakeRequest for LevelRequest {
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.level(&self)
     }
 }
 
-impl MakeRequest for LevelsRequest {
+impl Request for LevelsRequest {
+    type Result = Vec<PartialLevel>;
+
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.levels(&self)
     }

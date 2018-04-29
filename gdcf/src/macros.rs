@@ -56,3 +56,13 @@ macro_rules! into_gdo {
         }
     };
 }
+
+macro_rules! on_miss {
+    ($lookup_result: expr => $code: block) => {
+        match $lookup_result {
+            Err(CacheError::CacheMiss) => $code,
+            Err(err) => Err(err),
+            _ => Ok(None)
+        }
+    };
+}

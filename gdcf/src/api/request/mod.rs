@@ -69,8 +69,6 @@ pub trait Request: Display + Default {
     fn new() -> Self {
         Default::default()
     }
-}
 
-pub trait MakeRequest: Request {
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err>;
 }

@@ -1,13 +1,13 @@
 use api::ApiClient;
-use api::request::MakeRequest;
 use api::response::ProcessedResponse;
 use cache::Cache;
 use error::CacheError;
 use futures::Future;
 use model::GDObject;
+use api::request::Request;
 
 pub(crate) trait ApiClientExt: ApiClient {
-    fn make<R: MakeRequest + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
+    fn make<R: Request + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
         Box::new(request.make(self)
             .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", request, err)))
     }

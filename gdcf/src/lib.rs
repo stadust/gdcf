@@ -66,7 +66,7 @@ extern crate serde;
 extern crate serde_derive;
 
 use api::client::ApiClient;
-use api::request::{LevelRequest, LevelsRequest, MakeRequest, Request};
+use api::request::{LevelRequest, LevelsRequest, Request};
 use api::response::ProcessedResponse;
 use cache::Cache;
 use error::CacheError;
@@ -89,7 +89,7 @@ pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     fn client(&self) -> MutexGuard<A>;
     fn cache(&self) -> MutexGuard<C>;
 
-    fn refresh<R: MakeRequest + 'static>(&self, request: R);
+    fn refresh<R: Request + 'static>(&self, request: R);
 
     gdcf!(level, LevelRequest, lookup_level);
     gdcf!(levels, LevelsRequest, lookup_partial_levels);
@@ -135,21 +135,19 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
         }
     }
 
-    fn ensure_integrity(cache: &C, object: &GDObject) -> Result<Option<impl MakeRequest>, CacheError<C::Err>> {
+    fn ensure_integrity(cache: &C, object: &GDObject) -> Result<Option<impl Request>, CacheError<C::Err>> {
         use api::request::level::SearchFilters;
 
         match *object {
             GDObject::Level(ref level) => {
                 if let Some(song_id) = level.base.custom_song_id {
-                    match cache.lookup_song(song_id) {
-                        Err(CacheError::CacheMiss) => {
+                    on_miss! {
+                        cache.lookup_song(song_id) => {
                             Ok(Some(LevelsRequest::default()
                                 .with_id(level.base.level_id)
                                 .filter(SearchFilters::default()
                                     .custom_song(song_id))))
                         }
-                        Err(err) => Err(err),
-                        _ => Ok(None)
                     }
                 } else {
                     Ok(None)
@@ -161,7 +159,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
 
     fn with_integrity<R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> + 'static
         where
-            R: MakeRequest + 'static,
+            R: Request + 'static,
     {
         let request_string = format!("{}", request);
         let request_future = lock!(client_mutex).make(request);
@@ -215,7 +213,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, 
         lock!(self.cache)
     }
 
-    fn refresh<R: MakeRequest + 'static>(&self, request: R) {
+    fn refresh<R: Request + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing!", request);
 
         let client = self.client();
@@ -234,7 +232,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
         lock!(self.cache)
     }
 
-    fn refresh<R: MakeRequest + 'static>(&self, request: R) {
+    fn refresh<R: Request + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
 
         let future = Self::with_integrity(request, self.client.clone(), self.cache.clone());
