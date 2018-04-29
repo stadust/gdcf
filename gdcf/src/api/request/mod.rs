@@ -6,7 +6,6 @@ use model::GameVersion;
 use api::ApiClient;
 use api::client::ApiFuture;
 
-use futures::Future;
 use std::fmt::Display;
 
 /// Base data included in every request made

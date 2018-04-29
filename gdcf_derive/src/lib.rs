@@ -160,7 +160,7 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
                 #field_name : raw_obj.get_with_or_default(#idx, #path)?
             },
             Mode::Flatten => quote! {
-                #field_name : FromRawObject::from_raw(&raw_obj)?
+                #field_name : TryFrom::try_from(raw_obj)?
             },
             Mode::Custom(path) => quote! {
                 #field_name: #path(raw_obj)?
@@ -168,8 +168,18 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
         });
 
     quote! {
-        impl FromRawObject for #name {
-            fn from_raw(raw_obj: &RawObject) -> Result<Self, ValueError> {
+        impl TryFrom<RawObject> for #name {
+            type Error = ValueError;
+
+            fn try_from(raw_obj: RawObject) -> Result<Self, ValueError> {
+                Self::try_from(&raw_obj)
+            }
+        }
+
+        impl<'a> TryFrom<&'a RawObject> for #name {
+            type Error = ValueError;
+
+            fn try_from(raw_obj: &'a RawObject) -> Result<Self, ValueError> {
                 Ok(#name {
                     #(#things,)*
                 })

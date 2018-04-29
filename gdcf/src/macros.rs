@@ -26,17 +26,6 @@ macro_rules! gdcf {
     }
 }
 
-macro_rules! store {
-    ($cache: expr, $store: ident, $raw_obj: expr) => {
-        {
-            FromRawObject::from_raw(&$raw_obj).map(|constructed|{
-                info!("Caching {}", constructed);
-                $cache.$store(constructed)
-            })
-        }
-    };
-}
-
 macro_rules! setter {
     ($name: ident, $field: ident, $t: ty) => {
         pub fn $name(mut self, arg0: $t) -> Self {
@@ -56,4 +45,14 @@ macro_rules! setter {
 macro_rules! lock {
     (@$mutex: expr) => {&*$mutex.lock().unwrap()};
     ($mutex: expr) => {$mutex.lock().unwrap()};
+}
+
+macro_rules! into_gdo {
+    ($tp: ident) => {
+        impl From<$tp> for GDObject {
+            fn from(level: $tp) -> Self {
+                GDObject::$tp(level)
+            }
+        }
+    };
 }

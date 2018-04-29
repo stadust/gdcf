@@ -1,13 +1,11 @@
 #[cfg(feature = "deser")]
 use serde::{Serialize, Serializer, Deserialize};
 
-use futures::Future;
-
 use api::request::{BaseRequest, Request, MakeRequest};
 use api::ApiClient;
 use api::client::ApiFuture;
 
-use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel, RawObject};
+use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 
 use std::fmt::{Display, Formatter, Error};
 
@@ -159,6 +157,10 @@ impl LevelsRequest {
         self.search_string = search_string;
         self.request_type = LevelRequestType::Search;
         self
+    }
+
+    pub fn with_id(self, id: u64) -> Self {
+        self.search(id.to_string())
     }
 
     pub fn with_length(mut self, length: LevelLength) -> Self {

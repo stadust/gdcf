@@ -69,12 +69,11 @@ use api::client::ApiClient;
 use api::request::{LevelRequest, LevelsRequest, MakeRequest, Request};
 use api::response::ProcessedResponse;
 use cache::Cache;
-use error::{GdcfError, CacheError};
+use error::CacheError;
 use ext::{ApiClientExt, CacheExt};
 use futures::Future;
 use futures::future::join_all;
-use model::{FromRawObject, ObjectType, RawObject};
-use std::error::Error;
+use model::GDObject;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 #[macro_use]
@@ -121,11 +120,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> CacheManager<A, C> {
             F: Future<Item=ProcessedResponse, Error=()> + 'static
     {
         f.map(move |response| {
-            let mut cache = lock!(mutex);
-
-            for raw_object in response.iter() {
-                cache.store_raw(raw_object);
-            }
+            lock!(mutex).store_all(response);
         })
     }
 }
@@ -140,21 +135,21 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
         }
     }
 
-    fn ensure_integrity(cache: &C, raw: &RawObject) -> Result<Option<impl MakeRequest>, GdcfError<A::Err, C::Err>> {
+    fn ensure_integrity(cache: &C, object: &GDObject) -> Result<Option<impl MakeRequest>, CacheError<C::Err>> {
         use api::request::level::SearchFilters;
 
-        match raw.object_type {
-            ObjectType::Level => {
-                let song_id: u64 = raw.get(35)?;
-
-                if song_id != 0 {
-                    if let Err(CacheError::CacheMiss) = cache.lookup_song(song_id) {
-                        Ok(Some(LevelsRequest::default()
-                            .search(raw.get(1)?)
-                            .filter(SearchFilters::default()
-                                .custom_song(song_id))))
-                    } else {
-                        Ok(None)
+        match *object {
+            GDObject::Level(ref level) => {
+                if let Some(song_id) = level.base.custom_song_id {
+                    match cache.lookup_song(song_id) {
+                        Err(CacheError::CacheMiss) => {
+                            Ok(Some(LevelsRequest::default()
+                                .with_id(level.base.level_id)
+                                .filter(SearchFilters::default()
+                                    .custom_song(song_id))))
+                        }
+                        Err(err) => Err(err),
+                        _ => Ok(None)
                     }
                 } else {
                     Ok(None)
@@ -174,7 +169,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
         request_future.and_then(move |response| {
             let mut integrity_futures = Vec::new();
 
-            for raw_object in response.iter() {
+            for raw_object in &response {
                 match Self::ensure_integrity(lock!(@cache_mutex), raw_object) {
                     Ok(Some(integrity_request)) => {
                         warn!("Integrity for result of {} is not given, making integrity request {}", request_string, integrity_request);
@@ -196,14 +191,14 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                 let integrity_future = join_all(integrity_futures)
                     .map(move |_| {
                         debug!("Successfully stored all data relevant for integrity!");
-                        lock!(cache_mutex).store_all(response.iter());
+                        lock!(cache_mutex).store_all(response);
                     })
                     .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
 
                 lock!(client_mutex).spawn(integrity_future);
             } else {
                 debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
-                lock!(cache_mutex).store_all(response.iter());
+                lock!(cache_mutex).store_all(response);
             }
 
             Ok(())

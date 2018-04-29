@@ -15,7 +15,7 @@ use futures::{Async, Future};
 
 use tokio_core::reactor::Core;
 
-use gdcf::api::request::{Request, LevelRequest};
+use gdcf::api::request::{Request, LevelRequest, LevelsRequest};
 use gdcf::{Gdcf, ConsistentCacheManager};
 
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
@@ -33,7 +33,7 @@ fn main() {
 
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    let levels = vec![38786978u64, 38515466u64, 39599737u64, 1u64];
+    let levels = vec![38786978u64, 38515466u64, 11774780u64, 39599737u64, 1u64];
 
     for level in levels.into_iter() {
         gdcf.level(LevelRequest::new(level));

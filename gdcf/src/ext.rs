@@ -1,9 +1,10 @@
 use api::ApiClient;
 use api::request::MakeRequest;
-use futures::Future;
 use api::response::ProcessedResponse;
-use model::{RawObject, ObjectType, FromRawObject};
 use cache::Cache;
+use error::CacheError;
+use futures::Future;
+use model::GDObject;
 
 pub(crate) trait ApiClientExt: ApiClient {
     fn make<R: MakeRequest + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
@@ -13,24 +14,27 @@ pub(crate) trait ApiClientExt: ApiClient {
 }
 
 pub(crate) trait CacheExt: Cache {
-    fn store_all<'a>(&mut self, objects: impl Iterator<Item=&'a RawObject>) {
-        for raw_object in objects {
-            self.store_raw(raw_object);
+    fn store_all(&mut self, objects: impl IntoIterator<Item=GDObject>) -> Result<(), Vec<CacheError<Self::Err>>> {
+        let errors = objects.into_iter()
+            .map(|object| self.store_object(object))
+            .filter(|result| result.is_err())
+            .map(|result| result.unwrap_err())
+            .collect::<Vec<_>>();
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
 
-    fn store_raw(&mut self, raw_object: &RawObject) {
-        let err = match raw_object.object_type {
-            ObjectType::Level => store!(self, store_level, raw_object),
-            ObjectType::PartialLevel => store!(self, store_partial_level, raw_object),
-            ObjectType::NewgroundsSong => store!(self, store_song, raw_object)
-        };
+    fn store_object(&mut self, object: GDObject) -> Result<(), CacheError<Self::Err>> {
+        info!("Caching {}", object);
 
-        if let Err(err) = err {
-            error!(
-                "Unexpected error while constructing object {:?}: {:?}",
-                raw_object.object_type, err
-            )
+        match object {
+            GDObject::Level(level) => self.store_level(level),
+            GDObject::PartialLevel(level) => self.store_partial_level(level),
+            GDObject::NewgroundsSong(song) => self.store_song(song)
         }
     }
 }

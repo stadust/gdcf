@@ -1,5 +1,5 @@
 use model::de;
-use model::{FromRawObject, GameVersion, RawObject, MainSong};
+use model::{GameVersion, RawObject, MainSong};
 
 use error::ValueError;
 
@@ -8,7 +8,7 @@ use std::fmt::{Display, Formatter, Error};
 use std::convert::From;
 use std::num::ParseIntError;
 use std::str::FromStr;
-
+use std::convert::TryFrom;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
@@ -57,85 +57,85 @@ pub enum Featured {
 #[derive(Debug, FromRawObject)]
 pub struct PartialLevel {
     #[raw_data(index = 1)]
-    lid: u64,
+    pub level_id: u64,
 
     #[raw_data(index = 2)]
-    name: String,
+    pub name: String,
 
     #[raw_data(index = 3, deserialize_with = "de::into_option", default)]
-    description: Option<String>,
+    pub description: Option<String>,
 
     // Index 4 not provided for partial levels
     #[raw_data(index = 5)]
-    version: u32,
+    pub version: u32,
 
     #[raw_data(index = 6)]
-    creator_id: u64,
+    pub creator_id: u64,
 
     #[raw_data(index = 8, deserialize_with = "de::int_to_bool")]
-    has_difficulty_rating: bool,
+    pub has_difficulty_rating: bool,
 
     #[raw_data(custom = "de::level_rating")]
-    difficulty: LevelRating,
+    pub difficulty: LevelRating,
 
     #[raw_data(index = 10)]
-    downloads: u32,
+    pub downloads: u32,
 
     #[raw_data(custom = "de::main_song")]
-    main_song: Option<&'static MainSong>,
+    pub main_song: Option<&'static MainSong>,
 
     /// The gd version the request was uploaded/last updated in. Index: 13
     #[raw_data(index = 13)]
-    gd_version: GameVersion,
+    pub gd_version: GameVersion,
 
     #[raw_data(index = 14)]
-    likes: i32,
+    pub likes: i32,
 
     #[raw_data(index = 15)]
-    length: LevelLength,
+    pub length: LevelLength,
 
     #[raw_data(index = 17, deserialize_with = "de::int_to_bool", default = false)]
-    is_demon: bool,
+    pub is_demon: bool,
 
     #[raw_data(index = 18)]
-    stars: u8,
+    pub stars: u8,
 
     /// 0 if the request isn't featured, otherwise an arbitrary value that indicates the ranking on the featured list.
     #[raw_data(index = 19, deserialize_with = "de::featured")]
-    featured: Featured,
+    pub featured: Featured,
 
     #[raw_data(index = 25, deserialize_with = "de::int_to_bool", default = false)]
-    is_auto: bool,
+    pub is_auto: bool,
 
     // Index 27 is not provided for partial levels
     // Index 28 is not provided for partial levels
     // Index 29 is not provided for partial levels
     #[raw_data(index = 30, deserialize_with = "de::default_to_none")]
-    copy_of: Option<u64>,
+    pub copy_of: Option<u64>,
 
     #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
-    custom_song_id: Option<u64>,
+    pub custom_song_id: Option<u64>,
 
     // Index 36 is not provided for partial levels
     #[raw_data(index = 37)]
-    coin_amount: u8,
+    pub coin_amount: u8,
 
     // Index 38 has unknown usage
     #[raw_data(index = 38)]
-    index_38: String,
+    pub index_38: String,
 
     #[raw_data(index = 39, deserialize_with = "de::default_to_none")]
-    stars_requested: Option<u8>,
+    pub stars_requested: Option<u8>,
 
     #[raw_data(index = 42, deserialize_with = "de::int_to_bool")]
-    is_epic: bool,
+    pub is_epic: bool,
 
     // Index 43 has unknown usage
     #[raw_data(index = 43)]
-    index_43: String,
+    pub index_43: String,
 
     #[raw_data(index = 45)]
-    object_amount: u32,
+    pub object_amount: u32,
     // Index 46 has unknown usage
     //#[raw_data(index = 46)]
     //index_46: String,
@@ -148,23 +148,23 @@ pub struct PartialLevel {
 #[derive(Debug, FromRawObject)]
 pub struct Level {
     #[raw_data(flatten)]
-    base: PartialLevel,
+    pub base: PartialLevel,
 
     /// GZip compressed level data. Index: 4
     #[raw_data(index = 4)]
-    level_data: String,
+    pub level_data: String,
 
     /// The request's password (encrypted).  Index: 27
     #[raw_data(index = 27)]
-    password: String,
+    pub password: String,
 
     /// Index: 28
     #[raw_data(index = 28)]
-    time_since_upload: String,
+    pub time_since_upload: String,
 
     /// Index: 29
     #[raw_data(index = 29)]
-    time_since_update: String,
+    pub time_since_update: String,
     // Index 36 has unknown usage
     //#[raw_data(index = 36)]
     //index_36: String,
@@ -284,12 +284,12 @@ impl From<DemonRating> for i32 {
 
 impl Display for PartialLevel {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "PartialLevel({}, {})", self.lid, self.name)
+        write!(f, "PartialLevel({}, {})", self.level_id, self.name)
     }
 }
 
 impl Display for Level {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "Level({}, {})", self.base.lid, self.base.name)
+        write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }
 }

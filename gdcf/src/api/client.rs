@@ -3,8 +3,6 @@ use futures::Future;
 use api::request::{LevelsRequest, LevelRequest};
 use api::response::ProcessedResponse;
 
-use model::RawObject;
-use api::request::MakeRequest;
 use std::error::Error;
 use error::ApiError;
 

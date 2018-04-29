@@ -1,11 +1,14 @@
-use gdcf::model::RawObject;
-use gdcf::model::ObjectType;
-
-use gdcf::error::ApiError;
-
-use std::str::pattern::Pattern;
 use gdcf::api::response::ProcessedResponse;
+use gdcf::error::ApiError;
+use gdcf::model::GDObject;
+use gdcf::model::RawObject;
 use hyper::Error;
+use std::convert::TryFrom;
+use std::str::pattern::Pattern;
+use gdcf::model::NewgroundsSong;
+use gdcf::error::ValueError;
+use gdcf::model::PartialLevel;
+use gdcf::model::Level;
 
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
@@ -13,7 +16,7 @@ pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     let mut sections = body.split("#");
 
     match sections.next() {
-        Some(section) => parse_fragment(ObjectType::Level, section, ":").map(ProcessedResponse::One),
+        Some(section) => parse_fragment::<Level, _>(section, ":").map(ProcessedResponse::One),
         None => Err(ApiError::UnexpectedFormat),
     }
 }
@@ -27,7 +30,7 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     match sections.next() {
         Some(section) => {
             for fragment in section.split("|") {
-                result.push(parse_fragment(ObjectType::PartialLevel, fragment, ":")?);
+                result.push(parse_fragment::<PartialLevel, _>(fragment, ":")?);
             }
         }
         None => return Err(ApiError::UnexpectedFormat),
@@ -38,7 +41,7 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     match sections.next() {
         Some(section) => {
             for fragment in section.split("~:~") {
-                result.push(parse_fragment(ObjectType::NewgroundsSong, fragment, "~|~")?);
+                result.push(parse_fragment::<NewgroundsSong, _>(fragment, "~|~")?);
             }
         }
         None => return Err(ApiError::UnexpectedFormat),
@@ -47,16 +50,13 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     Ok(ProcessedResponse::Many(result))
 }
 
-fn parse_fragment<'a, P>(
-    obj_type: ObjectType,
-    fragment: &'a str,
-    seperator: P,
-) -> Result<RawObject, ApiError<Error>>
-where
-    P: Pattern<'a>,
+fn parse_fragment<'a, A, P>(fragment: &'a str, seperator: P) -> Result<GDObject, ApiError<Error>>
+    where
+        P: Pattern<'a>,
+        A: TryFrom<RawObject, Error=ValueError> + Into<GDObject>,
 {
     let mut iter = fragment.split(seperator);
-    let mut raw_obj = RawObject::new(obj_type);
+    let mut raw_obj = RawObject::new();
 
     while let Some(idx) = iter.next() {
         let idx = match idx.parse() {
@@ -72,5 +72,7 @@ where
         raw_obj.set(idx, value.into());
     }
 
-    Ok(raw_obj)
+    let object: A = TryFrom::try_from(raw_obj)?;
+
+    Ok(object.into())
 }

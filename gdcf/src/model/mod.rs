@@ -2,8 +2,8 @@ use error::ValueError;
 pub use self::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 pub use self::song::{MainSong, NewgroundsSong};
 use std::error::Error;
+use std::fmt::{self, Display, Formatter};
 use std::iter;
-use std::marker::Sized;
 use std::str::FromStr;
 
 mod de;
@@ -14,13 +14,6 @@ pub mod song;
 pub enum GameVersion {
     Unknown,
     Version { minor: u8, major: u8 },
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum ObjectType {
-    PartialLevel,
-    Level,
-    NewgroundsSong,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -34,19 +27,36 @@ pub enum Value {
 #[derive(Debug)]
 pub struct RawObject {
     values: Vec<Value>,
-    pub object_type: ObjectType,
 }
 
-pub trait FromRawObject: Sized {
-    fn from_raw(obj: &RawObject) -> Result<Self, ValueError>;
+#[derive(Debug)]
+pub enum GDObject {
+    NewgroundsSong(NewgroundsSong),
+    PartialLevel(PartialLevel),
+    Level(Level),
+}
+
+into_gdo!(Level);
+into_gdo!(PartialLevel);
+into_gdo!(NewgroundsSong);
+
+impl Display for GDObject {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            GDObject::NewgroundsSong(ref inner) => inner.fmt(f),
+            GDObject::PartialLevel(ref inner) => inner.fmt(f),
+            GDObject::Level(ref inner) => inner.fmt(f)
+        }
+    }
+}
+
+pub trait FromRawObject {
+    // Marker Trait
 }
 
 impl RawObject {
-    pub fn new(object_type: ObjectType) -> RawObject {
-        RawObject {
-            values: Vec::new(),
-            object_type,
-        }
+    pub fn new() -> RawObject {
+        RawObject::default()
     }
 
     pub fn get<T>(&self, idx: usize) -> Result<T, ValueError>
@@ -156,6 +166,14 @@ impl RawObject {
             self.values.push(value)
         } else {
             self.values[idx] = value
+        }
+    }
+}
+
+impl Default for RawObject {
+    fn default() -> Self {
+        RawObject {
+            values: Vec::new()
         }
     }
 }

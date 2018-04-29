@@ -83,42 +83,17 @@ impl Cache for DatabaseCache {
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
         CachedObject::retrieve(newground_id, &self.connection)
-            .map_err(|err| CacheError::Custom(err))
+            .map_err(|err| {
+                if let Error::NotFound = err {
+                    CacheError::CacheMiss
+                } else {
+                    CacheError::Custom(err)
+                }
+            })
     }
 
     fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
         CachedObject::store(song, &self.connection)
             .map_err(|err| CacheError::Custom(err))
     }
-
-    /*fn lookup_partial_levels(
-        &self,
-        req: &LevelsRequest,
-    ) -> Option<CachedObject<Vec<PartialLevel>>> {
-        None
-    }
-
-    fn lookup_partial_level(&self, req: &LevelRequest) -> Option<CachedObject<PartialLevel>> {
-        None
-    }
-
-    fn store_partial_level(&mut self, level: PartialLevel) {
-
-    }
-
-    fn lookup_level(&self, req: &LevelRequest) -> Option<CachedObject<Level>> {
-        None
-    }
-
-    fn store_level(&mut self, level: Level) {
-
-    }
-
-    fn lookup_song(&self, newground_id: u64) -> Option<CachedObject<NewgroundsSong>> {
-        CachedObject::retrieve(newground_id, &self.connection)
-    }
-
-    fn store_song(&mut self, song: NewgroundsSong) {
-        CachedObject::store(song, &self.connection);
-    }*/
 }

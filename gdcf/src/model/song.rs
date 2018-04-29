@@ -1,9 +1,10 @@
 use model::de;
-use model::{FromRawObject, RawObject};
+use model::{RawObject};
 
 use error::ValueError;
 
 use std::fmt::{Display, Formatter, Error};
+use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub struct MainSong {
