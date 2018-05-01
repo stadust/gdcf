@@ -10,25 +10,45 @@ pub enum ValueError {
     Parse(usize, String, Box<Error>),
 }
 
+/// Type for errors that occur during cache access
 #[derive(Debug)]
 pub enum CacheError<E>
     where
         E: Error
 {
+    /// The cache chose not to store the provided value
     NoStore,
+
+    /// The value requested is not cached
     CacheMiss,
+
+    /// An error caused by the underlying cache implementation occurred
     Custom(E),
 }
 
+/// Type for errors that occur when interacting with the API
 #[derive(Debug)]
 pub enum ApiError<E>
     where
         E: Error
 {
+    /// The API server returned a 500 INTERNAL SERVER ERROR response
     InternalServerError,
+
+    /// The request resulted in no data
+    ///
+    /// This can either be a 404 response, or an otherwise empty response, like RobTop's `-1` responses
     NoData,
+
+    /// The response had an unexpected format
     UnexpectedFormat,
+
+    /// The request data was malformed
+    ///
+    /// This variant is only intended to be used while constructing data from [RawObject](model/structs.RawObject.html)s
     MalformedData(ValueError),
+
+    /// An error caused by the underlying api client implementation occured
     Custom(E),
 }
 

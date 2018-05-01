@@ -15,6 +15,8 @@ pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
 
     let mut sections = body.split("#");
 
+    println!("{}", body);
+
     match sections.next() {
         Some(section) => parse_fragment::<Level, _>(section, ":").map(ProcessedResponse::One),
         None => Err(ApiError::UnexpectedFormat),
@@ -38,13 +40,12 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
 
     sections.next(); // ignore the creator section (for now)
 
-    match sections.next() {
-        Some(section) => {
+    if let Some(section) = sections.next() {  // No song fragment is fine with us
+        if !section.is_empty() {
             for fragment in section.split("~:~") {
                 result.push(parse_fragment::<NewgroundsSong, _>(fragment, "~|~")?);
             }
         }
-        None => return Err(ApiError::UnexpectedFormat),
     }
 
     Ok(ProcessedResponse::Many(result))
