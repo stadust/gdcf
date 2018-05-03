@@ -29,11 +29,17 @@ pub mod level;
 pub struct BaseRequest {
     /// The version of the game client we're pretending to be
     ///
+    /// ## GD Internals:
+    /// This field is called `gameVersion` in the boomlings API and needs to be converted to a string
+    ///
     /// The value of this field doesn't matter, and the request will succeed regardless of
     /// what it's been set to
     pub game_version: GameVersion,
 
     /// Internal version of the game client we're pretending to be
+    ///
+    /// ## GD Internals:
+    /// This field is called `binaryVersion` in the boomlings API and needs to be converted to a string
     ///
     /// The value of this field doesn't matter, and the request will succeed regardless of
     /// what it's been set to
@@ -41,6 +47,7 @@ pub struct BaseRequest {
 
     /// The current secret String the server uses to identify valid clients.
     ///
+    /// ## GD Internals:
     /// Settings this field to an incorrect value will cause the request to fail
     pub secret: String,
 }

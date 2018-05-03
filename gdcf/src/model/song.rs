@@ -6,27 +6,61 @@ use error::ValueError;
 use std::fmt::{Display, Formatter, Error};
 use std::convert::TryFrom;
 
+/// struct representing Geometry Dash's main songs.
+///
+/// This data is not provided by the API and needs to be manually kept up to date
 #[derive(Debug)]
+#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct MainSong {
-    main_song_id: u8,
-    name: &'static str,
-    artist: &'static str,
+    /// The ID of this `MainSong`
+    pub main_song_id: u8,
+
+    /// The name of this `MainSong`
+    pub name: &'static str,
+
+    /// The artist of this `MainSong`
+    pub artist: &'static str,
 }
 
+/// Struct representing a Newgrounds song.
+///
+/// ## GD Internals
+/// The Geometry Dash servers provide a list of the newgrounds songs of the levels in a `getGJLevels`
+/// response.
+///
+/// ### Unused indices:
+/// The following indices arent used by the Geometry Dash servers: `9`
 #[derive(Debug, FromRawObject)]
+#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct NewgroundsSong {
+    /// The newgrounds id of this `NewgroundsSong`
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `1`
     #[raw_data(index = 1)]
     pub song_id: u64,
 
+    /// The name of this `NewgroundsSong`
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `2`
     #[raw_data(index = 2)]
     pub name: String,
 
     #[raw_data(index = 3)]
     pub index_3: u64,
 
+    /// The artist of this `NewgroundsSong`
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `4`
     #[raw_data(index = 4)]
     pub artist: String,
 
+    /// The filesize of this `NewgroundsSong`, in megabytes
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `5`
     #[raw_data(index = 5)]
     pub filesize: f64,
 
@@ -40,7 +74,10 @@ pub struct NewgroundsSong {
     #[raw_data(index = 8)]
     pub index_8: i32,
 
-    // Index 9 is unused
+    /// The direct `audio.ngfiles.com` download link for this `NewgroundsSong`
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `10`, and is percent encoded.
     #[raw_data(index = 10, deserialize_with = "de::url")]
     pub link: String,
 }
@@ -56,6 +93,7 @@ impl MainSong {
 }
 
 lazy_static! {
+    /// All current `MainSong`s, as of Geometry Dash 2.1
     pub static ref MAIN_SONGS: [MainSong; 21] = [
         MainSong::new(0, "Stereo Madness", "ForeverBound"),
         MainSong::new(1, "Back on Track", "DJVI"),
@@ -79,6 +117,11 @@ lazy_static! {
         MainSong::new(19, "Deadlocked", "F-777"),
         MainSong::new(20, "Fingerdash", "MDK"),
     ];
+
+    /// Placeholder value for unknown `MainSong`s
+    ///
+    /// When resolving a main song by its ID, but you pass a wrong ID, or
+    /// GDCF hasn't updated to include the new song yet, you will receive this object
     pub static ref UNKNOWN: MainSong = MainSong::new(
         0xFF,
         "The song was added after the release of GDCF you're using",

@@ -21,27 +21,6 @@
 //! automatically generate more requests if it notices that, i.e., a level you just retrieved
 //! doesn't have its newgrounds song cached.
 //!
-//! # The API Client
-//!
-//! The API Client used by GDCF must provide access to all data returning endpoints of the boomlings
-//! API or an equivalent thereof. GDCF tries to abstract away as must as possible of RobTop's request
-//! and response formatting, to allow the use of alternate Geometry Dash APIs, like GDJSAPI.
-//! This also means GDCF does not include a default implementation of any client.
-//!
-//! # The data model
-//!
-//! GDCF models its data very closely to the way RobTop does. Due to the way RobTop's data is
-//! organized, it is impossible to use frameworks like serde to process them. In GDCF you can either
-//! choose to construct the objects yourself, or convert them to RobTop's indexed data format
-//! and have GDCF construct them for you.
-//!
-//! # The Cache
-//!
-//! The only assumption GDCF makes about its cache is that if the `store_` methods return an `Ok(...)`
-//! value, the data has been successfully cached. If your cache implementation chooses to not cache
-//! a specific type of data, it must return an `Err(...)` value, otherwise GDCF cannot uphold its
-//! integrity guarantees
-
 extern crate chrono;
 extern crate futures;
 #[macro_use]

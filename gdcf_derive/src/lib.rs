@@ -12,6 +12,8 @@ pub fn from_raw_object_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let generated = impl_from_raw_object(&ast);
 
+    println!("{:?}", generated);
+
     generated.into()
 }
 
@@ -145,10 +147,10 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
                 #field_name : raw_obj.get(#idx)?
             },
             Mode::Auto(idx, DefaultValue::Literal(lit)) => quote! {
-                #field_name : raw_obj.get_or(#idx, #lit)
+                #field_name : raw_obj.get_or(#idx, #lit)?
             },
             Mode::Auto(idx, DefaultValue::Default) => quote! {
-                #field_name : raw_obj.get_or_default(#idx)
+                #field_name : raw_obj.get_or_default(#idx)?
             },
             Mode::With(path, idx, DefaultValue::None) => quote! {
                 #field_name : raw_obj.get_with(#idx, #path)?

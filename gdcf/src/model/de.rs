@@ -1,19 +1,20 @@
+use error::ValueError;
 use model::{LevelRating, RawObject};
 use model::level::Featured;
-use model::song::{MainSong, MAIN_SONGS, UNKNOWN};
-
-use error::ValueError;
-
+use model::song::{MAIN_SONGS, MainSong, UNKNOWN};
+use percent_encoding::percent_decode;
 use std::num::ParseIntError;
 use std::str::FromStr;
-use percent_encoding::percent_decode;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
+    let is_auto = raw_obj.get_with_or(25, int_to_bool, false)?;
     let rating: i32 = raw_obj.get(9)?;
 
     if is_demon {
         Ok(LevelRating::Demon(rating.into()))
+    } else if is_auto {
+        Ok(LevelRating::Auto)
     } else {
         Ok(rating.into())
     }

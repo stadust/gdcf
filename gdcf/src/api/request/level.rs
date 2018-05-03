@@ -11,7 +11,7 @@ use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 
 use std::fmt::{Display, Formatter, Error};
 
-/// struct modelling a request to `downloadGJLevel22.php`.
+/// Struct modelled after a request to `downloadGJLevel22.php`.
 ///
 /// In the Geometry Dash API, this endpoint is used to download a level from the servers
 /// and retrieve some additional information that isn't provided with the response to a
@@ -22,63 +22,273 @@ pub struct LevelRequest {
     pub base: BaseRequest,
 
     /// The ID of the level to download
+    ///
+    /// ## GD Internals:
+    /// This field is called `levelID` in the boomlings API
     pub level_id: u64,
 
     /// Some weird field the Geometry Dash Client sends along
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub inc: bool,
 
     /// Some weird field the Geometry Dash Client sends along
+    ///
+    /// ## GD Internals:
+    /// This field is called `extras` in the boomlings API and needs to be converted to an integer
     pub extra: bool,
 }
 
+/// Struct modelled after a request to `getGJLevels21.php`
+///
+/// In the Geometry Dash API, this endpoint is used to retrieve a list of levels matching
+/// the specified criteria, along with their [NewgroundsSong](../../../model/song/struct.NewgroundsSong.html)s
+/// and some basic information on their creators.
 #[derive(Debug, Default, Clone, Hash)]
 pub struct LevelsRequest {
+    /// The base request data
     pub base: BaseRequest,
+
+    /// The type of level list to retrieve
+    ///
+    /// ## GD Internals:
+    /// This field is called `type` in the boomlings API and needs to be converted to an integer
     pub request_type: LevelRequestType,
 
+    /// A search string to filter the levels by
+    ///
+    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    ///
+    /// ## GD Internals:
+    /// This field is called `str` in the boomlings API
     pub search_string: String,
 
+    /// A list of level lengths to filter by
+    ///
+    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    ///
+    /// ## GD Internals:
+    /// This field is called `len` in the boomlings API and needs to be converted to a
+    /// comma separated list of integers, or a single dash (`-`) if filtering by level length isn't
+    /// wanted.
     pub lengths: Vec<LevelLength>,
+
+    /// A list of level ratings to filter by.
+    ///
+    /// To filter by any demon, add [LevelRating::Demon(_)](../../../model/level/enum.LevelRating.html#variant.Demon)
+    /// with any arbitrary [DemonRating](../../../model/level/enum.DemonRating.html) value.
+    ///
+    /// `ratings` and [demon_rating](struct.LevelsRequest.html#structfield.demon_rating) are
+    /// mutually exlusive.
+    ///
+    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    ///
+    /// ## GD Internals:
+    /// This field is called `diff` in the boomlings API and needs to be converted to a
+    /// comma separated list of integers, or a single dash (`-`) if filtering by level rating isn't
+    /// wanted.
     pub ratings: Vec<LevelRating>,
+
+    /// Optionally, a single demon rating to filter by. To filter by any demon rating, use
+    /// [ratings](struct.LevelsRequest.html#structfield.ratings)
+    ///
+    /// `demon_rating` and `ratings` are mutually exlusive.
+    ///
+    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    ///
+    /// ## GD Internals:
+    /// This field is called `demonFilter` in the boomlings API and needs to be converted to
+    /// an integer. If filtering by demon rating isn't wanted, the value has to be omitted from the
+    /// request.
     pub demon_rating: Option<DemonRating>,
 
+    /// The page of results to retrieve
     pub page: u32,
+
+    /// Some weird value the Geometry Dash client sends along
     pub total: i32,
 
+    /// Search filters to apply.
+    ///
+    /// These values is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     pub search_filters: SearchFilters,
 }
 
+/// Struct containing the various search filters provided by the Geometry Dash client.
 #[derive(Debug, Default, Copy, Clone, Hash)]
 pub struct SearchFilters {
+    /// Only retrieve uncompleted levels
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub uncompleted: bool,
+
+    /// Only retrieve completed levels
+    ///
+    /// ## GD Internals:
+    /// This field is called `onlyCompleted` in the boomlings API and needs to be converted to
+    /// an integer
     pub completed: bool,
+
+    /// Only retrieve featured levels
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub featured: bool,
+
+    /// Only retrieve original (uncopied)  levels
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub original: bool,
+
+    /// Only retrieve two-player levels
+    ///
+    /// ## GD Internals:
+    /// This field is called `twoPlayer` in the boomlings API and needs to be converted to
+    /// an integer
     pub two_player: bool,
+
+    /// Only retrieve levels with coins
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub coins: bool,
+
+    /// Only retrieve epic levels
+    ///
+    /// ## GD Internals:
+    /// This value needs to be converted to an integer for the boomlings API
     pub epic: bool,
+
+    /// Only retrieve star rated levels
+    ///
+    /// ## GD Internals:
+    /// This field is called `star` in the boomlings API and needs to be converted to
+    /// an integer
     pub rated: bool,
+
+    /// Optionally only retrieve levels that match the given `SongFilter`
+    ///
+    /// ## GD Internals:
+    /// This field composes both the `customSong` and `song` fields of the boomlings API.
+    /// To filter by main song, set the `song` field to the id of the main song, and omit the `customSong`
+    /// field from the request. To filter by a newgrounds song, set `customSong` to `1` and `song`
+    /// to the newgrounds ID of the custom song.
     pub song: Option<SongFilter>,
 }
 
+/// Enum containing the various types of [LevelsRequest](struct.LevelsRequest.html) possible
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Hash)]
 pub enum LevelRequestType {
+    /// A search request.
+    ///
+    /// Setting this variant will enabled all the available search filters
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `0` in requests
     Search,
+
+    /// Request to retrieve the list of most downloaded levels
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `1` in requests
     MostDownloaded,
+
+    /// Request to retrieve the list of most liked levels
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `2` in requests
     MostLiked,
+
+    /// Request to retrieve the list of trending levels
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `3` in requests
     Trending,
+
+    /// Request to retrieve the list of most recent levels
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `4` in requests
     Recent,
+
+    /// Unknown how this works
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `5` in requests
     User,
+
+    /// Request to retrieve the list of featured levels, ordered by their [featured weight](../../../model/level/enum.Featured.html)
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `6` in requests
     Featured,
+
+    /// Request to retrieve a list of levels filtered by some magic criteria
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `7` in requests
     Magic,
+
+    /// Unknown what this is
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `8` in requests
     Unknown8,
+
+    /// Request to retrieve the list of levels most recently awarded a rating
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `9` in requests
     Awarded,
+
+    /// Unknown how this works
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `10` in requests
     Followed,
+
+    /// Unknown how this works
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `11` in requests
     Friend,
+
+    /// Unknown what this is
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `12` in requests
     Unknown12,
+
+    /// Unknown what this is
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `13` in requests
     Unknown13,
+
+    /// Unknown what this is
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `14` in requests
     Unknown14,
+
+    /// Unknown what this is
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `15` in requests
     Unknown15,
+
+    /// Request to retrieve the levels in the hall of fame
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `16` in requests.
     HallOfFame,
 }
 
