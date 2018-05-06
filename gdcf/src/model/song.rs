@@ -5,7 +5,7 @@ use error::ValueError;
 
 use std::fmt::{Display, Formatter, Error};
 use std::convert::TryFrom;
-
+use convert;
 /// struct representing Geometry Dash's main songs.
 ///
 /// This data is not provided by the API and needs to be manually kept up to date
@@ -78,7 +78,7 @@ pub struct NewgroundsSong {
     ///
     /// ## GD Internals:
     /// This value is provided at index `10`, and is percent encoded.
-    #[raw_data(index = 10, deserialize_with = "de::url")]
+    #[raw_data(index = 10, deserialize_with = "convert::to::decoded_url")]
     pub link: String,
 }
 

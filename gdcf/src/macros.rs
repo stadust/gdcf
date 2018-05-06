@@ -83,3 +83,17 @@ macro_rules! on_miss {
         }
     };
 }
+
+macro_rules! from_str {
+    ($target: ident) => {
+        impl FromStr for $target {
+            type Err = ParseIntError;
+
+            fn from_str(s: &str) -> Result<$target, ParseIntError> {
+                let value: i32 = s.parse()?;
+
+                Ok($target::from(value))
+            }
+        }
+    };
+}

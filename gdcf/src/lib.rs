@@ -1,6 +1,7 @@
 #![feature(box_syntax)]
 #![feature(attr_literals)]
 #![feature(never_type)]
+#![feature(try_from)]
 
 //! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
 //! It provides all the core traits required to implement an API Client and
@@ -55,6 +56,7 @@ pub mod api;
 pub mod cache;
 pub mod model;
 pub mod error;
+pub mod convert;
 
 pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     fn client(&self) -> MutexGuard<A>;

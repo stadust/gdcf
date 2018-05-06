@@ -1,10 +1,11 @@
 use api::ApiClient;
+use api::request::Request;
 use api::response::ProcessedResponse;
 use cache::Cache;
 use error::CacheError;
 use futures::Future;
 use model::GDObject;
-use api::request::Request;
+use std::fmt::Display;
 
 pub(crate) trait ApiClientExt: ApiClient {
     fn make<R: Request + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
@@ -39,6 +40,40 @@ pub(crate) trait CacheExt: Cache {
     }
 }
 
+pub trait Join: Iterator {
+    fn join(self, seperator: &str) -> String
+        where
+            Self::Item: Display,
+            Self: Sized,
+    {
+        let mut result = String::new();
+        let mut sep = "";
+
+        for t in self {
+            result = format!("{}{}{}", result, sep, t);
+            sep = seperator;
+        }
+
+        result
+    }
+
+    fn join_quoted(self, seperator: &str) -> String
+        where
+            Self::Item: Display,
+            Self: Sized,
+    {
+        let mut result = String::new();
+        let mut sep = "";
+
+        for t in self {
+            result = format!("{}{}'{}'", result, sep, t);
+            sep = seperator;
+        }
+
+        result
+    }
+}
+
 impl<T> ApiClientExt for T
     where
         T: ApiClient
@@ -47,4 +82,9 @@ impl<T> ApiClientExt for T
 impl<T> CacheExt for T
     where
         T: Cache
+{}
+
+impl<I> Join for I
+    where
+        I: Iterator,
 {}

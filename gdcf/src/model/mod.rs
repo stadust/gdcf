@@ -84,7 +84,7 @@ impl RawObject {
     pub fn get_with<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
         where
             E: Error + 'static,
-            F: Fn(&String) -> Result<T, E>,
+            F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Err(ValueError::IndexOutOfBounds(idx)),
@@ -100,7 +100,7 @@ impl RawObject {
     pub fn get_with_or<T, E, F>(&self, idx: usize, f: F, default: T) -> Result<T, ValueError>
         where
             E: Error + 'static,
-            F: Fn(&String) -> Result<T, E>,
+            F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(default),
@@ -117,7 +117,7 @@ impl RawObject {
         where
             T: Default,
             E: Error + 'static,
-            F: Fn(&String) -> Result<T, E>,
+            F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(Default::default()),

@@ -285,7 +285,7 @@ pub struct PartialLevel {
     ///
     /// ## GD Internals:
     /// This value is provided at index `19`
-    #[raw_data(index = 19, deserialize_with = "de::featured")]
+    #[raw_data(index = 19)]
     pub featured: Featured,
 
     /// The ID of the level this `PartialLevel` is a copy of, or `None`, if this `PartialLevel`
@@ -384,118 +384,6 @@ pub struct Level {
 
     #[raw_data(index = 36, default)]
     pub index_36: String,
-}
-
-impl FromStr for GameVersion {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
-        let version: i32 = s.parse()?;
-
-        if version == 10 {
-            Ok(GameVersion::Unknown)
-        } else {
-            Ok(GameVersion::Version {
-                major: (version / 10) as u8,
-                minor: (version % 10) as u8,
-            })
-        }
-    }
-}
-
-impl ToString for GameVersion {
-    fn to_string(&self) -> String {
-        match *self {
-            GameVersion::Unknown => String::from("10"),
-            GameVersion::Version { minor, major } => (minor + 10 * major).to_string(),
-        }
-    }
-}
-
-impl FromStr for LevelLength {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
-        let length = s.parse()?;
-
-        Ok(match length {
-            0 => LevelLength::Tiny,
-            1 => LevelLength::Short,
-            2 => LevelLength::Medium,
-            3 => LevelLength::Long,
-            4 => LevelLength::ExtraLong,
-            _ => LevelLength::Unknown,
-        })
-    }
-}
-
-impl From<LevelLength> for i32 {
-    fn from(length: LevelLength) -> Self {
-        match length {
-            LevelLength::Tiny => 0,
-            LevelLength::Short => 1,
-            LevelLength::Medium => 2,
-            LevelLength::Long => 3,
-            LevelLength::ExtraLong => 4,
-            LevelLength::Unknown => std::i32::MAX,
-        }
-    }
-}
-
-impl From<i32> for LevelRating {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => LevelRating::NotAvailable,
-            10 => LevelRating::Easy,
-            20 => LevelRating::Normal,
-            30 => LevelRating::Hard,
-            40 => LevelRating::Harder,
-            50 => LevelRating::Insane,
-            _ => LevelRating::Unknown,
-        }
-    }
-}
-
-impl From<LevelRating> for i32 {
-    fn from(rating: LevelRating) -> Self {
-        match rating {
-            LevelRating::Auto => -3,
-            LevelRating::Demon(_) => -2,
-            LevelRating::NotAvailable => -1,
-            LevelRating::Easy => 1,
-            LevelRating::Normal => 2,
-            LevelRating::Hard => 3,
-            LevelRating::Harder => 4,
-            LevelRating::Insane => 5,
-            LevelRating::Unknown => std::i32::MAX,
-        }
-    }
-}
-
-impl From<i32> for DemonRating {
-    fn from(value: i32) -> DemonRating {
-        match value {
-            10 => DemonRating::Easy,
-            20 => DemonRating::Medium,
-            30 => DemonRating::Hard,
-            40 => DemonRating::Insane,
-            50 => DemonRating::Extreme,
-            _ => DemonRating::Unknown,
-        }
-    }
-}
-
-impl From<DemonRating> for i32 {
-    fn from(rating: DemonRating) -> i32 {
-        match rating {
-            DemonRating::Easy => 1,
-            DemonRating::Medium => 2,
-            DemonRating::Hard => 3,
-            DemonRating::Insane => 4,
-            DemonRating::Extreme => 5,
-            DemonRating::Unknown => std::i32::MAX,
-        }
-    }
 }
 
 impl Display for PartialLevel {
