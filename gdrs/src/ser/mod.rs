@@ -17,6 +17,7 @@ use gdcf::api::request::level::LevelRequestType;
 use gdcf::api::request::level::SearchFilters;
 use gdcf::api::request::level::SongFilter;
 use gdcf::model::DemonRating;
+use gdcf::convert::{self, from};
 
 pub(super) fn game_version<S>(version: &GameVersion, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -36,35 +37,21 @@ pub(super) fn length_vec<S>(values: &Vec<LevelLength>, serializer: S) -> Result<
 where
     S: Serializer,
 {
-    if values.is_empty() {
-        serializer.serialize_str("-")
-    } else {
-        serializer.serialize_str(&values
-            .into_iter()
-            .map(|length| i32::from(*length))
-            .join(","))
-    }
+    serializer.serialize_str(&convert::from::vec(values))
 }
 
 pub(super) fn rating_vec<S>(values: &Vec<LevelRating>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    if values.is_empty() {
-        serializer.serialize_str("-")
-    } else {
-        serializer.serialize_str(&values
-            .into_iter()
-            .map(|rating| i32::from(*rating))
-            .join(","))
-    }
+    serializer.serialize_str(&convert::from::vec(values))
 }
 
 pub(super) fn demon_rating<S>(rating: &Option<DemonRating>, serialize: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serialize.serialize_i32(i32::from(rating.unwrap()))
+    serialize.serialize_i32(rating.unwrap().into())
 }
 
 pub(super) fn req_type<S>(req_type: &LevelRequestType, serializer: S) -> Result<S::Ok, S::Error>
@@ -80,14 +67,14 @@ where
 {
     let mut map = serializer.serialize_map(None)?;
 
-    map.serialize_entry("uncompleted", &(filters.uncompleted as u8))?;
-    map.serialize_entry("onlyCompleted", &(filters.completed as u8))?;
-    map.serialize_entry("featured", &(filters.featured as u8))?;
-    map.serialize_entry("original", &(filters.original as u8))?;
-    map.serialize_entry("twoPlayer", &(filters.two_player as u8))?;
-    map.serialize_entry("coins", &(filters.coins as u8))?;
-    map.serialize_entry("epic", &(filters.epic as u8))?;
-    map.serialize_entry("star", &(filters.rated as u8))?;
+    map.serialize_entry("uncompleted", &from::bool(filters.uncompleted))?;
+    map.serialize_entry("onlyCompleted", &from::bool(filters.completed))?;
+    map.serialize_entry("featured", &from::bool(filters.featured))?;
+    map.serialize_entry("original", &from::bool(filters.original))?;
+    map.serialize_entry("twoPlayer", &from::bool(filters.two_player))?;
+    map.serialize_entry("coins", &from::bool(filters.coins))?;
+    map.serialize_entry("epic", &from::bool(filters.epic))?;
+    map.serialize_entry("star", &from::bool(filters.rated))?;
 
     match filters.song {
         Some(SongFilter::Main(id)) => map.serialize_entry("song", &id)?,

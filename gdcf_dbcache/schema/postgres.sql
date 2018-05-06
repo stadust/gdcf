@@ -1,4 +1,6 @@
 CREATE TABLE newgrounds_song (
+    first_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
+    last_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
     song_id BIGINT PRIMARY KEY NOT NULL,
     song_name TEXT NOT NULL,
     index_3 BIGINT NOT NULL,
@@ -7,9 +9,7 @@ CREATE TABLE newgrounds_song (
     index_6 TEXT NULL DEFAULT NULL,
     index_7 TEXT NULL DEFAULT NULL,
     index_8 INT NOT NULL,
-    download_link TEXT NOT NULL,
-    first_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
-    last_cached_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')
+    download_link TEXT NOT NULL
 );
 
 CREATE TABLE partial_level (

@@ -1,48 +1,42 @@
 #![feature(pattern)]
+#![feature(try_from)]
 
-extern crate gdcf;
-
-#[macro_use]
-extern crate serde_derive;
 extern crate futures;
+extern crate gdcf;
 extern crate hyper;
-extern crate serde;
-extern crate serde_urlencoded;
-extern crate tokio_core;
 #[macro_use]
 extern crate log;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_urlencoded;
+extern crate tokio_core;
+
+use futures::Future;
+use futures::Stream;
+use gdcf::api::ApiClient;
+use gdcf::api::client::ApiFuture;
+use gdcf::api::request::level::LevelRequest;
+use gdcf::api::request::level::LevelsRequest;
+use gdcf::api::response::ProcessedResponse;
+use gdcf::error::ApiError;
+use gdcf::model::RawObject;
+use hyper::Client;
+use hyper::client::HttpConnector;
+use hyper::Error;
+use hyper::header::{ContentLength, ContentType};
+use hyper::Method;
+use hyper::Request;
+use hyper::StatusCode;
+use ser::LevelRequestRem;
+use ser::LevelsRequestRem;
+use std::str;
+use tokio_core::reactor::Handle;
 
 #[macro_use]
 mod macros;
 pub mod parse;
 mod ser;
-
-use std::str;
-
-use gdcf::api::request::level::LevelRequest;
-use gdcf::api::request::level::LevelsRequest;
-use gdcf::api::ApiClient;
-
-use gdcf::error::ApiError;
-
-use futures::Future;
-use futures::Stream;
-
-use tokio_core::reactor::Handle;
-
-use hyper::client::HttpConnector;
-use hyper::header::{ContentLength, ContentType};
-use hyper::Client;
-use hyper::Error;
-use hyper::Method;
-use hyper::Request;
-use hyper::StatusCode;
-
-use gdcf::model::RawObject;
-use ser::LevelRequestRem;
-use ser::LevelsRequestRem;
-use gdcf::api::response::ProcessedResponse;
-use gdcf::api::client::ApiFuture;
 
 #[derive(Serialize)]
 #[serde(untagged)]

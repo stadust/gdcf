@@ -11,6 +11,18 @@ use gdcf::model::song::NewgroundsSong;
 use schema::_O;
 use schema::Cached;
 
+schema! { NewgroundsSong[newgrounds_song (song_id)],
+    song_id[2]: u64 => (i64[BigInt], i64[BigInt], u64[Unsigned<BigInt>]),
+    song_name[3, name]: String[Text],
+    index_3[4]: u64 => (i64[BigInt], i64[BigInt], u64[Unsigned<BigInt>]),
+    artist[5]: String[Text],
+    filesize[6]: f64[Double],
+    index_6[7]: Option<String>[Nullable<Text>],
+    index_7[8]: Option<String>[Nullable<Text>],
+    index_8[9]: i32[Integer],
+    download_link[10, link]: String[Text],
+}
+
 backend_abstraction!(newgrounds_song);
 
 impl Cached<_Backend> for CachedObject<NewgroundsSong> {

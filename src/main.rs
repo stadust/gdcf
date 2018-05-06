@@ -33,7 +33,7 @@ fn main() {
 
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    let levels = vec![/*38786978u64, 38515466u64, 11774780u64, 39599737u64, */3150u64];
+    let levels = vec![38786978u64, 38515466u64, 11774780u64, 39599737u64, 3150u64];
 
     for level in levels.into_iter() {
         gdcf.level(LevelRequest::new(level));

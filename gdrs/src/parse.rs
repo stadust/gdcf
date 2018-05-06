@@ -15,8 +15,6 @@ pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
 
     let mut sections = body.split("#");
 
-    println!("{}", body);
-
     match sections.next() {
         Some(section) => parse_fragment::<Level, _>(section, ":").map(ProcessedResponse::One),
         None => Err(ApiError::UnexpectedFormat),

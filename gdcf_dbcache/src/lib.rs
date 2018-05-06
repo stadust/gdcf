@@ -1,3 +1,7 @@
+#![feature(trace_macros)]
+
+//trace_macros!(true);
+
 #[macro_use]
 extern crate diesel;
 extern crate chrono;
