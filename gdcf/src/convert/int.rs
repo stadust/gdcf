@@ -1,8 +1,8 @@
+use model::DemonRating;
 use model::level::Featured;
 use model::LevelLength;
 use model::LevelRating;
 use std;
-use model::DemonRating;
 
 impl From<i32> for Featured {
     fn from(value: i32) -> Self {

@@ -1,17 +1,16 @@
+use chrono::NaiveDateTime;
 use diesel::backend::Backend;
 use diesel::connection::Connection;
-
-use chrono::NaiveDateTime;
-use gdcf::cache::CachedObject;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-use gdcf::error::CacheError;
+use diesel::deserialize::FromSql;
 use diesel::result::Error;
+use gdcf::cache::CachedObject;
+use gdcf::error::CacheError;
 
 #[macro_use]
 mod macros;
 
 pub mod song;
+pub mod level;
 
 pub trait Cached<Back: Backend>: Sized {
     type SearchKey;
