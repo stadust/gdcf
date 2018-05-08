@@ -50,8 +50,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 #[macro_use]
 mod macros;
-mod ext;
 
+pub mod ext;
 pub mod api;
 pub mod cache;
 pub mod model;

@@ -2,16 +2,20 @@
 name = "gdcf_dbcache"
 version = "0.1.0"
 
-[dependencies]
-diesel = "^1.2.2"
-chrono = "^0.4.0"
+[dependencies.rusqlite]
+version = "^0.13.0"
+optional = true
+
+[dependencies.postgres]
+version = "^0.15.2"
+optional = true
 
 [dependencies.gdcf]
 path = "../gdcf"
 
 [features]
-default = []
+default = ["pg"]
 
-postgres = ["diesel/postgres", "diesel/chrono"]
-mysql = ["diesel/mysql", "diesel/chrono"]
-sqlite = ["diesel/sqlite", "diesel/chrono"]
+pg = ["postgres"]
+mysql = []
+sqlite = ["rusqlite"]
