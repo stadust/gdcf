@@ -18,11 +18,15 @@ use tokio_core::reactor::Core;
 use gdcf::api::request::{Request, LevelRequest, LevelsRequest};
 use gdcf::{Gdcf, ConsistentCacheManager};
 
-use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
+//use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 
 use gdrs::BoomlingsClient;
 
 fn main() {
+    gdcf_dbcache::test();
+}
+
+/*fn main() {
     env_logger::init();
 
     let mut core = Core::new().unwrap();
@@ -60,3 +64,4 @@ impl Future for Thing {
         Ok(Async::NotReady)
     }
 }
+*/

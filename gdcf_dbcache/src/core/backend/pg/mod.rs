@@ -1,8 +1,5 @@
-use core::{AsSql, Database, query::InsertValue};
-use core::query::Insertable;
+use core::{AsSql, Database, query::Insertable, table::{FieldValue, SetField}};
 use postgres::{Connection, Error, types::ToSql as ToPgSql};
-use postgres::types::IsNull;
-use postgres::types::Type;
 use self::types::PgTypes;
 use std::error;
 
@@ -10,7 +7,7 @@ mod condition;
 mod types;
 mod query;
 
-struct Pg {
+pub(crate) struct Pg {
     conn: Connection
 }
 
@@ -28,13 +25,5 @@ impl Database for Pg {
 
         self.conn.execute(&statement, &values[..])?;
         Ok(())
-    }
-}
-
-struct Test;
-
-impl Insertable<Pg> for Test {
-    fn values<'a>(&'a self) -> Vec<InsertValue<'a, Pg>> {
-        vec![InsertValue::Default, (&6i32).into()]
     }
 }

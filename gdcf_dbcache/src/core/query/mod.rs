@@ -1,5 +1,7 @@
 use core::{AsSql, Database, statement::PreparedStatement, table::{Field, Table}};
+use core::table::SetField;
 use self::condition::Condition;
+use core::query::condition::And;
 
 pub(crate) mod condition;
 
@@ -27,43 +29,20 @@ pub(crate) trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
     }
 }
 
-pub(crate) enum InsertValue<'a, DB: Database + 'a> {
-    Default,
-    Value(&'a AsSql<DB>),
-}
-
-impl<'a, DB: Database, T: 'a> From<&'a T> for InsertValue<'a, DB>
-    where
-        T: AsSql<DB>
-{
-    fn from(t: &'a T) -> Self {
-        InsertValue::Value(t)
-    }
-}
-
-impl<'a, DB: Database> InsertValue<'a, DB> {
-    pub(crate) fn is_default(&self) -> bool {
-        match self {
-            InsertValue::Default => true,
-            _ => false
-        }
-    }
-
-    pub(crate) fn is_value(&self) -> bool {
-        match self {
-            InsertValue::Value(_) => true,
-            _ => false
-        }
-    }
-}
-
 pub(crate) struct Insert<'a, DB: Database + 'a> {
     table: &'a Table,
-    values: Vec<InsertValue<'a, DB>>,
+    values: Vec<SetField<'a, DB>>,
 }
 
 impl<'a, DB: Database + 'a> Insert<'a, DB> {
-    pub(crate) fn values(&self) -> &Vec<InsertValue<'a, DB>> {
+    pub(crate) fn new(table: &'a Table, values: Vec<SetField<'a, DB>>) -> Insert<'a, DB> {
+        Insert {
+            table,
+            values,
+        }
+    }
+
+    pub(crate) fn values(&self) -> &Vec<SetField<'a, DB>> {
         &self.values
     }
 
@@ -81,11 +60,25 @@ pub(crate) struct Select<'a, DB: Database + 'a> {
     table: &'a Table,
     fields: Vec<&'a Field>,
     joins: Vec<Join<'a, DB>>,
-    filter: &'a Condition<'a, DB>,
+    filter: Option<&'a Condition<'a, DB>>,
 }
 
+/*impl<'a, DB: Database + 'a> Select<'a, DB> {
+    fn filter<C: Condition<'a, DB>>(self, cond: &'a C) -> Self
+        where
+            And<'a, DB>: QueryPart<'a, DB>
+    {
+        self.filter = match self.filter {
+            None => Some(cond),
+            Some(cond2) => Some(&cond.and(cond2))
+        };
+
+        self
+    }
+}*/
+
 pub(crate) trait Insertable<DB: Database> {
-    fn values<'a>(&'a self) -> Vec<InsertValue<'a, DB>>;
+    fn values<'a>(&'a self) -> Vec<SetField<'a, DB>>;
 
     fn insert_into<'a>(&'a self, table: &'a Table) -> Result<Insert<'a, DB>, DB::Error> {
         Ok(
@@ -96,3 +89,5 @@ pub(crate) trait Insertable<DB: Database> {
         )
     }
 }
+
+pub(crate) trait Selectable<DB: Database> {}

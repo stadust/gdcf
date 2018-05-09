@@ -4,11 +4,11 @@ use self::query::Query;
 //pub mod cache;
 //pub mod schema;
 #[macro_use]
-mod macros;
-mod query;
-mod table;
-mod backend;
-mod statement;
+pub(crate) mod macros;
+pub(crate) mod query;
+pub(crate) mod table;
+pub(crate) mod backend;
+pub(crate) mod statement;
 
 pub(crate) trait AsSql<DB: Database> {
     fn as_sql(&self) -> DB::Types;
@@ -41,10 +41,4 @@ pub(crate) trait Database {
     }
 
     fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), Self::Error>;
-}
-
-table! {
-    song => {
-        name
-    }
 }

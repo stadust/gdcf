@@ -42,4 +42,3 @@ impl<'a> QueryPart<'a, Pg> for And<'a, Pg> {
         (stmt1, params1)
     }
 }
-

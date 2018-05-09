@@ -6,7 +6,7 @@ use postgres::types::ToSql as ToPgSql;
 use std::error::Error;
 
 #[derive(Debug)]
-pub(super) enum PgTypes {
+pub(crate) enum PgTypes {
     Integer(i32),
     Text(String)
 }
@@ -48,5 +48,25 @@ impl AsSql<Pg> for i32 {
 
     fn as_sql_string(&self) -> String {
         format!("{}", self)
+    }
+}
+
+impl AsSql<Pg> for String {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::Text(self.clone())
+    }
+
+    fn as_sql_string(&self) -> String {
+        self.clone()
+    }
+}
+
+impl<'a> AsSql<Pg> for &'a str {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::Text(self.to_string())
+    }
+
+    fn as_sql_string(&self) -> String {
+        format!("'{}'", self)
     }
 }
