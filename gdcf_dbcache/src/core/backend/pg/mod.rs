@@ -1,7 +1,6 @@
-use core::{AsSql, Database, query::Insertable, table::{FieldValue, SetField}};
+use core::{AsSql, backend::Database};
 use postgres::{Connection, Error, types::ToSql as ToPgSql};
 use self::types::PgTypes;
-use std::error;
 
 mod condition;
 mod types;

@@ -1,6 +1,6 @@
 use core::query::condition::Condition;
 use core::query::Select;
-use super::{AsSql, Database};
+use super::{AsSql, backend::Database};
 use super::query::condition::{EqField, EqValue};
 use core::query::condition::And;
 
@@ -48,7 +48,7 @@ impl Field {
         }
     }
 
-    pub(crate) fn set_default<'a, DB: Database + 'a>(&'a self) -> SetField<'a, DB> {
+    pub(crate) fn set_default<DB: Database>(&self) -> SetField<DB> {
         SetField {
             field: &self,
             value: FieldValue::Default,

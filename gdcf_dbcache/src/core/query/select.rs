@@ -1,4 +1,4 @@
-use core::Database;
+use core::backend::Database;
 use core::query::condition::And;
 use core::query::condition::Condition;
 use core::table::Field;

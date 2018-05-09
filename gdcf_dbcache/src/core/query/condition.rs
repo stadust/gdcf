@@ -1,5 +1,4 @@
-use core::{AsSql, Database, table::Field};
-use core::statement::PreparedStatement;
+use core::{AsSql, backend::Database, table::Field};
 use std::fmt::Debug;
 use super::QueryPart;
 

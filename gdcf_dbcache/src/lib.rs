@@ -2,20 +2,18 @@
 
 //trace_macros!(true);
 
-#[macro_use]
-extern crate postgres;
 extern crate gdcf;
+extern crate postgres;
+
+use core::query::Insert;
+use core::query::QueryPart;
 
 #[macro_use]
 mod core;
 
-use core::query::Insert;
-use core::query::QueryPart;
-use core::query::Select;
-
 table! {
     newgrounds_song => {
-        song_id, song_name
+        song_id, song_name, song_artist
     }
 }
 
@@ -30,6 +28,13 @@ pub fn test() {
         ]);
 
     println!("{}", ins.to_sql_unprepared());
+    println!("{}", ins.to_sql().0.to_statement(|idx| format!("${}", idx)));
 
-    let select = Select::new(&newgrounds_song, vec![&song_id]).filter(song_id.eq(&5));
+    let select = newgrounds_song
+        .filter(song_id.eq(&5))
+        .filter(song_name.same_as(&song_artist))
+        .select(vec![&song_name])
+        .limit(5);
+
+    println!("{:?}", select);
 }

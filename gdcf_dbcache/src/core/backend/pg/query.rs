@@ -4,7 +4,6 @@ use core::query::{Insert, Query, QueryPart};
 use core::table::FieldValue;
 use core::statement::PreparedStatement;
 use core::statement::StatementPart;
-use gdcf::ext::Join;
 
 impl<'a> QueryPart<'a, Pg> for Insert<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {

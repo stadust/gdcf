@@ -1,3 +1,5 @@
+use gdcf::ext::Join;
+
 #[derive(Debug)]
 pub(crate) enum StatementPart {
     Static(String),
@@ -33,18 +35,16 @@ impl PreparedStatement {
 
     pub(crate) fn to_statement(&self, placeholder_fmt: fn(usize) -> String) -> String {
         let mut idx = 0;
-        let mut stmt = String::new();
 
-        for part in &self.parts {
-            idx += 1;
-
-            match part {
-                StatementPart::Static(string) => stmt = format!("{} {}", stmt, string),
-                StatementPart::Placeholder => stmt = format!("{} {}", stmt, placeholder_fmt(idx))
-            }
-        }
-
-        stmt
+        self.parts.iter()
+            .map(|part| match part {
+                StatementPart::Static(string) => string.to_string(),
+                StatementPart::Placeholder => {
+                    idx += 1;
+                    placeholder_fmt(idx)
+                }
+            })
+            .join(" ")
     }
 }
 

@@ -1,4 +1,4 @@
-use core::Database;
+use core::backend::Database;
 use core::table::SetField;
 use core::table::Table;
 
@@ -26,7 +26,7 @@ impl<'a, DB: Database + 'a> Insert<'a, DB> {
 }
 
 pub(crate) trait Insertable<DB: Database> {
-    fn values<'a>(&'a self) -> Vec<SetField<'a, DB>>;
+    fn values(&self) -> Vec<SetField<DB>>;
 
     fn insert_into<'a>(&'a self, table: &'a Table) -> Result<Insert<'a, DB>, DB::Error> {
         Ok(
