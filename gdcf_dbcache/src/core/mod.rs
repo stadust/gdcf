@@ -1,4 +1,5 @@
 use self::query::Query;
+use std::fmt::Debug;
 
 //#[cfg(any(feature = "postgres", feature = "mysql", feature = "sqlite"))]
 //pub mod cache;
@@ -10,7 +11,7 @@ pub(crate) mod table;
 pub(crate) mod backend;
 pub(crate) mod statement;
 
-pub(crate) trait AsSql<DB: Database> {
+pub(crate) trait AsSql<DB: Database>: Debug {
     fn as_sql(&self) -> DB::Types;
     fn as_sql_string(&self) -> String;
 }

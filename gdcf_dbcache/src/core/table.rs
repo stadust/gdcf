@@ -1,6 +1,7 @@
 use super::{AsSql, Database};
 use super::query::condition::{EqField, EqValue};
 
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Table {
     pub(crate) name: &'static str,
     pub(crate) fields: &'static [&'static Field],
@@ -12,6 +13,7 @@ impl Table {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) struct Field {
     pub(crate) table: &'static str,
     pub(crate) name: &'static str,

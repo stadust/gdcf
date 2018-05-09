@@ -1,7 +1,7 @@
 use core::{AsSql, Database, statement::PreparedStatement, table::{Field, Table}};
+use core::query::condition::And;
 use core::table::SetField;
 use self::condition::Condition;
-use core::query::condition::And;
 
 pub(crate) mod condition;
 
@@ -60,22 +60,26 @@ pub(crate) struct Select<'a, DB: Database + 'a> {
     table: &'a Table,
     fields: Vec<&'a Field>,
     joins: Vec<Join<'a, DB>>,
-    filter: Option<&'a Condition<'a, DB>>,
+    filter: Option<Box<Condition<'a, DB>>>,
 }
 
-/*impl<'a, DB: Database + 'a> Select<'a, DB> {
-    fn filter<C: Condition<'a, DB>>(self, cond: &'a C) -> Self
+impl<'a, DB: Database + 'a> Select<'a, DB> {
+    fn filter<C>(mut self, cond: C) -> Self
         where
-            And<'a, DB>: QueryPart<'a, DB>
+            C: Condition<'a, DB> + 'a,
+            And<'a, DB>: Condition<'a, DB> + 'static
     {
         self.filter = match self.filter {
-            None => Some(cond),
-            Some(cond2) => Some(&cond.and(cond2))
+            None => Some(Box::new(cond)),
+            Some(old) => Some(Box::new(And {
+                cond_1: old,
+                cond_2: Box::new(cond)
+            }))
         };
 
         self
     }
-}*/
+}
 
 pub(crate) trait Insertable<DB: Database> {
     fn values<'a>(&'a self) -> Vec<SetField<'a, DB>>;
@@ -90,4 +94,6 @@ pub(crate) trait Insertable<DB: Database> {
     }
 }
 
-pub(crate) trait Selectable<DB: Database> {}
+pub(crate) trait Selectable<DB: Database> {
+
+}
