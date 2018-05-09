@@ -29,6 +29,11 @@ pub(crate) struct And<'a, DB: Database + 'a> {
     pub(crate) cond_2: Box<Condition<'a, DB>>,
 }
 
+pub(crate) struct Or<'a, DB: Database + 'a> {
+    pub(crate) cond_1: Box<Condition<'a, DB>>,
+    pub(crate) cond_2: Box<Condition<'a, DB>>,
+}
+
 impl<'a, DB: Database + 'a> EqValue<'a, DB> {
     pub(crate) fn new(field: &'a Field, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
         EqValue {
@@ -57,6 +62,16 @@ impl<'a, DB: Database + 'a> And<'a, DB> {
     }
 }
 
+impl<'a, DB: Database + 'a> Or<'a, DB> {
+    pub(crate) fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> Or<'a, DB>
+        where
+            A: Condition<'a, DB>,
+            B: Condition<'a, DB>
+    {
+        Or { cond_1: Box::new(cond_1), cond_2: Box::new(cond_2) }
+    }
+}
+
 macro_rules! condition {
     ($cond_type: ty) => {
         impl <'a, DB: Database + 'a> Condition<'a, DB> for $cond_type
@@ -67,4 +82,5 @@ macro_rules! condition {
 
 condition!(EqField<'a>);
 condition!(And<'a, DB>);
+condition!(Or<'a, DB>);
 condition!(EqValue<'a, DB>);
