@@ -11,6 +11,7 @@ mod core;
 
 use core::query::Insert;
 use core::query::QueryPart;
+use core::query::Select;
 
 table! {
     newgrounds_song => {
@@ -29,4 +30,6 @@ pub fn test() {
         ]);
 
     println!("{}", ins.to_sql_unprepared());
+
+    let select = Select::new(&newgrounds_song, vec![&song_id]).filter(song_id.eq(&5));
 }

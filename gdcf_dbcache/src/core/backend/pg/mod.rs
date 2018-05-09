@@ -7,6 +7,7 @@ mod condition;
 mod types;
 mod query;
 
+#[derive(Debug)]
 pub(crate) struct Pg {
     conn: Connection
 }

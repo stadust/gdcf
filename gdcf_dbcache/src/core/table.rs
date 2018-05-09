@@ -1,5 +1,8 @@
+use core::query::condition::Condition;
+use core::query::Select;
 use super::{AsSql, Database};
 use super::query::condition::{EqField, EqValue};
+use core::query::condition::And;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Table {
@@ -10,6 +13,16 @@ pub(crate) struct Table {
 impl Table {
     pub(crate) fn fields(&self) -> &'static [&'static Field] {
         &self.fields
+    }
+
+    pub(crate) fn filter<'a, DB, Cond: 'static>(&'a self, cond: Cond) -> Select<'a, DB>
+        where
+            Cond: Condition<'a, DB>,
+            DB: Database,
+            And<'a, DB>: Condition<'a, DB> + 'static,
+    {
+        Select::new(self, self.fields().to_vec())
+            .filter(cond)
     }
 }
 
@@ -51,6 +64,7 @@ impl Field {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum FieldValue<'a, DB: Database + 'a> {
     Default,
     Value(&'a AsSql<DB>),
@@ -81,6 +95,7 @@ impl<'a, DB: Database, T: 'a> From<&'a T> for FieldValue<'a, DB>
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct SetField<'a, DB: Database + 'a> {
     pub(crate) field: &'a Field,
     pub(crate) value: FieldValue<'a, DB>,

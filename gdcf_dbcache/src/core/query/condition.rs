@@ -1,8 +1,9 @@
 use core::{AsSql, Database, table::Field};
 use core::statement::PreparedStatement;
+use std::fmt::Debug;
 use super::QueryPart;
 
-pub(crate) trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> {
+pub(crate) trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> + Debug {
     fn and<Cond>(self, other: Cond) -> And<'a, DB>
         where
             Self: Sized + 'static,
@@ -18,17 +19,19 @@ pub(crate) struct EqField<'a> {
     pub(crate) field_2: &'a Field,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct EqValue<'a, DB: Database + 'a> {
     pub(crate) field: &'a Field,
     pub(crate) value: &'a AsSql<DB>,
 }
 
+#[derive(Debug)]
 pub(crate) struct And<'a, DB: Database + 'a> {
     pub(crate) cond_1: Box<Condition<'a, DB>>,
     pub(crate) cond_2: Box<Condition<'a, DB>>,
 }
 
+#[derive(Debug)]
 pub(crate) struct Or<'a, DB: Database + 'a> {
     pub(crate) cond_1: Box<Condition<'a, DB>>,
     pub(crate) cond_2: Box<Condition<'a, DB>>,

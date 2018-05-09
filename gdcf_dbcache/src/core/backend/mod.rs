@@ -1,4 +1,4 @@
-#[cfg(feature = "postgres")]
+#[cfg(feature = "pg")]
 pub mod pg;
 
 #[cfg(feature = "sqlite")]

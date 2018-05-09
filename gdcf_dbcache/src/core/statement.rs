@@ -1,8 +1,10 @@
+#[derive(Debug)]
 pub(crate) enum StatementPart {
     Static(String),
     Placeholder,
 }
 
+#[derive(Debug)]
 pub(crate) struct PreparedStatement {
     parts: Vec<StatementPart>
 }

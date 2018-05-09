@@ -20,7 +20,7 @@ pub(crate) trait FromSql<DB: Database> {
     fn from_sql(sql: DB::Types) -> Self;
 }
 
-pub(crate) trait Database {
+pub(crate) trait Database: Debug {
     type Types;
     type Error;
 
