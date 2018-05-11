@@ -1,14 +1,25 @@
-use core::backend::pg::Pg;
 use core::AsSql;
+use core::backend::pg::Pg;
+use postgres::types::FromSql as FromPgSql;
 use postgres::types::IsNull;
-use postgres::types::Type;
 use postgres::types::ToSql as ToPgSql;
+use postgres::types::Type;
 use std::error::Error;
 
 #[derive(Debug)]
 pub(crate) enum PgTypes {
     Integer(i32),
-    Text(String)
+    Text(String),
+}
+
+impl FromPgSql for PgTypes {
+    fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<Error + Send + Sync>> {
+        unimplemented!()
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        unimplemented!()
+    }
 }
 
 impl ToPgSql for PgTypes {

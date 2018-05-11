@@ -1,7 +1,9 @@
 use core::backend::Database;
+use core::FromSql;
 use core::query::condition::And;
 use core::query::condition::Condition;
 use core::table::Field;
+use core::table::SetField;
 use core::table::Table;
 
 #[derive(Debug)]
@@ -79,4 +81,35 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
 
         self
     }
+}
+
+pub(crate) struct Row<DB: Database> {
+    fields: Vec<DB::Types>,
+}
+
+impl<DB: Database> Row<DB> {
+    pub(crate) fn new(values: Vec<DB::Types>) -> Row<DB> {
+        Row {
+            fields: values
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get<T>(&self, idx: usize) -> Option<T>
+        where
+            T: FromSql<DB>
+    {
+        self.fields.get(idx).map(T::from_sql)
+    }
+}
+
+pub(crate) trait Queryable<DB: Database> {
+    fn from_row(row: &Row<DB>) -> Self;
 }
