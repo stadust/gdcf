@@ -82,7 +82,7 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
     }
 }
 
-pub(crate) trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB>{
+pub(crate) trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB> {
     fn name(&'a self) -> Option<&'a str> {
         None
     }

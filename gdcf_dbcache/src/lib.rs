@@ -10,26 +10,23 @@ use core::query::QueryPart;
 use gdcf::model::NewgroundsSong;
 use core::query::create::Create;
 use core::query::create::Column;
+use core::backend::sqlite::Sqlite;
+use core::backend::Database;
 
 #[macro_use]
 mod core;
 
 table! {
-    newgrounds_song => {
-        song_id, song_name, index_3, song_artist, filesize, index_6, index_7, index_8, song_link, first_cached_at, last_cached_at
-    }
-}
-
-insertable! {
     NewgroundsSong => newgrounds_song {
-        /*song_id => song_id,
-        name => song_name
+        song_id => song_id,
+        name => song_name,
         index_3 => index_3,
         artist => song_artist,
         index_6 => index_6,
         index_7 => index_7,
         index_8 => index_8,
-        link => song_link*/
+        link => song_link;
+        first_cached_at, last_cached_at
     }
 }
 
@@ -53,10 +50,10 @@ pub fn test() {
         .select(vec![&song_name])
         .limit(5);
 
-    let create = Create::new("newgrounds_song")
+    /*let create = Create::new("newgrounds_song")
         .ignore_if_exists()
-        .with_column(Column::new("song_id", "BIGINT").primary())
-        .with_column(Column::new("song_name", "TEXT"));
+        .with_column(Column::new("song_id", "BIGINT"))
+        .with_column(Column::new("song_name", "TEXT"));*/
 
     println!("{:?}", select);
 }
