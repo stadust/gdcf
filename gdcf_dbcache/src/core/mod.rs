@@ -10,6 +10,7 @@ pub(crate) mod query;
 pub(crate) mod table;
 pub(crate) mod backend;
 pub(crate) mod statement;
+pub(crate) mod types;
 
 pub(crate) trait AsSql<DB: Database>: Debug {
     fn as_sql(&self) -> DB::Types;

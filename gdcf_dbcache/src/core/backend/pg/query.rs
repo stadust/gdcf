@@ -50,5 +50,3 @@ impl<'a> QueryPart<'a, Pg> for Insert<'a, Pg> {
         (stmt, values)
     }
 }
-
-impl<'a> Query<'a, Pg> for Insert<'a, Pg> {}

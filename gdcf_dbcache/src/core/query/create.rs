@@ -1,6 +1,8 @@
 use core::AsSql;
 use core::backend::Database;
 use core::query::QueryPart;
+use core::types::Type;
+use core::query::Query;
 
 #[derive(Debug)]
 pub(crate) struct Create<'a, DB: Database + 'a> {
@@ -32,15 +34,15 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
 #[derive(Debug)]
 pub(crate) struct Column<'a, DB: Database + 'a> {
     name: &'a str,
-    type_name: &'a str,
+    sql_type: Box<Type<'a, DB>>,
     constraints: Vec<Box<Constraint<'a, DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
-    pub(crate) fn new(name: &'a str, type_name: &'a str) -> Column<'a, DB> {
+    pub(crate) fn new<T: Type<'a, DB> + 'static>(name: &'a str, sql_type: T) -> Column<'a, DB> {
         Column {
             name,
-            type_name,
+            sql_type: Box::new(sql_type),
             constraints: Vec::new(),
         }
     }
@@ -117,3 +119,7 @@ impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
         }
     }
 }
+
+impl<'a, DB: Database + 'a> Query<'a, DB> for Create<'a, DB>
+    where
+        Create<'a, DB>: QueryPart<'a, DB> {}

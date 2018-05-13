@@ -1,11 +1,12 @@
 use core::{AsSql, backend::Database};
 use core::query::select::Row;
 use postgres::{Connection, Error, types::ToSql as ToPgSql};
-use self::types::PgTypes;
+use self::convert::PgTypes;
 
 mod condition;
-mod types;
+mod convert;
 mod query;
+mod types;
 
 #[derive(Debug)]
 pub(crate) struct Pg {

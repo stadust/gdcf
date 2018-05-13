@@ -1,9 +1,8 @@
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-
-use model::{PartialLevel, Level, NewgroundsSong};
 use api::request::{LevelRequest, LevelsRequest};
-use std::error::Error;
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
+use model::{Level, NewgroundsSong, PartialLevel};
+use std::error::Error;
 use std::result;
 
 pub type Lookup<T, E> = result::Result<CachedObject<T>, CacheError<E>>;
@@ -62,4 +61,6 @@ impl<T> CachedObject<T> {
     pub fn extract(self) -> T {
         self.obj
     }
+
+    pub fn cached(&self) -> &T { &self.obj }
 }

@@ -2,6 +2,8 @@ use core::backend::Database;
 use core::FromSql;
 use core::query::condition::And;
 use core::query::condition::Condition;
+use core::query::Query;
+use core::query::QueryPart;
 use core::table::Field;
 use core::table::SetField;
 use core::table::Table;
@@ -113,3 +115,7 @@ impl<DB: Database> Row<DB> {
 pub(crate) trait Queryable<DB: Database> {
     fn from_row(row: &Row<DB>) -> Self;
 }
+
+impl<'a, DB: Database + 'a> Query<'a, DB> for Select<'a, DB>
+    where
+        Select<'a, DB>: QueryPart<'a, DB> {}

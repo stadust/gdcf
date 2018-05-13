@@ -1,6 +1,8 @@
 use core::backend::Database;
 use core::table::SetField;
 use core::table::Table;
+use core::query::Query;
+use core::query::QueryPart;
 
 #[derive(Debug, Ord, PartialOrd, PartialEq, Eq, Copy, Clone)]
 enum OnConflict {
@@ -61,3 +63,7 @@ pub(crate) trait Insertable<DB: Database> {
         }
     }
 }
+
+impl<'a, DB: Database + 'a> Query<'a, DB> for Insert<'a, DB>
+    where
+        Insert<'a, DB>: QueryPart<'a, DB> {}

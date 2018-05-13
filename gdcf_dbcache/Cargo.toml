@@ -14,7 +14,7 @@ optional = true
 path = "../gdcf"
 
 [features]
-default = ["pg", "sqlite"]
+default = ["pg"]
 
 pg = ["postgres"]
 mysql = []
