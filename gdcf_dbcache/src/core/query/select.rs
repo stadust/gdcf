@@ -104,10 +104,16 @@ impl<DB: Database> Row<DB> {
         self.len() == 0
     }
 
-    pub fn get<T>(&self, idx: usize) -> Option<T>
+    pub fn get<T>(&self, idx: isize) -> Option<T>
         where
             T: FromSql<DB>
     {
+        let idx: usize = if idx < 0 {
+            (self.fields.len() as isize + idx) as usize
+        } else {
+            idx as usize
+        };
+
         self.fields.get(idx).map(T::from_sql)
     }
 }
