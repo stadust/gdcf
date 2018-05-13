@@ -1,7 +1,8 @@
 use core::{AsSql, backend::Database};
 use core::query::select::Row;
-use postgres::{Connection, Error, types::ToSql as ToPgSql};
+use postgres::{Connection, Error as PgError, types::ToSql as ToPgSql};
 use self::convert::PgTypes;
+use super::Error;
 
 mod condition;
 mod convert;
@@ -15,13 +16,13 @@ pub(crate) struct Pg {
 
 impl Database for Pg {
     type Types = PgTypes;
-    type Error = Error;
+    type Error = PgError;
 
     fn prepare(idx: usize) -> String {
         format!("${}", idx)
     }
 
-    fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), <Self as Database>::Error> {
+    fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), Error<Pg>> {
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &ToPgSql).collect();
 
@@ -29,7 +30,7 @@ impl Database for Pg {
         Ok(())
     }
 
-    fn query_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<Vec<Row<Pg>>, Error>
+    fn query_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<Vec<Row<Pg>>, Error<Pg>>
         where
             Self: Sized
     {
@@ -43,5 +44,11 @@ impl Database for Pg {
         }
 
         Ok(rows)
+    }
+}
+
+impl From<PgError> for Error<Pg> {
+    fn from(pg: PgError) -> Self {
+        Error::Database(pg)
     }
 }

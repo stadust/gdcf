@@ -12,6 +12,7 @@ table! {
         name => song_name[Text],
         index_3 => index_3[Unsigned<BigInteger>],
         artist => song_artist[Text],
+        filesize => filesize[Double],
         index_6 => index_6[Text],
         index_7 => index_7[Text],
         index_8 => index_8[Integer],

@@ -1,4 +1,5 @@
 #![feature(trace_macros)]
+#![feature(macro_at_most_once_rep)]
 
 //trace_macros!(true);
 

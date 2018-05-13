@@ -1,5 +1,6 @@
 use core::backend::Database;
 use std::fmt::Debug;
+use core::backend::Error;
 
 //#[cfg(any(feature = "postgres", feature = "mysql", feature = "sqlite"))]
 //pub mod cache;
@@ -18,7 +19,7 @@ pub(crate) trait AsSql<DB: Database>: Debug {
 }
 
 pub(crate) trait FromSql<DB: Database> {
-    fn from_sql(sql: &DB::Types) -> Self
+    fn from_sql(sql: &DB::Types) -> Result<Self, Error<DB>>
         where
             Self: Sized;
 }

@@ -7,6 +7,7 @@ use core::query::QueryPart;
 use core::table::Field;
 use core::table::SetField;
 use core::table::Table;
+use core::backend::Error;
 
 #[derive(Debug)]
 pub(crate) struct Join<'a, DB: Database + 'a> {
@@ -104,7 +105,7 @@ impl<DB: Database> Row<DB> {
         self.len() == 0
     }
 
-    pub fn get<T>(&self, idx: isize) -> Option<T>
+    pub fn get<T>(&self, idx: isize) -> Option<Result<T, Error<DB>>>
         where
             T: FromSql<DB>
     {
@@ -118,8 +119,8 @@ impl<DB: Database> Row<DB> {
     }
 }
 
-pub(crate) trait Queryable<DB: Database> {
-    fn from_row(row: &Row<DB>) -> Self;
+pub(crate) trait Queryable<DB: Database>: Sized {
+    fn from_row(row: &Row<DB>) -> Result<Self, Error<DB>>;
 }
 
 impl<'a, DB: Database + 'a> Query<'a, DB> for Select<'a, DB>

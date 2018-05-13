@@ -1,4 +1,5 @@
 use core::{AsSql, backend::Database, FromSql, statement::PreparedStatement};
+use core::backend::Error;
 pub(crate) use self::insert::{Insert, Insertable};
 pub(crate) use self::select::{Join, Select};
 use std::fmt::Debug;
@@ -17,14 +18,14 @@ pub(crate) trait QueryPart<'a, DB: Database + 'a>: Debug {
 }
 
 pub(crate) trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
-    fn execute(&'a self, db: &'a DB) -> Result<(), DB::Error>
+    fn execute(&'a self, db: &'a DB) -> Result<(), Error<DB>>
         where
             Self: Sized
     {
         db.execute(self)
     }
 
-    fn execute_unprepared(&'a self, db: &'a DB) -> Result<(), DB::Error>
+    fn execute_unprepared(&'a self, db: &'a DB) -> Result<(), Error<DB>>
         where
             Self: Sized
     {
