@@ -5,6 +5,15 @@ use std::marker::PhantomData;
 pub(crate) trait Type<'a, DB: Database + 'a>: QueryPart<'a, DB> {}
 
 #[derive(Debug, Default)]
+pub(crate) struct Timestamp;
+
+#[derive(Debug, Default)]
+pub(crate) struct TinyInteger;
+
+#[derive(Debug, Default)]
+pub(crate) struct SmallInteger;
+
+#[derive(Debug, Default)]
 pub(crate) struct Integer;
 
 #[derive(Debug, Default)]

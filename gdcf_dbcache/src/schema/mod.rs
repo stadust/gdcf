@@ -8,7 +8,7 @@ use core::query::select::Row;
 use core::backend::Error;
 
 pub mod song;
-
+pub mod level;
 
 impl<DB: Database, T: Insertable<DB>> Insertable<DB> for CachedObject<T> {
     fn values(&self) -> Vec<SetField<DB>> {
@@ -25,8 +25,8 @@ impl<DB: Database, T: Insertable<DB>> Insertable<DB> for CachedObject<T> {
 }
 
 impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T> {
-    fn from_row(row: &Row<DB>) -> Result<Self, Error<DB>> {
-        let t = T::from_row(row)?;
+    fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>> {
+        let t = T::from_row(row, offset)?;
 
         // TODO: get cache data from row.get(-1) and row.get(-2) and construct CachedObject<T>
         unimplemented!()

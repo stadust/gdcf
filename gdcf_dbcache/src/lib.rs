@@ -4,10 +4,11 @@
 //trace_macros!(true);
 
 extern crate gdcf;
+#[cfg(feature = "pg")]
 extern crate postgres;
 
 use core::backend::Database;
-use core::backend::pg::Pg;
+//use core::backend::pg::Pg;
 use core::query::create::Column;
 use core::query::create::Create;
 use core::query::Insert;
@@ -22,7 +23,7 @@ pub mod schema;
 pub fn test() {
     use schema::song::newgrounds_song::*;
 
-    let ins = Insert::new(
+    /*let ins = Insert::new(
         &table,
         vec![
             song_id.set(&5),
@@ -40,5 +41,5 @@ pub fn test() {
 
     let c: Create<Pg> = create();
 
-    //println!("{:?}", select);
+    //println!("{:?}", select);*/
 }

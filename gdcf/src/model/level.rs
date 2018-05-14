@@ -333,7 +333,7 @@ pub struct PartialLevel {
 
     /// The amount of objects in this `PartialLevel`
     ///
-    /// ## GD Internals:-
+    /// ## GD Internals:
     /// This value is provided at index `45`, although only for levels uploaded in version
     /// 2.1 or later. For all older levels this is always `0`
     #[raw_data(index = 45)]
