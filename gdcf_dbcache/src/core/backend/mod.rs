@@ -54,7 +54,7 @@ pub(crate) trait Database: Debug + Sized {
         let mut ts = Vec::new();
 
         for row in self.query_raw(stmt.to_statement(Self::prepare), &params)? {
-            ts.push(T::from_row(&row)?)
+            ts.push(T::from_row(&row, 0)?)
         }
 
         Ok(ts)

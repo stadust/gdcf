@@ -120,7 +120,11 @@ impl<DB: Database> Row<DB> {
 }
 
 pub(crate) trait Queryable<DB: Database>: Sized {
-    fn from_row(row: &Row<DB>) -> Result<Self, Error<DB>>;
+    fn select_from<'a>(table: &'a Table) -> Select<'a, DB> {
+        table.select()
+    }
+
+    fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>>;
 }
 
 impl<'a, DB: Database + 'a> Query<'a, DB> for Select<'a, DB>

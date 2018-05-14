@@ -1,9 +1,9 @@
 use core::query::condition::And;
 use core::query::condition::Condition;
+use core::query::create::Create;
 use core::query::Select;
 use super::{AsSql, backend::Database};
 use super::query::condition::{EqField, EqValue};
-use core::query::create::Create;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Table {
@@ -22,8 +22,11 @@ impl Table {
             DB: Database,
             And<'a, DB>: Condition<'a, DB> + 'static,
     {
+        self.select().filter(cond)
+    }
+
+    pub(crate) fn select<'a, DB: Database + 'a>(&'a self) -> Select<'a, DB> {
         Select::new(self, self.fields().to_vec())
-            .filter(cond)
     }
 
     pub(crate) fn create<'a, DB: 'a>(&'a self) -> Create<'a, DB>
