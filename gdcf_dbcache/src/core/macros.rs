@@ -163,7 +163,7 @@ macro_rules! create {
         }
     };
 
-    (@$($tokens: tt)*) => {
+    ($model: ident, @$($tokens: tt)*) => {
         compile_error!("Its broken!");
     };
 

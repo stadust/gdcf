@@ -2,36 +2,73 @@ use gdcf::model::PartialLevel;
 
 table! {
     PartialLevel => partial_level {
-        level_id => level_id[Unsigned<BigInteger>][NotNull, Unique, PrimaryKey],
-        name => level_name[Text][NotNull],
-        description => description[Text],
-        version => level_version[Unsigned<Integer>][NotNull],
-        creator_id => creator_id[Unsigned<BigInteger>][NotNull],
+        level_id => level_id,
+        name => level_name,
+        description => description,
+        version => level_version,
+        creator_id => creator_id,
 
-        difficulty => difficulty[Text][NotNull],
+        difficulty => difficulty,
 
-        download => downloads[Unsigned<Integer>][NotNull],
+        downloads => downloads,
 
-        main_song => main_song[Unsigned<TinyInteger>],
+        main_song => main_song,
 
-        gd_version => gd_version[Text][NotNull],
-        likes => likes[Integer][NotNull],
+        gd_version => gd_version,
+        likes => likes,
 
-        length => level_length[Text][NotNull],
-        stars => stars[Unsigned<TinyInteger>][NotNull],
+        length => level_length,
+        stars => stars,
 
-        featured => featured[Integer][NotNull],
+        featured => featured,
 
-        copy_of => copy_of[Unsigned<Integer>],
-        custom_song_id => custom_song_id[Unsigned<Integer>],
-        coin_amount => coin_amount[Unsigned<TinyInteger>][NotNull],
-        index_38 => index_38[Text],
-        stars_requested => stars_requested[Unsigned<TinyInteger>],
-        is_epic => is_epic[Boolean][NotNull],
-        index_43 => index43[Text],
-        object_amount => object_amount[Unsigned<Integer>][NotNull],
-        index_46 => index_46[Text],
-        index_47 => index_47[Text];
-        first_cached_at[Timestamp][NotNull], last_cached_at[Timestamp][NotNull]
+        copy_of => copy_of,
+        custom_song_id => custom_song_id,
+        coin_amount => coin_amount,
+        index_38 => index_38,
+        stars_requested => stars_requested,
+        is_epic => is_epic,
+        index_43 => index43,
+        object_amount => object_amount,
+        index_46 => index_46,
+        index_47 => index_47;
+        first_cached_at, last_cached_at
     }
+}
+
+create! { partial_level,
+    level_id[NotNull, Unique, Primary] => Unsigned<BigInteger>,
+    level_name[NotNull] => Text,
+    description => Text,
+    level_version[NotNull] => Unsigned<Integer>,
+    creator_id[NotNull] => Unsigned<BigInteger>,
+
+    difficulty[NotNull] => Text,
+
+    downloads[NotNull] => Unsigned<Integer>,
+
+    main_song => Unsigned<TinyInteger>,
+
+    gd_version[NotNull] => Text,
+
+    likes[NotNull] => Integer,
+
+    length[NotNull] => Text,
+
+    stars[NotNull] => Unsigned<TinyInteger>,
+
+    featured[NotNull] => Integer,
+
+    copy_of => Unsigned<BigInteger>,
+    custom_song_id => Unsigned<BigInteger>,
+    coin_amount[NotNull] => Unsigned<TinyInteger>,
+    index_38 => Text,
+    stars_requested => Unsigned<TinyInteger>,
+    is_epic[NotNull] => Boolean,
+    index_43 => Text,
+    object_amount[NotNull] => Unsigned<Integer>,
+    index_46 => Text,
+    index_47 => Text,
+    first_cached_at[NotNull] => Timestamp,
+    last_cached_at[NotNull] => Timestamp
 }
