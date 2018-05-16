@@ -2,15 +2,30 @@ use gdcf::model::NewgroundsSong;
 
 table! {
     NewgroundsSong => newgrounds_song {
-        song_id => song_id[Unsigned<BigInteger>, NotNull],
-        name => song_name[Text, NotNull],
-        index_3 => index_3[Unsigned<BigInteger>],
-        artist => song_artist[Text, NotNull],
-        filesize => filesize[Double, NotNull],
-        index_6 => index_6[Text],
-        index_7 => index_7[Text],
-        index_8 => index_8[Integer],
-        link => song_link[Text, NotNull];
-        first_cached_at[Timestamp, NotNull], last_cached_at[Text, NotNull]
+        song_id => song_id,
+        name => song_name,
+        index_3 => index_3,
+        artist => song_artist,
+        filesize => filesize,
+        index_6 => index_6,
+        index_7 => index_7,
+        index_8 => index_8,
+        link => song_link;
+        first_cached_at,
+        last_cached_at
     }
+}
+
+create! { newgrounds_song,
+    song_id[NotNull, Unique, Primary] => Unsigned<BigInteger>,
+    song_name[NotNull] => Text,
+    index_3 => Unsigned<BigInteger>,
+    song_artist[NotNull] => Text,
+    filesize[NotNull] => Double,
+    index_6 => Text,
+    index_7 => Text,
+    index_8 => Text,
+    song_link[NotNull] => Text,
+    first_cached_at[NotNull] => Timestamp,
+    last_cached_at[NotNull] => Timestamp
 }

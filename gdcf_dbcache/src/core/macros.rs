@@ -1,5 +1,5 @@
 macro_rules! table {
-    ($model: ident => $table: ident {$($model_field: ident => $table_column: ident[$sql_type: ty $(,$($cons: tt),*)?]),*; $($unmapped_column: ident[$sql_type2: ty $(,$($cons2: tt),*)?]),*}) => {
+    ($model: ident => $table: ident {$($model_field: ident => $table_column: ident),*; $($unmapped_column: ident),*}) => {
         pub(crate) mod $table {
             use super::$model;
             use core::backend::{Database, Error};
@@ -63,55 +63,10 @@ macro_rules! table {
                 __insertable!(MySql, $model, $($model_field => $table_column,)*);
                 __queryable!(MySql, $model, $($model_field,)*);
             }
-
-            pub(crate) fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
-                where
-                    $($sql_type: Type<'a, DB>,)*
-                    $($sql_type2: Type<'a, DB>,)*
-                    $($($(__constraint_type!($cons): Constraint<'a, DB> + 'static,)*)?)*
-                    $($($(__constraint_type!($cons2): Constraint<'a, DB> + 'static,)*)?)*
-            {
-                Create::new(table_name)
-                $(
-                    .with_column(
-                        __constraints!(Column::new($table_column.name(), {
-                            let ty: $sql_type = Default::default();
-                            ty
-                        }), $($($cons,)*)?)
-                    )
-                )*
-                $(
-                    .with_column(
-                        __constraints!(Column::new($unmapped_column.name(), {
-                            let ty: $sql_type2 = Default::default();
-                            ty
-                        }), $($($cons2,)*)?)
-                    )
-                )*
-            }
         }
     };
 }
 
-macro_rules! __constraint_type {
-    (NotNull) => {
-        NotNullConstraint<'a>
-    };
-}
-
-macro_rules! __constraints {
-    ($column: expr, NotNull, $($rest: tt),*) => {
-        __constraints!($column.not_null(), $($rest,)*)
-    };
-
-    ($column: expr, $invalid: tt, $($rest: tt),*) => {
-        compiler_error!("Invalid constraint start")
-    };
-
-    ($column: expr, ) => {
-        $column
-    };
-}
 
 macro_rules! __insertable {
     ($backend: ty, $model: ty, $($model_field: ident => $table_column: ident),*,) => {
@@ -153,5 +108,66 @@ macro_rules! __queryable {
 
     ($backend: ty, $model: ident, $($rest: ident),*,) => {
         __queryable!(@[], 0, $backend, $model, $($rest,)*);
+    };
+}
+
+macro_rules! create {
+    ($model: ident, @[], [$($stack_tokens: tt)*], $column: ident => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[], [$($stack_tokens)*, ($column, $sql_type, [])], $($rest)*);
+    };
+
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[], [$($stack_tokens)*, ($column, $sql_type, [$(($types, $cons),)*])], $($rest)*);
+    };
+
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[NotNull $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[(NotNullConstraint<'a>, NotNullConstraint::default()), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
+    };
+
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[Unique $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[(UniqueConstraint<'a>, UniqueConstraint::default()), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
+    };
+
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[Primary $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[(PrimaryKeyConstraint<'a>, PrimaryKeyConstraint::default()), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
+    };
+
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[Default($value: expr) $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model: ident, @[(DefaultConstraint<'a>, DefaultConstraint::new($value)), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
+    };
+
+    ($model: ident, @[], [,$(($column: ident, $sql_type: ty, [$(($cons_type: ty, $constraint: expr)),* $(,)?])),*], ) => {
+        use core::types::*;
+        use core::query::create::*;
+        use core::backend::Database;
+
+        pub(crate) fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
+            where
+                $(
+                    $(
+                        $cons_type: Constraint<'a, DB> + 'static,
+                    )*
+                )*
+                $(
+                    $sql_type: Type<'a, DB>,
+                )*
+        {
+            $model::table.create()
+            $(
+                .with_column(Column::new($model::$column.name(), {let ty: $sql_type = Default::default(); ty})
+                    $(
+                        .constraint($constraint)
+                    )*
+                )
+            )*
+        }
+    };
+
+    (@$($tokens: tt)*) => {
+        compile_error!("Its broken!");
+    };
+
+    ($model: ident, $($tokens: tt)*) => {
+        create!($model, @[], [], $($tokens)*,);
     };
 }

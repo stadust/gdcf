@@ -1,8 +1,9 @@
 use core::AsSql;
 use core::backend::Database;
-use core::query::QueryPart;
-use core::types::Type;
 use core::query::Query;
+use core::query::QueryPart;
+use core::table::Field;
+use core::types::Type;
 
 #[derive(Debug)]
 pub(crate) struct Create<'a, DB: Database + 'a> {
@@ -75,6 +76,13 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
+    pub(crate) fn foreign_key(mut self, references: &'a Field) -> Self
+        where
+            ForeignKeyConstraint<'a>: Constraint<'a, DB> + 'static
+    {
+        self.constraint(ForeignKeyConstraint::new(None, references))
+    }
+
     pub(crate) fn constraint<Con: 'static>(mut self, constraint: Con) -> Self
         where
             Con: Constraint<'a, DB>
@@ -102,7 +110,7 @@ pub(crate) struct PrimaryKeyConstraint<'a>(Option<&'a str>);
 #[derive(Debug)]
 pub(crate) struct ForeignKeyConstraint<'a> {
     name: Option<&'a str>,
-    // TODO: rest
+    references: &'a Field,
 }
 
 #[derive(Debug)]
@@ -116,6 +124,15 @@ impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
         DefaultConstraint {
             name,
             default,
+        }
+    }
+}
+
+impl<'a> ForeignKeyConstraint<'a> {
+    pub(crate) fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
+        ForeignKeyConstraint {
+            name,
+            references,
         }
     }
 }

@@ -8,7 +8,7 @@ use core::query::select::Row;
 use core::backend::Error;
 
 pub mod song;
-pub mod level;
+//pub mod level;
 
 impl<DB: Database, T: Insertable<DB>> Insertable<DB> for CachedObject<T> {
     fn values(&self) -> Vec<SetField<DB>> {
