@@ -137,6 +137,12 @@ impl<'a> ForeignKeyConstraint<'a> {
     }
 }
 
+if_query_part!(NotNullConstraint<'a>, Constraint<'a, DB>);
+if_query_part!(UniqueConstraint<'a>, Constraint<'a, DB>);
+if_query_part!(PrimaryKeyConstraint<'a>, Constraint<'a, DB>);
+if_query_part!(ForeignKeyConstraint<'a>, Constraint<'a, DB>);
+if_query_part!(DefaultConstraint<'a, DB>, Constraint<'a, DB>);
+
 impl<'a, DB: Database + 'a> Query<'a, DB> for Create<'a, DB>
     where
         Create<'a, DB>: QueryPart<'a, DB> {}

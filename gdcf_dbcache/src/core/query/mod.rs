@@ -1,7 +1,7 @@
-use core::{AsSql, backend::Database, FromSql, statement::PreparedStatement};
+use core::{AsSql, backend::Database, statement::PreparedStatement};
 use core::backend::Error;
 pub(crate) use self::insert::{Insert, Insertable};
-pub(crate) use self::select::{Join, Select};
+pub(crate) use self::select::{Select};
 use std::fmt::Debug;
 
 pub(crate) mod condition;

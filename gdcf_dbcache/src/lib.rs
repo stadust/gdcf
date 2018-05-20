@@ -1,27 +1,25 @@
 #![feature(trace_macros)]
 #![feature(macro_at_most_once_rep)]
 
-trace_macros!(true);
+//trace_macros!(true);
 
 extern crate gdcf;
 #[cfg(feature = "pg")]
 extern crate postgres;
 
-use core::backend::Database;
-//use core::backend::pg::Pg;
-use core::query::create::Column;
+use core::backend::pg::Pg;
 use core::query::create::Create;
-use core::query::Insert;
-use core::query::QueryPart;
-use core::query::select::Select;
-use gdcf::model::NewgroundsSong;
+use schema::song;
 
 #[macro_use]
 mod core;
+mod ser;
+mod de;
 pub mod schema;
 
 pub fn test() {
     use schema::song::newgrounds_song::*;
+    let c: Create<Pg> = song::create();
 
     /*let ins = Insert::new(
         &table,

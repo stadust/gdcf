@@ -10,11 +10,13 @@ use std::error::Error as StdError;
 
 #[derive(Debug)]
 pub(crate) enum PgTypes {
+    TinyInteger(i8),
     Integer(i32),
     BigInteger(i64),
     Text(String),
     Double(f64),
     Float(f32),
+    Boolean(bool),
     Null,
 }
 
@@ -34,11 +36,13 @@ impl ToPgSql for PgTypes {
             Self: Sized
     {
         match self {
+            PgTypes::TinyInteger(value) => value.to_sql(ty, out),
             PgTypes::Integer(value) => value.to_sql(ty, out),
             PgTypes::Text(value) => value.to_sql(ty, out),
             PgTypes::BigInteger(value) => value.to_sql(ty, out),
             PgTypes::Double(value) => value.to_sql(ty, out),
             PgTypes::Float(value) => value.to_sql(ty, out),
+            PgTypes::Boolean(value) => value.to_sql(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
     }
@@ -56,13 +60,35 @@ impl ToPgSql for PgTypes {
 
     fn to_sql_checked(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<StdError + Send + Sync>> {
         match self {
+            PgTypes::TinyInteger(value) => value.to_sql_checked(ty, out),
             PgTypes::Integer(value) => value.to_sql_checked(ty, out),
             PgTypes::Text(value) => value.to_sql_checked(ty, out),
             PgTypes::BigInteger(value) => value.to_sql_checked(ty, out),
             PgTypes::Double(value) => value.to_sql_checked(ty, out),
             PgTypes::Float(value) => value.to_sql_checked(ty, out),
+            PgTypes::Boolean(value) => value.to_sql_checked(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
+    }
+}
+
+impl AsSql<Pg> for i8 {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::TinyInteger(*self)
+    }
+
+    fn as_sql_string(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl AsSql<Pg> for u8 {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::TinyInteger(*self as i8)
+    }
+
+    fn as_sql_string(&self) -> String {
+        format!("{}", self)
     }
 }
 
@@ -116,6 +142,20 @@ impl AsSql<Pg> for f64 {
     }
 }
 
+impl AsSql<Pg> for bool {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::Boolean(*self)
+    }
+
+    fn as_sql_string(&self) -> String {
+        if *self {
+            String::from("TRUE")
+        } else {
+            String::from("FALSE")
+        }
+    }
+}
+
 impl AsSql<Pg> for String {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Text(self.clone())
@@ -155,6 +195,18 @@ impl<T> AsSql<Pg> for Option<T>
     }
 }
 
+impl FromSql<Pg> for u8 {
+    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
+        where
+            Self: Sized
+    {
+        match sql {
+            PgTypes::TinyInteger(value) => Ok(*value as u8),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "u8"))
+        }
+    }
+}
+
 impl FromSql<Pg> for u64 {
     fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
         where
@@ -186,8 +238,22 @@ impl FromSql<Pg> for i32 {
             Self: Sized
     {
         match sql {
+            PgTypes::TinyInteger(value) => Ok((*value).into()),
             PgTypes::Integer(value) => Ok(*value),
             _ => Err(Error::Conversion(format!("{:?}", sql), "i32"))
+        }
+    }
+}
+
+impl FromSql<Pg> for u32 {
+    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
+        where
+            Self: Sized
+    {
+        match sql {
+            PgTypes::TinyInteger(value) => Ok(*value as u32), // do not sign extend here, it will fuck things up
+            PgTypes::Integer(value) => Ok(*value as u32),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "u32"))
         }
     }
 }
@@ -201,6 +267,18 @@ impl FromSql<Pg> for f64 {
             PgTypes::Double(value) => Ok(*value),
             PgTypes::Float(value) => Ok(*value as f64),
             _ => Err(Error::Conversion(format!("{:?}", sql), "f64"))
+        }
+    }
+}
+
+impl FromSql<Pg> for bool {
+    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
+        where
+            Self: Sized
+    {
+        match sql {
+            PgTypes::Boolean(value) => Ok(*value),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "bool"))
         }
     }
 }

@@ -8,6 +8,7 @@ mod condition;
 mod convert;
 mod query;
 mod types;
+mod constraint;
 
 #[derive(Debug)]
 pub(crate) struct Pg {

@@ -1,6 +1,6 @@
 use core::AsSql;
 use core::backend::pg::Pg;
-use core::query::{Insert, Query, QueryPart};
+use core::query::{Insert, QueryPart};
 use core::table::FieldValue;
 use core::statement::PreparedStatement;
 use core::statement::StatementPart;

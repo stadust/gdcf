@@ -5,7 +5,6 @@ use core::query::condition::Condition;
 use core::query::Query;
 use core::query::QueryPart;
 use core::table::Field;
-use core::table::SetField;
 use core::table::Table;
 use core::backend::Error;
 

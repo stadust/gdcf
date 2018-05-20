@@ -2,12 +2,10 @@ macro_rules! table {
     ($model: ident => $table: ident {$($model_field: ident => $table_column: ident),*; $($unmapped_column: ident),*}) => {
         pub(crate) mod $table {
             use super::$model;
-            use core::backend::{Database, Error};
-            use core::query::create::*; // we need all the constraints
+            use core::backend::Error;
             use core::query::insert::Insertable;
             use core::query::select::{Queryable, Row};
             use core::table::{Field, Table, SetField};
-            use core::types::*;
 
             #[allow(non_upper_case_globals)]
             pub(crate) const table_name: &str = stringify!($table);
@@ -169,5 +167,23 @@ macro_rules! create {
 
     ($model: ident, $($tokens: tt)*) => {
         create!($model, @[], [], $($tokens)*,);
+    };
+}
+
+macro_rules! if_query_part {
+    ($t: ty, $tr: ty) => {
+        impl<'a, DB: Database + 'a> $tr for $t
+            where
+                $t: QueryPart<'a, DB> {}
+    };
+}
+
+macro_rules! simply_query_part {
+    ($back: ty, $t: ty, $val: expr) => {
+        impl<'a> QueryPart<'a, $back> for $t {
+            fn to_sql_unprepared(&self) -> String {
+                String::from($val)
+            }
+        }
     };
 }

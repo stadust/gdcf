@@ -1,8 +1,33 @@
 use model::DemonRating;
+use model::GameVersion;
 use model::level::Featured;
 use model::LevelLength;
 use model::LevelRating;
+use model::MainSong;
+use model::song::{MAIN_SONGS, UNKNOWN};
 use std;
+
+impl From<u8> for GameVersion {
+    fn from(version: u8) -> Self {
+        if version == 10 {
+            GameVersion::Unknown
+        } else {
+            GameVersion::Version {
+                major: (version / 10) as u8,
+                minor: (version % 10) as u8,
+            }
+        }
+    }
+}
+
+impl Into<u8> for GameVersion {
+    fn into(self) -> u8 {
+        match self {
+            GameVersion::Unknown => 10,
+            GameVersion::Version { minor, major } => major * 10 + minor
+        }
+    }
+}
 
 impl From<i32> for Featured {
     fn from(value: i32) -> Self {
@@ -103,5 +128,13 @@ impl Into<i32> for DemonRating {
             DemonRating::Extreme => 5,
             DemonRating::Unknown => std::i32::MAX,
         }
+    }
+}
+
+impl From<u8> for &'static MainSong {
+    fn from(song_id: u8) -> Self {
+        MAIN_SONGS
+            .get(song_id as usize)
+            .unwrap_or(&UNKNOWN)
     }
 }

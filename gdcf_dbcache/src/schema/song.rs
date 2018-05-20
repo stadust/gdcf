@@ -26,6 +26,6 @@ create! { newgrounds_song,
     index_7 => Text,
     index_8 => Text,
     song_link[NotNull] => Text,
-    first_cached_at[NotNull] => Timestamp,
-    last_cached_at[NotNull] => Timestamp
+    first_cached_at[NotNull] => UtcTimestamp,
+    last_cached_at[NotNull] => UtcTimestamp
 }

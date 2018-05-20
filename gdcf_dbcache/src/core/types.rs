@@ -1,11 +1,10 @@
 use core::backend::Database;
 use core::query::QueryPart;
-use std::marker::PhantomData;
 
 pub(crate) trait Type<'a, DB: Database + 'a>: QueryPart<'a, DB> {}
 
 #[derive(Debug, Default)]
-pub(crate) struct Timestamp;
+pub(crate) struct UtcTimestamp;
 
 #[derive(Debug, Default)]
 pub(crate) struct TinyInteger;
@@ -34,20 +33,13 @@ pub(crate) struct Boolean;
 #[derive(Debug, Default)]
 pub(crate) struct Unsigned<Signed>(Signed);
 
-macro_rules! implement {
-    ($t: ty) => {
-        impl<'a, DB: Database + 'a> Type<'a, DB> for $t
-            where
-                $t: QueryPart<'a, DB> {}
-    };
-}
-
-implement!(Integer);
-implement!(BigInteger);
-implement!(Text);
-implement!(Double);
-implement!(Float);
-implement!(Boolean);
+if_query_part!(Integer, Type<'a, DB>);
+if_query_part!(BigInteger, Type<'a, DB>);
+if_query_part!(Text, Type<'a, DB>);
+if_query_part!(Double, Type<'a, DB>);
+if_query_part!(Float, Type<'a, DB>);
+if_query_part!(Boolean, Type<'a, DB>);
+if_query_part!(UtcTimestamp, Type<'a, DB>);
 
 impl<'a, DB: Database + 'a, Signed> Type<'a, DB> for Unsigned<Signed>
     where

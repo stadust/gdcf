@@ -28,7 +28,7 @@ table! {
         index_38 => index_38,
         stars_requested => stars_requested,
         is_epic => is_epic,
-        index_43 => index43,
+        index_43 => index_43,
         object_amount => object_amount,
         index_46 => index_46,
         index_47 => index_47;
@@ -53,7 +53,7 @@ create! { partial_level,
 
     likes[NotNull] => Integer,
 
-    length[NotNull] => Text,
+    level_length[NotNull] => Text,
 
     stars[NotNull] => Unsigned<TinyInteger>,
 
@@ -69,6 +69,6 @@ create! { partial_level,
     object_amount[NotNull] => Unsigned<Integer>,
     index_46 => Text,
     index_47 => Text,
-    first_cached_at[NotNull] => Timestamp,
-    last_cached_at[NotNull] => Timestamp
+    first_cached_at[NotNull] => UtcTimestamp,
+    last_cached_at[NotNull] => UtcTimestamp
 }
