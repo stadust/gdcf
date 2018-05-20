@@ -53,9 +53,9 @@ impl<'a, DB: Database + 'a> Insert<'a, DB> {
 
 pub(crate) trait Insertable<DB: Database> {
     fn values(&self) -> Vec<SetField<DB>>;
-    fn table<'a>(&'a self) -> &'a Table;
+    fn table(&self) -> &Table;
 
-    fn insert<'a>(&'a self) -> Insert<'a, DB> {
+    fn insert(&self) -> Insert<DB> {
         Insert {
             table: self.table(),
             values: self.values(),

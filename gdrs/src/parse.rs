@@ -1,7 +1,7 @@
 use gdcf::api::response::ProcessedResponse;
 use gdcf::error::ApiError;
 use gdcf::model::GDObject;
-use gdcf::model::RawObject;
+use gdcf::model::raw::RawObject;
 use hyper::Error;
 use std::convert::TryFrom;
 use std::str::pattern::Pattern;

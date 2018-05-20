@@ -6,7 +6,6 @@ use gdcf::model::level::Featured;
 use gdcf::model::LevelLength;
 use gdcf::model::LevelRating;
 use gdcf::model::MainSong;
-use std::str::FromStr;
 
 impl<DB: Database> FromSql<DB> for LevelRating
     where

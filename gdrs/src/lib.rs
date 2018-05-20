@@ -20,7 +20,7 @@ use gdcf::api::request::level::LevelRequest;
 use gdcf::api::request::level::LevelsRequest;
 use gdcf::api::response::ProcessedResponse;
 use gdcf::error::ApiError;
-use gdcf::model::RawObject;
+use gdcf::model::raw::RawObject;
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper::Error;

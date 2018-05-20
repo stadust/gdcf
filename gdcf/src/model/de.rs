@@ -1,5 +1,5 @@
 use error::ValueError;
-use model::{LevelRating, RawObject};
+use model::LevelRating;
 use model::level::Featured;
 use model::song::{MAIN_SONGS, MainSong, UNKNOWN};
 use percent_encoding::percent_decode;
@@ -7,6 +7,7 @@ use std::num::ParseIntError;
 use std::str::{FromStr, Utf8Error};
 
 use convert;
+use model::raw::RawObject;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;

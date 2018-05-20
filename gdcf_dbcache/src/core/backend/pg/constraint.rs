@@ -16,7 +16,6 @@ macro_rules! constraint_query_part {
     };
 }
 
-
 constraint_query_part!(Pg, PrimaryKeyConstraint<'a>, "PRIMARY KEY");
 constraint_query_part!(Pg, UniqueConstraint<'a>, "UNIQUE");
 constraint_query_part!(Pg, NotNullConstraint<'a>, "NOT NULL");

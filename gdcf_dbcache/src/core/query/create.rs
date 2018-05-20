@@ -48,35 +48,35 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         }
     }
 
-    pub(crate) fn primary(mut self) -> Self
+    pub(crate) fn primary(self) -> Self
         where
             PrimaryKeyConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(PrimaryKeyConstraint::default())
     }
 
-    pub(crate) fn unique(mut self) -> Self
+    pub(crate) fn unique(self) -> Self
         where
             UniqueConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(UniqueConstraint::default())
     }
 
-    pub(crate) fn not_null(mut self) -> Self
+    pub(crate) fn not_null(self) -> Self
         where
             NotNullConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(NotNullConstraint::default())
     }
 
-    pub(crate) fn default(mut self, default: &'a AsSql<DB>) -> Self
+    pub(crate) fn default(self, default: &'a AsSql<DB>) -> Self
         where
             DefaultConstraint<'a, DB>: Constraint<'a, DB> + 'static
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
-    pub(crate) fn foreign_key(mut self, references: &'a Field) -> Self
+    pub(crate) fn foreign_key(self, references: &'a Field) -> Self
         where
             ForeignKeyConstraint<'a>: Constraint<'a, DB> + 'static
     {

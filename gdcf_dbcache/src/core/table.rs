@@ -25,11 +25,11 @@ impl Table {
         self.select().filter(cond)
     }
 
-    pub(crate) fn select<'a, DB: Database + 'a>(&'a self) -> Select<'a, DB> {
+    pub(crate) fn select<DB: Database>(&self) -> Select<DB> {
         Select::new(self, self.fields().to_vec())
     }
 
-    pub(crate) fn create<'a, DB: 'a>(&'a self) -> Create<'a, DB>
+    pub(crate) fn create<DB>(&self) -> Create<DB>
         where
             DB: Database
     {

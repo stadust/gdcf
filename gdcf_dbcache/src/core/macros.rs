@@ -69,7 +69,7 @@ macro_rules! table {
 macro_rules! __insertable {
     ($backend: ty, $model: ty, $($model_field: ident => $table_column: ident),*,) => {
         impl Insertable<$backend> for $model {
-            fn table<'a>(&'a self) -> &'a Table {
+            fn table(&self) -> &Table {
                 &table
             }
 

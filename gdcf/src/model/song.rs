@@ -1,11 +1,10 @@
-use model::de;
-use model::{RawObject};
-
-use error::ValueError;
-
-use std::fmt::{Display, Formatter, Error};
-use std::convert::TryFrom;
 use convert;
+use error::ValueError;
+use model::de;
+use model::raw::RawObject;
+use std::convert::TryFrom;
+use std::fmt::{Display, Error, Formatter};
+
 /// struct representing Geometry Dash's main songs.
 ///
 /// This data is not provided by the API and needs to be manually kept up to date

@@ -1,5 +1,5 @@
 use error::ValueError;
-use model::{GameVersion, MainSong, RawObject};
+use model::{GameVersion, MainSong};
 use model::de;
 use std;
 use std::convert::From;
@@ -7,6 +7,7 @@ use std::convert::TryFrom;
 use std::fmt::{Display, Error, Formatter};
 use std::num::ParseIntError;
 use std::str::FromStr;
+use model::raw::RawObject;
 
 /// Enum representing the possible level lengths known to GDCF
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
