@@ -1,14 +1,15 @@
 use core::backend::pg::Pg;
 use core::query::QueryPart;
-use core::types::{BigInteger, Boolean, Double, Float, Integer, Text, TinyInteger, Unsigned, UtcTimestamp};
+use core::types::{BigInteger, Boolean, Double, Float, Integer, Text, SmallInteger, Unsigned, UtcTimestamp};
 
-simply_query_part!(Pg, Text, "TEXT");
-simply_query_part!(Pg, TinyInteger, "TINYINT");
-simply_query_part!(Pg, Integer, "INT");
-simply_query_part!(Pg, BigInteger, "BIGINT");
-simply_query_part!(Pg, Boolean, "BOOL");
-simply_query_part!(Pg, Float, "FLOAT(4)");
-simply_query_part!(Pg, Double, "REAL");
-simply_query_part!(Pg, Unsigned<Integer>, "INTEGER");
-simply_query_part!(Pg, Unsigned<BigInteger>, "BIGINT");
-simply_query_part!(Pg, UtcTimestamp, "TIMESTAMP WITHOUT TIMEZONE");
+simple_query_part!(Pg, Text, "TEXT");
+simple_query_part!(Pg, SmallInteger, "SMALLINT");
+simple_query_part!(Pg, Integer, "INT");
+simple_query_part!(Pg, BigInteger, "BIGINT");
+simple_query_part!(Pg, Boolean, "BOOL");
+simple_query_part!(Pg, Float, "FLOAT(4)");
+simple_query_part!(Pg, Double, "REAL");
+simple_query_part!(Pg, Unsigned<SmallInteger>, "SMALLINT");
+simple_query_part!(Pg, Unsigned<Integer>, "INTEGER");
+simple_query_part!(Pg, Unsigned<BigInteger>, "BIGINT");
+simple_query_part!(Pg, UtcTimestamp, "TIMESTAMP WITHOUT TIME ZONE");

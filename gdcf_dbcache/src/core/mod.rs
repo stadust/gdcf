@@ -36,16 +36,3 @@ pub(crate) trait FromSql<DB: Database> {
         where
             Self: Sized;
 }
-
-/*
-impl<T: 'static, DB: Database + 'static> FromSql<DB> for &'static T
-    where
-        T: FromSql<DB>
-{
-    fn from_sql(sql: &<DB as Database>::Types) -> Result<Self, Error<DB>>
-        where
-            Self: Sized
-    {
-        Ok(&T::from_sql(sql)?)
-    }
-}*/

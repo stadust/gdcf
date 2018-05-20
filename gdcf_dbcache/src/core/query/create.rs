@@ -7,9 +7,9 @@ use core::types::Type;
 
 #[derive(Debug)]
 pub(crate) struct Create<'a, DB: Database + 'a> {
-    name: &'a str,
-    ignore_if_exists: bool,
-    columns: Vec<Column<'a, DB>>,
+    pub(crate) name: &'a str,
+    pub(crate) ignore_if_exists: bool,
+    pub(crate) columns: Vec<Column<'a, DB>>,
 }
 
 impl<'a, DB: Database + 'a> Create<'a, DB> {
@@ -34,9 +34,9 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
 
 #[derive(Debug)]
 pub(crate) struct Column<'a, DB: Database + 'a> {
-    name: &'a str,
-    sql_type: Box<Type<'a, DB>>,
-    constraints: Vec<Box<Constraint<'a, DB>>>,
+    pub(crate) name: &'a str,
+    pub(crate) sql_type: Box<Type<'a, DB>>,
+    pub(crate) constraints: Vec<Box<Constraint<'a, DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
@@ -99,13 +99,13 @@ pub(crate) trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB> {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct NotNullConstraint<'a>(Option<&'a str>);
+pub(crate) struct NotNullConstraint<'a>(pub(crate) Option<&'a str>);
 
 #[derive(Debug, Default)]
-pub(crate) struct UniqueConstraint<'a>(Option<&'a str>);
+pub(crate) struct UniqueConstraint<'a>(pub(crate) Option<&'a str>);
 
 #[derive(Debug, Default)]
-pub(crate) struct PrimaryKeyConstraint<'a>(Option<&'a str>);
+pub(crate) struct PrimaryKeyConstraint<'a>(pub(crate) Option<&'a str>);
 
 #[derive(Debug)]
 pub(crate) struct ForeignKeyConstraint<'a> {

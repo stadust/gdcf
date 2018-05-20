@@ -10,23 +10,42 @@ use std::error::Error as StdError;
 
 #[derive(Debug)]
 pub(crate) enum PgTypes {
-    TinyInteger(i8),
+    SmallInteger(i16),
     Integer(i32),
     BigInteger(i64),
     Text(String),
-    Double(f64),
     Float(f32),
+    Double(f64),
     Boolean(bool),
     Null,
 }
 
 impl FromPgSql for PgTypes {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<StdError + Send + Sync>> {
-        unimplemented!()
+        if <bool as FromPgSql>::accepts(ty) {
+            <bool as FromPgSql>::from_sql(ty, raw).map(PgTypes::Boolean)
+        } else if <i16 as FromPgSql>::accepts(ty) {
+            <i16 as FromPgSql>::from_sql(ty, raw).map(PgTypes::SmallInteger)
+        } else if <i32 as FromPgSql>::accepts(ty) {
+            <i32 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Integer)
+        } else if <i64 as FromPgSql>::accepts(ty) {
+            <i64 as FromPgSql>::from_sql(ty, raw).map(PgTypes::BigInteger)
+        } else if <String as FromPgSql>::accepts(ty) {
+            <String as FromPgSql>::from_sql(ty, raw).map(PgTypes::Text)
+        } else if <f32 as FromPgSql>::accepts(ty) {
+            <f32 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Float)
+        } else if <f64 as FromPgSql>::accepts(ty) {
+            <f64 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Double)
+        } else {
+            panic!("oh no!")
+        }
     }
 
     fn accepts(ty: &Type) -> bool {
-        unimplemented!()
+        <bool as FromPgSql>::accepts(ty) || <i16 as FromPgSql>::accepts(ty) ||
+            <i32 as FromPgSql>::accepts(ty) || <i64 as FromPgSql>::accepts(ty) ||
+            <String as FromPgSql>::accepts(ty) || <f32 as FromPgSql>::accepts(ty) ||
+            <f64 as FromPgSql>::accepts(ty)
     }
 }
 
@@ -36,7 +55,7 @@ impl ToPgSql for PgTypes {
             Self: Sized
     {
         match self {
-            PgTypes::TinyInteger(value) => value.to_sql(ty, out),
+            PgTypes::SmallInteger(value) => value.to_sql(ty, out),
             PgTypes::Integer(value) => value.to_sql(ty, out),
             PgTypes::Text(value) => value.to_sql(ty, out),
             PgTypes::BigInteger(value) => value.to_sql(ty, out),
@@ -60,7 +79,7 @@ impl ToPgSql for PgTypes {
 
     fn to_sql_checked(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<StdError + Send + Sync>> {
         match self {
-            PgTypes::TinyInteger(value) => value.to_sql_checked(ty, out),
+            PgTypes::SmallInteger(value) => value.to_sql_checked(ty, out),
             PgTypes::Integer(value) => value.to_sql_checked(ty, out),
             PgTypes::Text(value) => value.to_sql_checked(ty, out),
             PgTypes::BigInteger(value) => value.to_sql_checked(ty, out),
@@ -74,7 +93,7 @@ impl ToPgSql for PgTypes {
 
 impl AsSql<Pg> for i8 {
     fn as_sql(&self) -> PgTypes {
-        PgTypes::TinyInteger(*self)
+        PgTypes::SmallInteger(*self as i16)
     }
 
     fn as_sql_string(&self) -> String {
@@ -84,7 +103,27 @@ impl AsSql<Pg> for i8 {
 
 impl AsSql<Pg> for u8 {
     fn as_sql(&self) -> PgTypes {
-        PgTypes::TinyInteger(*self as i8)
+        PgTypes::SmallInteger(*self as i16)
+    }
+
+    fn as_sql_string(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl AsSql<Pg> for i16 {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::SmallInteger(*self)
+    }
+
+    fn as_sql_string(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl AsSql<Pg> for u16 {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::SmallInteger(*self as i16)
     }
 
     fn as_sql_string(&self) -> String {
@@ -201,7 +240,7 @@ impl FromSql<Pg> for u8 {
             Self: Sized
     {
         match sql {
-            PgTypes::TinyInteger(value) => Ok(*value as u8),
+            PgTypes::SmallInteger(value) => Ok(*value as u8),
             _ => Err(Error::Conversion(format!("{:?}", sql), "u8"))
         }
     }
@@ -238,7 +277,7 @@ impl FromSql<Pg> for i32 {
             Self: Sized
     {
         match sql {
-            PgTypes::TinyInteger(value) => Ok((*value).into()),
+            PgTypes::SmallInteger(value) => Ok((*value).into()),
             PgTypes::Integer(value) => Ok(*value),
             _ => Err(Error::Conversion(format!("{:?}", sql), "i32"))
         }
@@ -251,7 +290,7 @@ impl FromSql<Pg> for u32 {
             Self: Sized
     {
         match sql {
-            PgTypes::TinyInteger(value) => Ok(*value as u32), // do not sign extend here, it will fuck things up
+            PgTypes::SmallInteger(value) => Ok(*value as u32), // do not sign extend here, it will fuck things up
             PgTypes::Integer(value) => Ok(*value as u32),
             _ => Err(Error::Conversion(format!("{:?}", sql), "u32"))
         }

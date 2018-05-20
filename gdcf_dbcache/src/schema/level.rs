@@ -47,7 +47,7 @@ create! { partial_level,
 
     downloads[NotNull] => Unsigned<Integer>,
 
-    main_song => Unsigned<TinyInteger>,
+    main_song => Unsigned<SmallInteger>,
 
     gd_version[NotNull] => Text,
 
@@ -55,15 +55,15 @@ create! { partial_level,
 
     level_length[NotNull] => Text,
 
-    stars[NotNull] => Unsigned<TinyInteger>,
+    stars[NotNull] => Unsigned<SmallInteger>,
 
     featured[NotNull] => Integer,
 
     copy_of => Unsigned<BigInteger>,
     custom_song_id => Unsigned<BigInteger>,
-    coin_amount[NotNull] => Unsigned<TinyInteger>,
+    coin_amount[NotNull] => Unsigned<SmallInteger>,
     index_38 => Text,
-    stars_requested => Unsigned<TinyInteger>,
+    stars_requested => Unsigned<SmallInteger>,
     is_epic[NotNull] => Boolean,
     index_43 => Text,
     object_amount[NotNull] => Unsigned<Integer>,

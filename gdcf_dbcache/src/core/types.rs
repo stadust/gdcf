@@ -7,9 +7,6 @@ pub(crate) trait Type<'a, DB: Database + 'a>: QueryPart<'a, DB> {}
 pub(crate) struct UtcTimestamp;
 
 #[derive(Debug, Default)]
-pub(crate) struct TinyInteger;
-
-#[derive(Debug, Default)]
 pub(crate) struct SmallInteger;
 
 #[derive(Debug, Default)]
@@ -33,6 +30,7 @@ pub(crate) struct Boolean;
 #[derive(Debug, Default)]
 pub(crate) struct Unsigned<Signed>(Signed);
 
+if_query_part!(SmallInteger, Type<'a, DB>);
 if_query_part!(Integer, Type<'a, DB>);
 if_query_part!(BigInteger, Type<'a, DB>);
 if_query_part!(Text, Type<'a, DB>);

@@ -178,7 +178,7 @@ macro_rules! if_query_part {
     };
 }
 
-macro_rules! simply_query_part {
+macro_rules! simple_query_part {
     ($back: ty, $t: ty, $val: expr) => {
         impl<'a> QueryPart<'a, $back> for $t {
             fn to_sql_unprepared(&self) -> String {

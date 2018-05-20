@@ -9,7 +9,8 @@ extern crate postgres;
 
 use core::backend::pg::Pg;
 use core::query::create::Create;
-use schema::song;
+use core::query::QueryPart;
+use schema::{song, level};
 
 #[macro_use]
 mod core;
@@ -18,8 +19,14 @@ mod de;
 pub mod schema;
 
 pub fn test() {
-    use schema::song::newgrounds_song::*;
     let c: Create<Pg> = song::create();
+
+    println!("{}", c.to_sql_unprepared());
+
+    let c2: Create<Pg> = level::create()
+        .ignore_if_exists();
+
+    println!("{}", c2.to_sql_unprepared());
 
     /*let ins = Insert::new(
         &table,
