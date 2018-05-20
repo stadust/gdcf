@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use core::AsSql;
 use core::backend::Error;
 use core::backend::pg::Pg;
@@ -7,6 +8,7 @@ use postgres::types::IsNull;
 use postgres::types::ToSql as ToPgSql;
 use postgres::types::Type;
 use std::error::Error as StdError;
+use chrono::format::StrftimeItems;
 
 #[derive(Debug)]
 pub(crate) enum PgTypes {
@@ -17,6 +19,7 @@ pub(crate) enum PgTypes {
     Float(f32),
     Double(f64),
     Boolean(bool),
+    Timestamp(NaiveDateTime),
     Null,
 }
 
@@ -36,6 +39,8 @@ impl FromPgSql for PgTypes {
             <f32 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Float)
         } else if <f64 as FromPgSql>::accepts(ty) {
             <f64 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Double)
+        } else if <NaiveDateTime as FromPgSql>::accepts(ty) {
+            <NaiveDateTime as FromPgSql>::from_sql(ty, raw).map(PgTypes::Timestamp)
         } else {
             panic!("oh no!")
         }
@@ -45,7 +50,7 @@ impl FromPgSql for PgTypes {
         <bool as FromPgSql>::accepts(ty) || <i16 as FromPgSql>::accepts(ty) ||
             <i32 as FromPgSql>::accepts(ty) || <i64 as FromPgSql>::accepts(ty) ||
             <String as FromPgSql>::accepts(ty) || <f32 as FromPgSql>::accepts(ty) ||
-            <f64 as FromPgSql>::accepts(ty)
+            <f64 as FromPgSql>::accepts(ty) || <NaiveDateTime as FromPgSql>::accepts(ty)
     }
 }
 
@@ -62,6 +67,7 @@ impl ToPgSql for PgTypes {
             PgTypes::Double(value) => value.to_sql(ty, out),
             PgTypes::Float(value) => value.to_sql(ty, out),
             PgTypes::Boolean(value) => value.to_sql(ty, out),
+            PgTypes::Timestamp(value) => value.to_sql(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
     }
@@ -86,6 +92,7 @@ impl ToPgSql for PgTypes {
             PgTypes::Double(value) => value.to_sql_checked(ty, out),
             PgTypes::Float(value) => value.to_sql_checked(ty, out),
             PgTypes::Boolean(value) => value.to_sql_checked(ty, out),
+            PgTypes::Timestamp(value) => value.to_sql_checked(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
     }
@@ -215,6 +222,16 @@ impl<'a> AsSql<Pg> for &'a str {
     }
 }
 
+impl AsSql<Pg> for NaiveDateTime {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::Timestamp(*self)
+    }
+
+    fn as_sql_string(&self) -> String {
+        self.format("TIMESTAMP '%Y-%m-%d %H:%M:%S'").to_string()
+    }
+}
+
 impl<T> AsSql<Pg> for Option<T>
     where
         T: AsSql<Pg>
@@ -333,6 +350,18 @@ impl<T> FromSql<Pg> for Option<T>
         match sql {
             PgTypes::Null => Ok(None),
             _ => T::from_sql(sql).map(Option::Some)
+        }
+    }
+}
+
+impl FromSql<Pg> for NaiveDateTime {
+    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
+        where
+            Self: Sized
+    {
+        match sql {
+            PgTypes::Timestamp(ts) => Ok(*ts),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime"))
         }
     }
 }

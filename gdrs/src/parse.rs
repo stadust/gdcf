@@ -1,14 +1,14 @@
 use gdcf::api::response::ProcessedResponse;
 use gdcf::error::ApiError;
+use gdcf::error::ValueError;
 use gdcf::model::GDObject;
+use gdcf::model::Level;
+use gdcf::model::NewgroundsSong;
+use gdcf::model::PartialLevel;
 use gdcf::model::raw::RawObject;
 use hyper::Error;
 use std::convert::TryFrom;
 use std::str::pattern::Pattern;
-use gdcf::model::NewgroundsSong;
-use gdcf::error::ValueError;
-use gdcf::model::PartialLevel;
-use gdcf::model::Level;
 
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);

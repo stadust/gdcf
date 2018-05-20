@@ -3,6 +3,7 @@
 
 //trace_macros!(true);
 
+extern crate chrono;
 extern crate gdcf;
 #[cfg(feature = "pg")]
 extern crate postgres;
@@ -10,7 +11,7 @@ extern crate postgres;
 use core::backend::pg::Pg;
 use core::query::create::Create;
 use core::query::QueryPart;
-use schema::{song, level};
+use schema::{level, song};
 
 #[macro_use]
 mod core;
