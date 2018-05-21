@@ -12,62 +12,43 @@ use chrono::Duration;
 use futures::{Async, Future};
 use gdcf::{ConsistentCacheManager, Gdcf};
 use gdcf::api::request::{LevelRequest, LevelsRequest, Request};
+use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use tokio_core::reactor::Core;
 
 //use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 
 fn main() {
-    gdcf_dbcache::test();
+    env_logger::init();
 
-    println!("{:?}", skyline(
+    // Rust built-in await/async WHEN
+    let mut core = Core::new().unwrap();
+
+    let config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    let cache = DatabaseCache::new(config);
+
+    gdcf_dbcache::test();
+    cache.initialize().expect("Error initializing cache");
+
+    let client = BoomlingsClient::new(&core.handle());
+
+    let gdcf = ConsistentCacheManager::new(client, cache);
+
+
+    gdcf.level(38515466u64.into());
+    gdcf.levels(LevelsRequest::new().search("Auto play area".to_string()));
+
+
+
+    core.run(until_all_done());
+
+    /*println!("{:?}", skyline(
         &vec![11, 0, 2, 5],
         &vec![2, 4, 4, 4],
         &vec![4, 4, 8, 2],
         0,
         4,
-    ));
-}
-
-
-fn skyline(xi: &Vec<i32>, bi: &Vec<i32>, hi: &Vec<i32>, i: usize, n: usize) -> Vec<(i32, i32)> {
-    use std::cmp::max;
-
-    if n == 1 {
-        vec![(xi[i], hi[i]), (xi[i] + bi[i], 0)]
-    } else {
-        let left = skyline(xi, bi, hi, i, n / 2);
-        let right = skyline(xi, bi, hi, i + n / 2, n / 2);
-
-        let mut result = vec![(0, 0); 2 * n];
-
-        let mut lp = 0;
-        let mut rp = 0;
-
-        while lp + rp < 2 * n {
-            if lp < n && (rp >= n || left[lp].0 < right[rp].0) {
-                let (xl, hl) = left[lp];
-
-                if rp == 0 {
-                    result[lp + rp] = (xl, hl);
-                } else {
-                    result[lp + rp] = (xl, max(hl, right[rp - 1].1));
-                }
-                lp += 1;
-            } else {
-                let (xr, hr) = right[rp];
-
-                if lp == 0 {
-                    result[lp + rp] = (xr, hr);
-                } else {
-                    result[lp + rp] = (xr, max(hr, left[lp - 1].1));
-                }
-                rp += 1;
-            }
-        }
-
-        result
-    }
+    ));*/
 }
 /*fn main() {
     env_logger::init();
@@ -91,7 +72,7 @@ fn skyline(xi: &Vec<i32>, bi: &Vec<i32>, hi: &Vec<i32>, i: usize, n: usize) -> V
 
 
     core.run(until_all_done());
-}
+}*/
 
 pub fn until_all_done() -> impl Future<Item=(), Error=()> {
     Thing {}
@@ -107,4 +88,3 @@ impl Future for Thing {
         Ok(Async::NotReady)
     }
 }
-*/

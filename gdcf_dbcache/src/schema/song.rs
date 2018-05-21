@@ -24,7 +24,7 @@ create! { newgrounds_song,
     filesize[NotNull] => Double,
     index_6 => Text,
     index_7 => Text,
-    index_8 => Text,
+    index_8 => Integer,
     song_link[NotNull] => Text,
     first_cached_at[NotNull] => UtcTimestamp,
     last_cached_at[NotNull] => UtcTimestamp

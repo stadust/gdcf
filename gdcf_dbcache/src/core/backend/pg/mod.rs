@@ -1,6 +1,7 @@
 use core::{AsSql, backend::Database};
 use core::query::select::Row;
 use postgres::{Connection, Error as PgError, types::ToSql as ToPgSql};
+use postgres::TlsMode;
 use self::convert::PgTypes;
 use super::Error;
 
@@ -11,8 +12,16 @@ mod types;
 mod constraint;
 
 #[derive(Debug)]
-pub  struct Pg {
+pub struct Pg {
     conn: Connection
+}
+
+impl Pg {
+    pub fn new(url: &str, tls: TlsMode) -> Pg {
+        Pg {
+            conn: Connection::connect(url, tls).unwrap()
+        }
+    }
 }
 
 impl Database for Pg {

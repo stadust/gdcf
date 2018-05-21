@@ -32,3 +32,5 @@ pub trait Query<DB: Database>: QueryPart<DB> {
         db.execute_unprepared(self)
     }
 }
+
+//TODO: DROP TABLE query support

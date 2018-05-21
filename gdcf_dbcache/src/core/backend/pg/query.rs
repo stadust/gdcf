@@ -110,9 +110,11 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
             let (mut prep_col, mut col_values) = column.to_sql();
 
             values.append(&mut col_values);
-            prep_stmt.concat_on(prep_col, ",");
+            prep_stmt.concat(prep_col);
+            prep_stmt.append(",");
         }
 
+        prep_stmt.pop(); // Remove the last comma because it would cause a syntax error
         prep_stmt.append(")");
 
         (prep_stmt, values)

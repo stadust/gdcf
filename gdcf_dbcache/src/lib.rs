@@ -24,6 +24,7 @@ pub fn test() {
     let c: Create<Pg> = song::create();
 
     println!("{}", c.to_sql_unprepared());
+    println!("{}", c.to_sql().0.to_statement(|idx| format!("${}", idx)));
 
     let c2: Create<Pg> = level::create()
         .ignore_if_exists();
