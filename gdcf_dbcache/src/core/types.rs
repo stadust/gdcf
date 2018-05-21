@@ -1,7 +1,7 @@
 use core::backend::Database;
 use core::query::QueryPart;
 
-pub trait Type<'a, DB: Database + 'a>: QueryPart<DB> {}
+pub trait Type<DB: Database>: QueryPart<DB> {}
 
 #[derive(Debug, Default)]
 pub struct UtcTimestamp;
@@ -30,17 +30,17 @@ pub struct Boolean;
 #[derive(Debug, Default)]
 pub struct Unsigned<Signed>(Signed);
 
-if_query_part!(SmallInteger, Type<'a, DB>);
-if_query_part!(Integer, Type<'a, DB>);
-if_query_part!(BigInteger, Type<'a, DB>);
-if_query_part!(Text, Type<'a, DB>);
-if_query_part!(Double, Type<'a, DB>);
-if_query_part!(Float, Type<'a, DB>);
-if_query_part!(Boolean, Type<'a, DB>);
-if_query_part!(UtcTimestamp, Type<'a, DB>);
+if_query_part!(SmallInteger, Type<DB>);
+if_query_part!(Integer, Type<DB>);
+if_query_part!(BigInteger, Type<DB>);
+if_query_part!(Text, Type<DB>);
+if_query_part!(Double, Type<DB>);
+if_query_part!(Float, Type<DB>);
+if_query_part!(Boolean, Type<DB>);
+if_query_part!(UtcTimestamp, Type<DB>);
 
-impl<'a, DB: Database + 'a, Signed> Type<'a, DB> for Unsigned<Signed>
+impl<DB: Database, Signed> Type<DB> for Unsigned<Signed>
     where
         Unsigned<Signed>: QueryPart<DB>,
-        Signed: Type<'a, DB>
+        Signed: Type<DB>
 {}

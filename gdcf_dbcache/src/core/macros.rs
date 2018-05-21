@@ -147,7 +147,7 @@ macro_rules! create {
                     )*
                 )*
                 $(
-                    $sql_type: Type<'a, DB>,
+                    $sql_type: Type<DB>,
                 )*
         {
             $model::table.create()
@@ -162,7 +162,7 @@ macro_rules! create {
     };
 
     ($model: ident, @$($tokens: tt)*) => {
-        compile_error!("Its broken!");
+        compile_error!("You fucked up, good luck fixing it");
     };
 
     ($model: ident, $($tokens: tt)*) => {
@@ -172,7 +172,7 @@ macro_rules! create {
 
 macro_rules! if_query_part {
     ($t: ty, $tr: ty) => {
-        impl<'a, DB: Database + 'a> $tr for $t
+        impl<'a, DB: Database> $tr for $t
             where
                 $t: QueryPart<DB>
         {}
@@ -181,7 +181,7 @@ macro_rules! if_query_part {
 
 macro_rules! simple_query_part {
     ($back: ty, $t: ty, $val: expr) => {
-        impl<'a> QueryPart<$back> for $t {
+        impl QueryPart<$back> for $t {
             fn to_sql_unprepared(&self) -> String {
                 String::from($val)
             }

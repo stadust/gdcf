@@ -35,12 +35,12 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
 #[derive(Debug)]
 pub  struct Column<'a, DB: Database + 'a> {
     pub  name: &'a str,
-    pub  sql_type: Box<Type<'a, DB>>,
+    pub  sql_type: Box<Type<DB>>,
     pub  constraints: Vec<Box<Constraint<DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
-    pub  fn new<T: Type<'a, DB> + 'static>(name: &'a str, sql_type: T) -> Column<'a, DB> {
+    pub  fn new<T: Type<DB> + 'static>(name: &'a str, sql_type: T) -> Column<'a, DB> {
         Column {
             name,
             sql_type: Box::new(sql_type),
