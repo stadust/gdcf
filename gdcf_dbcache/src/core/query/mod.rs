@@ -9,16 +9,16 @@ pub  mod create;
 pub  mod insert;
 pub  mod select;
 
-pub trait QueryPart<'a, DB: Database + 'a>: Debug {
+pub trait QueryPart<DB: Database>: Debug {
     fn to_sql_unprepared(&self) -> String;
 
-    fn to_sql(&self) -> (PreparedStatement, Vec<&'a AsSql<DB>>) {
+    fn to_sql<'a>(&'a self) -> (PreparedStatement, Vec<&'a AsSql<DB>>) {
         (self.to_sql_unprepared().into(), Vec::new())
     }
 }
 
-pub trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
-    fn execute(&'a self, db: &'a DB) -> Result<(), Error<DB>>
+pub trait Query<DB: Database>: QueryPart<DB> {
+    fn execute(&self, db: &DB) -> Result<(), Error<DB>>
         where
             Self: Sized
     {

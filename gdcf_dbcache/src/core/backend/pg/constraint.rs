@@ -5,7 +5,7 @@ use core::query::create::{PrimaryKeyConstraint, UniqueConstraint, NotNullConstra
 
 macro_rules! constraint_query_part {
     ($back: ty, $t: ty, $val: expr) => {
-        impl<'a> QueryPart<'a, $back> for $t {
+        impl<'a> QueryPart<$back> for $t {
             fn to_sql_unprepared(&self) -> String {
                 match self.0 {
                     None => String::from($val),

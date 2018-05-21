@@ -174,13 +174,14 @@ macro_rules! if_query_part {
     ($t: ty, $tr: ty) => {
         impl<'a, DB: Database + 'a> $tr for $t
             where
-                $t: QueryPart<'a, DB> {}
+                $t: QueryPart<DB>
+        {}
     };
 }
 
 macro_rules! simple_query_part {
     ($back: ty, $t: ty, $val: expr) => {
-        impl<'a> QueryPart<'a, $back> for $t {
+        impl<'a> QueryPart<$back> for $t {
             fn to_sql_unprepared(&self) -> String {
                 String::from($val)
             }

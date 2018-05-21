@@ -126,6 +126,6 @@ pub trait Queryable<DB: Database>: Sized {
     fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>>;
 }
 
-impl<'a, DB: Database + 'a> Query<'a, DB> for Select<'a, DB>
+impl<'a, DB: Database + 'a> Query<DB> for Select<'a, DB>
     where
-        Select<'a, DB>: QueryPart<'a, DB> {}
+        Select<'a, DB>: QueryPart<DB> {}

@@ -2,7 +2,7 @@ use core::{AsSql, backend::Database, table::Field};
 use std::fmt::Debug;
 use super::QueryPart;
 
-pub  trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> + Debug {
+pub  trait Condition<'a, DB: Database + 'a>: QueryPart<DB> + Debug {
     fn and<Cond>(self, other: Cond) -> And<'a, DB>
         where
             Self: Sized + 'static,
@@ -76,9 +76,9 @@ impl<'a, DB: Database + 'a> Or<'a, DB> {
 
 macro_rules! condition {
     ($cond_type: ty) => {
-        impl <'a, DB: Database + 'a> Condition<'a, DB> for $cond_type
+        impl<'a, DB: Database + 'a> Condition<'a, DB> for $cond_type
             where
-                $cond_type: QueryPart<'a, DB> {}
+                $cond_type: QueryPart<DB> {}
     };
 }
 

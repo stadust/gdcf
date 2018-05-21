@@ -29,7 +29,7 @@ pub trait Database: Debug + Sized {
 
     fn prepare(idx: usize) -> String;
 
-    fn execute<'a>(&self, query: &Query<'a, Self>) -> Result<(), Error<Self>>
+    fn execute<'a>(&self, query: &Query<Self>) -> Result<(), Error<Self>>
         where
             Self: Sized + 'a
     {
@@ -37,7 +37,7 @@ pub trait Database: Debug + Sized {
         self.execute_raw(stmt.to_statement(Self::prepare), &params)
     }
 
-    fn execute_unprepared<'a>(&self, query: &Query<'a, Self>) -> Result<(), Error<Self>>
+    fn execute_unprepared<'a>(&self, query: &Query<Self>) -> Result<(), Error<Self>>
         where
             Self: Sized + 'a
     {
@@ -46,7 +46,9 @@ pub trait Database: Debug + Sized {
 
     fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), Error<Self>>;
 
-    fn query<'a, T>(&'a self, query: &'a Query<'a, Self>) -> Result<Vec<T>, Error<Self>>
+    // TODO: fn query_unprepared<T>
+
+    fn query<T>(&self, query: &Query<Self>) -> Result<Vec<T>, Error<Self>>
         where
             T: Queryable<Self>
     {

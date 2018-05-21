@@ -5,8 +5,10 @@ use core::query::create::{Column, Create};
 use core::statement::PreparedStatement;
 use core::statement::StatementPart;
 use core::table::FieldValue;
+use core::query::Select;
 
-impl<'a> QueryPart<'a, Pg> for Insert<'a, Pg> {
+// TODO: ON CONFLICT UPDATE
+impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
         let mut fields = Vec::new();
         let mut values = Vec::new();
@@ -23,7 +25,7 @@ impl<'a> QueryPart<'a, Pg> for Insert<'a, Pg> {
         format!("INSERT INTO {} ({}) VALUES ({})", self.table().name, fields.join(","), values.join(","))
     }
 
-    fn to_sql(&self) -> (PreparedStatement, Vec<&'a AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         let mut fields = Vec::new();
         let mut stmt = Vec::new();
         let mut values = Vec::new();
@@ -52,7 +54,7 @@ impl<'a> QueryPart<'a, Pg> for Insert<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<'a, Pg> for Column<'a, Pg> {
+impl<'a> QueryPart<Pg> for Column<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
         let mut sql_constraints = Vec::new();
 
@@ -63,7 +65,7 @@ impl<'a> QueryPart<'a, Pg> for Column<'a, Pg> {
         format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), sql_constraints.join(" "))
     }
 
-    fn to_sql(&self) -> (PreparedStatement, Vec<&'a AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         let mut prep_stmt = PreparedStatement::new(vec![self.name.into(), self.sql_type.to_sql_unprepared().into()]);
         let mut values = Vec::new();
 
@@ -77,7 +79,7 @@ impl<'a> QueryPart<'a, Pg> for Column<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<'a, Pg> for Create<'a, Pg> {
+impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
         let mut column_sql = Vec::new();
 
@@ -93,7 +95,7 @@ impl<'a> QueryPart<'a, Pg> for Create<'a, Pg> {
         )
     }
 
-    fn to_sql(&self) -> (PreparedStatement, Vec<&'a AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         let mut values = Vec::new();
         let mut prep_stmt = PreparedStatement::new(
             vec![
@@ -114,5 +116,16 @@ impl<'a> QueryPart<'a, Pg> for Create<'a, Pg> {
         prep_stmt.append(")");
 
         (prep_stmt, values)
+    }
+}
+
+impl<'a> QueryPart<Pg> for Select<'a, Pg> {
+    //TODO: implement
+    fn to_sql_unprepared(&self) -> String {
+        unimplemented!()
+    }
+
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+        unimplemented!()
     }
 }

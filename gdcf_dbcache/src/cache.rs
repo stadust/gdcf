@@ -3,9 +3,11 @@ use chrono::NaiveDateTime;
 use core::AsSql;
 use core::backend::Database;
 use core::backend::Error;
+use core::backend::pg::Pg;
 use core::query::Insert;
 use core::query::insert::Insertable;
 use core::query::Query;
+use core::query::select::Queryable;
 use gdcf::api::request::LevelRequest;
 use gdcf::api::request::LevelsRequest;
 use gdcf::cache::Cache;
@@ -30,6 +32,7 @@ impl<DB: Database> DatabaseCacheConfig<DB> {
 }
 
 impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
+    // TODO: figure out a way to specify this
     fn invalidate_after(&self) -> Duration {
         unimplemented!()
     }
@@ -39,16 +42,13 @@ struct DatabaseCache<DB: Database> {
     config: DatabaseCacheConfig<DB>
 }
 
-impl<'a, DB: Database + 'static> Cache for DatabaseCache<DB>
-    where
-        //Insert<'_, DB>: Query<'a, DB>,
-        NewgroundsSong: Insertable<DB>,
-        NaiveDateTime: AsSql<DB>
+// TODO: turn cache impl into a macro
+impl Cache for DatabaseCache<Pg>
 {
-    type Config = DatabaseCacheConfig<DB>;
-    type Err = Error<DB>;
+    type Config = DatabaseCacheConfig<Pg>;
+    type Err = Error<Pg>;
 
-    fn config(&self) -> &DatabaseCacheConfig<DB> {
+    fn config(&self) -> &DatabaseCacheConfig<Pg> {
         &self.config
     }
 
@@ -69,7 +69,11 @@ impl<'a, DB: Database + 'static> Cache for DatabaseCache<DB>
     }
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-        Err(CacheError::CacheMiss)
+        let select = NewgroundsSong::select_from(&newgrounds_song::table);
+
+        self.config.backend.query(&select)
+            .map_err(|e| CacheError::Custom(e))
+            .map(|mut v| v.remove(0))  // TODO: query one or sth
     }
 
     fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
@@ -79,5 +83,6 @@ impl<'a, DB: Database + 'static> Cache for DatabaseCache<DB>
             .with(newgrounds_song::last_cached_at.set(&ts))
             .on_conflict_update()
             .execute(&self.config.backend)
+            .map_err(|e| CacheError::Custom(e))
     }
 }

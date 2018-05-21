@@ -64,6 +64,6 @@ pub trait Insertable<DB: Database> {
     }
 }
 
-impl<'a, DB: Database + 'a> Query<'a, DB> for Insert<'a, DB>
+impl<'a, DB: Database + 'a> Query<DB> for Insert<'a, DB>
     where
-        Insert<'a, DB>: QueryPart<'a, DB> {}
+        Insert<'a, DB>: QueryPart<DB> {}

@@ -1,34 +1,34 @@
 use core::backend::Database;
 use core::query::QueryPart;
 
-pub  trait Type<'a, DB: Database + 'a>: QueryPart<'a, DB> {}
+pub trait Type<'a, DB: Database + 'a>: QueryPart<DB> {}
 
 #[derive(Debug, Default)]
-pub  struct UtcTimestamp;
+pub struct UtcTimestamp;
 
 #[derive(Debug, Default)]
-pub  struct SmallInteger;
+pub struct SmallInteger;
 
 #[derive(Debug, Default)]
-pub  struct Integer;
+pub struct Integer;
 
 #[derive(Debug, Default)]
-pub  struct BigInteger;
+pub struct BigInteger;
 
 #[derive(Debug, Default)]
-pub  struct Text;
+pub struct Text;
 
 #[derive(Debug, Default)]
-pub  struct Double;
+pub struct Double;
 
 #[derive(Debug, Default)]
-pub  struct Float;
+pub struct Float;
 
 #[derive(Debug, Default)]
-pub  struct Boolean;
+pub struct Boolean;
 
 #[derive(Debug, Default)]
-pub  struct Unsigned<Signed>(Signed);
+pub struct Unsigned<Signed>(Signed);
 
 if_query_part!(SmallInteger, Type<'a, DB>);
 if_query_part!(Integer, Type<'a, DB>);
@@ -41,5 +41,6 @@ if_query_part!(UtcTimestamp, Type<'a, DB>);
 
 impl<'a, DB: Database + 'a, Signed> Type<'a, DB> for Unsigned<Signed>
     where
-        Unsigned<Signed>: QueryPart<'a, DB>,
-        Signed: Type<'a, DB> {}
+        Unsigned<Signed>: QueryPart<DB>,
+        Signed: Type<'a, DB>
+{}

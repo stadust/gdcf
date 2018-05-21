@@ -92,7 +92,7 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
     }
 }
 
-pub  trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB> {
+pub  trait Constraint<'a, DB: Database + 'a>: QueryPart<DB> {
     fn name(&'a self) -> Option<&'a str> {
         None
     }
@@ -143,6 +143,6 @@ if_query_part!(PrimaryKeyConstraint<'a>, Constraint<'a, DB>);
 if_query_part!(ForeignKeyConstraint<'a>, Constraint<'a, DB>);
 if_query_part!(DefaultConstraint<'a, DB>, Constraint<'a, DB>);
 
-impl<'a, DB: Database + 'a> Query<'a, DB> for Create<'a, DB>
+impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
     where
-        Create<'a, DB>: QueryPart<'a, DB> {}
+        Create<'a, DB>: QueryPart<DB> {}
