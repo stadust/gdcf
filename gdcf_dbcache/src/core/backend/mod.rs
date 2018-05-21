@@ -29,17 +29,17 @@ pub trait Database: Debug + Sized {
 
     fn prepare(idx: usize) -> String;
 
-    fn execute<'a>(&self, query: &Query<Self>) -> Result<(), Error<Self>>
+    fn execute(&self, query: &Query<Self>) -> Result<(), Error<Self>>
         where
-            Self: Sized + 'a
+            Self: Sized
     {
         let (stmt, params) = query.to_sql();
         self.execute_raw(stmt.to_statement(Self::prepare), &params)
     }
 
-    fn execute_unprepared<'a>(&self, query: &Query<Self>) -> Result<(), Error<Self>>
+    fn execute_unprepared(&self, query: &Query<Self>) -> Result<(), Error<Self>>
         where
-            Self: Sized + 'a
+            Self: Sized
     {
         self.execute_raw(query.to_sql_unprepared(), &[])
     }

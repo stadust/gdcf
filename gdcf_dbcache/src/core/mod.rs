@@ -18,7 +18,7 @@ pub trait AsSql<DB: Database>: Debug {
     fn as_sql_string(&self) -> String;
 }
 
-impl<'a, T: 'a, DB: Database + 'a> AsSql<DB> for &'a T
+impl<'a, T: 'a, DB: Database> AsSql<DB> for &'a T
     where
         T: AsSql<DB>
 {

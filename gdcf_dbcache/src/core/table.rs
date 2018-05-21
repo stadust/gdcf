@@ -16,7 +16,7 @@ impl Table {
         &self.fields
     }
 
-    pub fn filter<'a, DB, Cond: 'static>(&'a self, cond: Cond) -> Select<'a, DB>
+    pub fn filter<DB, Cond: 'static>(&self, cond: Cond) -> Select<DB>
         where
             Cond: Condition<DB>,
             DB: Database,
