@@ -11,7 +11,7 @@ use core::table::Table;
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
     other: &'a Table,
-    join_condition: &'a Condition<'a, DB>,
+    join_condition: &'a Condition<DB>,
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Copy, Clone, Debug)]
@@ -31,7 +31,7 @@ pub struct Select<'a, DB: Database + 'a> {
     table: &'a Table,
     fields: Vec<&'a Field>,
     joins: Vec<Join<'a, DB>>,
-    filter: Option<Box<Condition<'a, DB>>>,
+    filter: Option<Box<Condition<DB>>>,
     subset: (Option<usize>, Option<usize>),
     order: Vec<OrderBy<'a>>,
 }
@@ -68,10 +68,10 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self
     }
 
-    pub fn filter<C: 'a>(mut self, cond: C) -> Select<'a, DB>
+    pub fn filter<C: 'static>(mut self, cond: C) -> Select<'a, DB>
         where
-            And<'a, DB>: Condition<'a, DB> + 'static,
-            C: Condition<'a, DB>,
+            And<DB>: Condition<DB> + 'static,
+            C: Condition<DB>,
     {
         self.filter = match self.filter {
             None => Some(Box::new(cond)),

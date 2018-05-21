@@ -18,9 +18,9 @@ impl Table {
 
     pub fn filter<'a, DB, Cond: 'static>(&'a self, cond: Cond) -> Select<'a, DB>
         where
-            Cond: Condition<'a, DB>,
+            Cond: Condition<DB>,
             DB: Database,
-            And<'a, DB>: Condition<'a, DB> + 'static,
+            And<DB>: Condition<DB> + 'static,
     {
         self.select().filter(cond)
     }

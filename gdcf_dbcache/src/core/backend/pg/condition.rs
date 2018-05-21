@@ -23,7 +23,7 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for And<'a, Pg> {
+impl QueryPart<Pg> for And<Pg> {
     fn to_sql_unprepared(&self) -> String {
         format!("({} AND {})", self.cond_1.to_sql_unprepared(), self.cond_2.to_sql_unprepared())
     }
@@ -44,7 +44,7 @@ impl<'a> QueryPart<Pg> for And<'a, Pg> {
 }
 
 
-impl<'a> QueryPart<Pg> for Or<'a, Pg> {
+impl QueryPart<Pg> for Or<Pg> {
     fn to_sql_unprepared(&self) -> String {
         format!("({} OR {})", self.cond_1.to_sql_unprepared(), self.cond_2.to_sql_unprepared())
     }
