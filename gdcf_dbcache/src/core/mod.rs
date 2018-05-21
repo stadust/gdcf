@@ -6,14 +6,14 @@ use std::fmt::Debug;
 //pub mod cache;
 //pub mod schema;
 #[macro_use]
-pub(crate) mod macros;
-pub(crate) mod query;
-pub(crate) mod table;
-pub(crate) mod backend;
-pub(crate) mod statement;
-pub(crate) mod types;
+pub  mod macros;
+pub  mod query;
+pub  mod table;
+pub  mod backend;
+pub  mod statement;
+pub  mod types;
 
-pub(crate) trait AsSql<DB: Database>: Debug {
+pub trait AsSql<DB: Database>: Debug {
     fn as_sql(&self) -> DB::Types;
     fn as_sql_string(&self) -> String;
 }
@@ -31,7 +31,7 @@ impl<'a, T: 'a, DB: Database + 'a> AsSql<DB> for &'a T
     }
 }
 
-pub(crate) trait FromSql<DB: Database> {
+pub  trait FromSql<DB: Database> {
     fn from_sql(sql: &DB::Types) -> Result<Self, Error<DB>>
         where
             Self: Sized;

@@ -18,6 +18,7 @@ mod core;
 mod ser;
 mod de;
 pub mod schema;
+pub mod cache;
 
 pub fn test() {
     let c: Create<Pg> = song::create();

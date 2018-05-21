@@ -1,4 +1,5 @@
 use core::backend::Database;
+use core::backend::Error;
 use core::FromSql;
 use core::query::condition::And;
 use core::query::condition::Condition;
@@ -6,28 +7,27 @@ use core::query::Query;
 use core::query::QueryPart;
 use core::table::Field;
 use core::table::Table;
-use core::backend::Error;
 
 #[derive(Debug)]
-pub(crate) struct Join<'a, DB: Database + 'a> {
+pub struct Join<'a, DB: Database + 'a> {
     other: &'a Table,
     join_condition: &'a Condition<'a, DB>,
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Copy, Clone, Debug)]
-pub(crate) enum Ordering {
+pub enum Ordering {
     Asc,
     Desc,
 }
 
 #[derive(Debug)]
-pub(crate) struct OrderBy<'a> {
+pub struct OrderBy<'a> {
     field: &'a Field,
     ordering: Ordering,
 }
 
 #[derive(Debug)]
-pub(crate) struct Select<'a, DB: Database + 'a> {
+pub struct Select<'a, DB: Database + 'a> {
     table: &'a Table,
     fields: Vec<&'a Field>,
     joins: Vec<Join<'a, DB>>,
@@ -37,7 +37,7 @@ pub(crate) struct Select<'a, DB: Database + 'a> {
 }
 
 impl<'a, DB: Database + 'a> Select<'a, DB> {
-    pub(crate) fn new(table: &'a Table, fields: Vec<&'a Field>) -> Select<'a, DB> {
+    pub fn new(table: &'a Table, fields: Vec<&'a Field>) -> Select<'a, DB> {
         Select {
             table,
             fields,
@@ -48,27 +48,27 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         }
     }
 
-    pub(crate) fn limit(mut self, limit: usize) -> Select<'a, DB> {
+    pub fn limit(mut self, limit: usize) -> Select<'a, DB> {
         self.subset = (self.subset.0, Some(limit));
         self
     }
 
-    pub(crate) fn offset(mut self, offset: usize) -> Select<'a, DB> {
+    pub fn offset(mut self, offset: usize) -> Select<'a, DB> {
         self.subset = (Some(offset), self.subset.1);
         self
     }
 
-    pub(crate) fn select(mut self, fields: Vec<&'a Field>) -> Select<'a, DB> {
+    pub fn select(mut self, fields: Vec<&'a Field>) -> Select<'a, DB> {
         self.fields = fields;
         self
     }
 
-    pub(crate) fn order_by(mut self, field: &'a Field, ordering: Ordering) -> Select<'a, DB> {
+    pub fn order_by(mut self, field: &'a Field, ordering: Ordering) -> Select<'a, DB> {
         self.order.push(OrderBy { field, ordering });
         self
     }
 
-    pub(crate) fn filter<C: 'a>(mut self, cond: C) -> Select<'a, DB>
+    pub fn filter<C: 'a>(mut self, cond: C) -> Select<'a, DB>
         where
             And<'a, DB>: Condition<'a, DB> + 'static,
             C: Condition<'a, DB>,
@@ -85,12 +85,12 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
     }
 }
 
-pub(crate) struct Row<DB: Database> {
+pub struct Row<DB: Database> {
     fields: Vec<DB::Types>,
 }
 
 impl<DB: Database> Row<DB> {
-    pub(crate) fn new(values: Vec<DB::Types>) -> Row<DB> {
+    pub fn new(values: Vec<DB::Types>) -> Row<DB> {
         Row {
             fields: values
         }
@@ -118,7 +118,7 @@ impl<DB: Database> Row<DB> {
     }
 }
 
-pub(crate) trait Queryable<DB: Database>: Sized {
+pub trait Queryable<DB: Database>: Sized {
     fn select_from(table: &Table) -> Select<DB> {
         table.select()
     }

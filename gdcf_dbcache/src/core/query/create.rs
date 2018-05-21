@@ -6,14 +6,14 @@ use core::table::Field;
 use core::types::Type;
 
 #[derive(Debug)]
-pub(crate) struct Create<'a, DB: Database + 'a> {
-    pub(crate) name: &'a str,
-    pub(crate) ignore_if_exists: bool,
-    pub(crate) columns: Vec<Column<'a, DB>>,
+pub  struct Create<'a, DB: Database + 'a> {
+    pub  name: &'a str,
+    pub  ignore_if_exists: bool,
+    pub  columns: Vec<Column<'a, DB>>,
 }
 
 impl<'a, DB: Database + 'a> Create<'a, DB> {
-    pub(crate) fn new(name: &'a str) -> Create<'a, DB> {
+    pub  fn new(name: &'a str) -> Create<'a, DB> {
         Create {
             name,
             ignore_if_exists: false,
@@ -21,26 +21,26 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
         }
     }
 
-    pub(crate) fn ignore_if_exists(mut self) -> Self {
+    pub  fn ignore_if_exists(mut self) -> Self {
         self.ignore_if_exists = true;
         self
     }
 
-    pub(crate) fn with_column(mut self, col: Column<'a, DB>) -> Self {
+    pub  fn with_column(mut self, col: Column<'a, DB>) -> Self {
         self.columns.push(col);
         self
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct Column<'a, DB: Database + 'a> {
-    pub(crate) name: &'a str,
-    pub(crate) sql_type: Box<Type<'a, DB>>,
-    pub(crate) constraints: Vec<Box<Constraint<'a, DB>>>,
+pub  struct Column<'a, DB: Database + 'a> {
+    pub  name: &'a str,
+    pub  sql_type: Box<Type<'a, DB>>,
+    pub  constraints: Vec<Box<Constraint<'a, DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
-    pub(crate) fn new<T: Type<'a, DB> + 'static>(name: &'a str, sql_type: T) -> Column<'a, DB> {
+    pub  fn new<T: Type<'a, DB> + 'static>(name: &'a str, sql_type: T) -> Column<'a, DB> {
         Column {
             name,
             sql_type: Box::new(sql_type),
@@ -48,42 +48,42 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         }
     }
 
-    pub(crate) fn primary(self) -> Self
+    pub  fn primary(self) -> Self
         where
             PrimaryKeyConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(PrimaryKeyConstraint::default())
     }
 
-    pub(crate) fn unique(self) -> Self
+    pub  fn unique(self) -> Self
         where
             UniqueConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(UniqueConstraint::default())
     }
 
-    pub(crate) fn not_null(self) -> Self
+    pub  fn not_null(self) -> Self
         where
             NotNullConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(NotNullConstraint::default())
     }
 
-    pub(crate) fn default(self, default: &'a AsSql<DB>) -> Self
+    pub  fn default(self, default: &'a AsSql<DB>) -> Self
         where
             DefaultConstraint<'a, DB>: Constraint<'a, DB> + 'static
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
-    pub(crate) fn foreign_key(self, references: &'a Field) -> Self
+    pub  fn foreign_key(self, references: &'a Field) -> Self
         where
             ForeignKeyConstraint<'a>: Constraint<'a, DB> + 'static
     {
         self.constraint(ForeignKeyConstraint::new(None, references))
     }
 
-    pub(crate) fn constraint<Con: 'static>(mut self, constraint: Con) -> Self
+    pub  fn constraint<Con: 'static>(mut self, constraint: Con) -> Self
         where
             Con: Constraint<'a, DB>
     {
@@ -92,35 +92,35 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
     }
 }
 
-pub(crate) trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB> {
+pub  trait Constraint<'a, DB: Database + 'a>: QueryPart<'a, DB> {
     fn name(&'a self) -> Option<&'a str> {
         None
     }
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct NotNullConstraint<'a>(pub(crate) Option<&'a str>);
+pub  struct NotNullConstraint<'a>(pub  Option<&'a str>);
 
 #[derive(Debug, Default)]
-pub(crate) struct UniqueConstraint<'a>(pub(crate) Option<&'a str>);
+pub  struct UniqueConstraint<'a>(pub  Option<&'a str>);
 
 #[derive(Debug, Default)]
-pub(crate) struct PrimaryKeyConstraint<'a>(pub(crate) Option<&'a str>);
+pub  struct PrimaryKeyConstraint<'a>(pub  Option<&'a str>);
 
 #[derive(Debug)]
-pub(crate) struct ForeignKeyConstraint<'a> {
+pub  struct ForeignKeyConstraint<'a> {
     name: Option<&'a str>,
     references: &'a Field,
 }
 
 #[derive(Debug)]
-pub(crate) struct DefaultConstraint<'a, DB: Database + 'a> {
+pub  struct DefaultConstraint<'a, DB: Database + 'a> {
     name: Option<&'a str>,
     default: &'a AsSql<DB>,
 }
 
 impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
-    pub(crate) fn new(name: Option<&'a str>, default: &'a AsSql<DB>) -> DefaultConstraint<'a, DB> {
+    pub  fn new(name: Option<&'a str>, default: &'a AsSql<DB>) -> DefaultConstraint<'a, DB> {
         DefaultConstraint {
             name,
             default,
@@ -129,7 +129,7 @@ impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
 }
 
 impl<'a> ForeignKeyConstraint<'a> {
-    pub(crate) fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
+    pub  fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
         ForeignKeyConstraint {
             name,
             references,

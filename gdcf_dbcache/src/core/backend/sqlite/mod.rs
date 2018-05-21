@@ -7,7 +7,7 @@ use core::statement::{PreparedStatement, StatementPart};
 use core::query::condition::EqValue;
 
 #[derive(Debug)]
-pub(crate) struct Sqlite;
+pub  struct Sqlite;
 
 
 impl Database for Sqlite {

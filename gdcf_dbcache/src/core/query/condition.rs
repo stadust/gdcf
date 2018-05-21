@@ -2,7 +2,7 @@ use core::{AsSql, backend::Database, table::Field};
 use std::fmt::Debug;
 use super::QueryPart;
 
-pub(crate) trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> + Debug {
+pub  trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> + Debug {
     fn and<Cond>(self, other: Cond) -> And<'a, DB>
         where
             Self: Sized + 'static,
@@ -13,31 +13,31 @@ pub(crate) trait Condition<'a, DB: Database + 'a>: QueryPart<'a, DB> + Debug {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct EqField<'a> {
-    pub(crate) field_1: &'a Field,
-    pub(crate) field_2: &'a Field,
+pub  struct EqField<'a> {
+    pub  field_1: &'a Field,
+    pub  field_2: &'a Field,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct EqValue<'a, DB: Database + 'a> {
-    pub(crate) field: &'a Field,
-    pub(crate) value: &'a AsSql<DB>,
+pub  struct EqValue<'a, DB: Database + 'a> {
+    pub  field: &'a Field,
+    pub  value: &'a AsSql<DB>,
 }
 
 #[derive(Debug)]
-pub(crate) struct And<'a, DB: Database + 'a> {
-    pub(crate) cond_1: Box<Condition<'a, DB>>,
-    pub(crate) cond_2: Box<Condition<'a, DB>>,
+pub  struct And<'a, DB: Database + 'a> {
+    pub  cond_1: Box<Condition<'a, DB>>,
+    pub  cond_2: Box<Condition<'a, DB>>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Or<'a, DB: Database + 'a> {
-    pub(crate) cond_1: Box<Condition<'a, DB>>,
-    pub(crate) cond_2: Box<Condition<'a, DB>>,
+pub  struct Or<'a, DB: Database + 'a> {
+    pub  cond_1: Box<Condition<'a, DB>>,
+    pub  cond_2: Box<Condition<'a, DB>>,
 }
 
 impl<'a, DB: Database + 'a> EqValue<'a, DB> {
-    pub(crate) fn new(field: &'a Field, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
+    pub  fn new(field: &'a Field, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
         EqValue {
             field,
             value,
@@ -46,7 +46,7 @@ impl<'a, DB: Database + 'a> EqValue<'a, DB> {
 }
 
 impl<'a> EqField<'a> {
-    pub(crate) fn new(field_1: &'a Field, field_2: &'a Field) -> EqField<'a> {
+    pub  fn new(field_1: &'a Field, field_2: &'a Field) -> EqField<'a> {
         EqField {
             field_1,
             field_2,
@@ -55,7 +55,7 @@ impl<'a> EqField<'a> {
 }
 
 impl<'a, DB: Database + 'a> And<'a, DB> {
-    pub(crate) fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> And<'a, DB>
+    pub  fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> And<'a, DB>
         where
             A: Condition<'a, DB>,
             B: Condition<'a, DB>
@@ -65,7 +65,7 @@ impl<'a, DB: Database + 'a> And<'a, DB> {
 }
 
 impl<'a, DB: Database + 'a> Or<'a, DB> {
-    pub(crate) fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> Or<'a, DB>
+    pub  fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> Or<'a, DB>
         where
             A: Condition<'a, DB>,
             B: Condition<'a, DB>

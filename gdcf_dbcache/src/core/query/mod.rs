@@ -1,15 +1,15 @@
 use core::{AsSql, backend::Database, statement::PreparedStatement};
 use core::backend::Error;
-pub(crate) use self::insert::{Insert, Insertable};
-pub(crate) use self::select::{Select};
+pub  use self::insert::{Insert, Insertable};
+pub  use self::select::{Select};
 use std::fmt::Debug;
 
-pub(crate) mod condition;
-pub(crate) mod create;
-pub(crate) mod insert;
-pub(crate) mod select;
+pub  mod condition;
+pub  mod create;
+pub  mod insert;
+pub  mod select;
 
-pub(crate) trait QueryPart<'a, DB: Database + 'a>: Debug {
+pub trait QueryPart<'a, DB: Database + 'a>: Debug {
     fn to_sql_unprepared(&self) -> String;
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&'a AsSql<DB>>) {
@@ -17,7 +17,7 @@ pub(crate) trait QueryPart<'a, DB: Database + 'a>: Debug {
     }
 }
 
-pub(crate) trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
+pub trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
     fn execute(&'a self, db: &'a DB) -> Result<(), Error<DB>>
         where
             Self: Sized
@@ -25,7 +25,7 @@ pub(crate) trait Query<'a, DB: Database + 'a>: QueryPart<'a, DB> {
         db.execute(self)
     }
 
-    fn execute_unprepared(&'a self, db: &'a DB) -> Result<(), Error<DB>>
+    fn execute_unprepared(&self, db: &DB) -> Result<(), Error<DB>>
         where
             Self: Sized
     {

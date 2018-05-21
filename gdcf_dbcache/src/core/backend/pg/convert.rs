@@ -11,7 +11,7 @@ use std::error::Error as StdError;
 use chrono::format::StrftimeItems;
 
 #[derive(Debug)]
-pub(crate) enum PgTypes {
+pub  enum PgTypes {
     SmallInteger(i16),
     Integer(i32),
     BigInteger(i64),

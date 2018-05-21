@@ -11,7 +11,7 @@ mod types;
 mod constraint;
 
 #[derive(Debug)]
-pub(crate) struct Pg {
+pub  struct Pg {
     conn: Connection
 }
 

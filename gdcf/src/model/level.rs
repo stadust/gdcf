@@ -237,11 +237,11 @@ pub struct PartialLevel {
     #[raw_data(custom = "de::level_rating")]
     pub difficulty: LevelRating,
 
-    #[raw_data(index = 10)]
     /// The amount of downloads
     ///
     /// ## GD Internals:
     /// This value is provided at index `10`
+    #[raw_data(index = 10)]
     pub downloads: u32,
 
     /// The `MainSong` the level uses, if any.

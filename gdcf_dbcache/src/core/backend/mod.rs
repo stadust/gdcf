@@ -18,28 +18,28 @@ pub mod sqlite;
 pub mod mysql;
 
 #[derive(Debug)]
-pub(crate) enum Error<DB: Database> {
+pub enum Error<DB: Database> {
     Database(DB::Error),
     Conversion(String, &'static str),
 }
 
-pub(crate) trait Database: Debug + Sized {
+pub trait Database: Debug + Sized {
     type Types: Debug;
     type Error: StdError;
 
     fn prepare(idx: usize) -> String;
 
-    fn execute<'a>(&'a self, query: &'a Query<'a, Self>) -> Result<(), Error<Self>>
+    fn execute<'a>(&self, query: &Query<'a, Self>) -> Result<(), Error<Self>>
         where
-            Self: Sized
+            Self: Sized + 'a
     {
         let (stmt, params) = query.to_sql();
         self.execute_raw(stmt.to_statement(Self::prepare), &params)
     }
 
-    fn execute_unprepared<'a>(&'a self, query: &'a Query<'a, Self>) -> Result<(), Error<Self>>
+    fn execute_unprepared<'a>(&self, query: &Query<'a, Self>) -> Result<(), Error<Self>>
         where
-            Self: Sized
+            Self: Sized + 'a
     {
         self.execute_raw(query.to_sql_unprepared(), &[])
     }

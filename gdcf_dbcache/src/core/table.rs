@@ -6,17 +6,17 @@ use super::{AsSql, backend::Database};
 use super::query::condition::{EqField, EqValue};
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Table {
-    pub(crate) name: &'static str,
-    pub(crate) fields: &'static [&'static Field],
+pub struct Table {
+    pub  name: &'static str,
+    pub  fields: &'static [&'static Field],
 }
 
 impl Table {
-    pub(crate) fn fields(&self) -> &'static [&'static Field] {
+    pub fn fields(&self) -> &'static [&'static Field] {
         &self.fields
     }
 
-    pub(crate) fn filter<'a, DB, Cond: 'static>(&'a self, cond: Cond) -> Select<'a, DB>
+    pub fn filter<'a, DB, Cond: 'static>(&'a self, cond: Cond) -> Select<'a, DB>
         where
             Cond: Condition<'a, DB>,
             DB: Database,
@@ -25,11 +25,11 @@ impl Table {
         self.select().filter(cond)
     }
 
-    pub(crate) fn select<DB: Database>(&self) -> Select<DB> {
+    pub fn select<DB: Database>(&self) -> Select<DB> {
         Select::new(self, self.fields().to_vec())
     }
 
-    pub(crate) fn create<DB>(&self) -> Create<DB>
+    pub fn create<DB>(&self) -> Create<DB>
         where
             DB: Database
     {
@@ -38,28 +38,28 @@ impl Table {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct Field {
-    pub(crate) table: &'static str,
-    pub(crate) name: &'static str,
+pub struct Field {
+    pub  table: &'static str,
+    pub  name: &'static str,
 }
 
 impl Field {
-    pub(crate) fn eq<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
+    pub fn eq<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
         EqValue::new(&self, value)
     }
 
-    pub(crate) fn same_as<'a>(&'a self, other: &'a Field) -> EqField<'a> {
+    pub fn same_as<'a>(&'a self, other: &'a Field) -> EqField<'a> {
         EqField::new(&self, other)
     }
 
-    pub(crate) fn set<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> SetField<'a, DB> {
+    pub fn set<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> SetField<'a, DB> {
         SetField {
             field: &self,
             value: FieldValue::Value(value),
         }
     }
 
-    pub(crate) fn set_default<DB: Database>(&self) -> SetField<DB> {
+    pub fn set_default<DB: Database>(&self) -> SetField<DB> {
         SetField {
             field: &self,
             value: FieldValue::Default,
@@ -76,20 +76,20 @@ impl Field {
 }
 
 #[derive(Debug)]
-pub(crate) enum FieldValue<'a, DB: Database + 'a> {
+pub enum FieldValue<'a, DB: Database + 'a> {
     Default,
     Value(&'a AsSql<DB>),
 }
 
 impl<'a, DB: Database> FieldValue<'a, DB> {
-    pub(crate) fn is_default(&self) -> bool {
+    pub fn is_default(&self) -> bool {
         match self {
             FieldValue::Default => true,
             _ => false
         }
     }
 
-    pub(crate) fn is_value(&self) -> bool {
+    pub fn is_value(&self) -> bool {
         match self {
             FieldValue::Value(_) => true,
             _ => false
@@ -107,7 +107,7 @@ impl<'a, DB: Database, T: 'a> From<&'a T> for FieldValue<'a, DB>
 }
 
 #[derive(Debug)]
-pub(crate) struct SetField<'a, DB: Database + 'a> {
-    pub(crate) field: &'a Field,
-    pub(crate) value: FieldValue<'a, DB>,
+pub struct SetField<'a, DB: Database + 'a> {
+    pub  field: &'a Field,
+    pub  value: FieldValue<'a, DB>,
 }

@@ -12,20 +12,6 @@ use gdcf::cache::CachedObject;
 pub mod song;
 pub mod level;
 
-impl<DB: Database, T: Insertable<DB>> Insertable<DB> for CachedObject<T> {
-    fn values(&self) -> Vec<SetField<DB>> {
-        let values = self.cached().values();
-
-        // TODO: deal with the timestamp types here
-
-        values
-    }
-
-    fn table<'a>(&'a self) -> &Table {
-        self.cached().table()
-    }
-}
-
 impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
     where
         NaiveDateTime: FromSql<DB>
