@@ -36,7 +36,7 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
 pub  struct Column<'a, DB: Database + 'a> {
     pub  name: &'a str,
     pub  sql_type: Box<Type<'a, DB>>,
-    pub  constraints: Vec<Box<Constraint<'a, DB>>>,
+    pub  constraints: Vec<Box<Constraint<DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
@@ -50,50 +50,50 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
 
     pub  fn primary(self) -> Self
         where
-            PrimaryKeyConstraint<'a>: Constraint<'a, DB> + 'static
+            PrimaryKeyConstraint<'a>: Constraint<DB> + 'static
     {
         self.constraint(PrimaryKeyConstraint::default())
     }
 
     pub  fn unique(self) -> Self
         where
-            UniqueConstraint<'a>: Constraint<'a, DB> + 'static
+            UniqueConstraint<'a>: Constraint<DB> + 'static
     {
         self.constraint(UniqueConstraint::default())
     }
 
     pub  fn not_null(self) -> Self
         where
-            NotNullConstraint<'a>: Constraint<'a, DB> + 'static
+            NotNullConstraint<'a>: Constraint<DB> + 'static
     {
         self.constraint(NotNullConstraint::default())
     }
 
     pub  fn default(self, default: &'a AsSql<DB>) -> Self
         where
-            DefaultConstraint<'a, DB>: Constraint<'a, DB> + 'static
+            DefaultConstraint<'a, DB>: Constraint<DB> + 'static
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
     pub  fn foreign_key(self, references: &'a Field) -> Self
         where
-            ForeignKeyConstraint<'a>: Constraint<'a, DB> + 'static
+            ForeignKeyConstraint<'a>: Constraint<DB> + 'static
     {
         self.constraint(ForeignKeyConstraint::new(None, references))
     }
 
     pub  fn constraint<Con: 'static>(mut self, constraint: Con) -> Self
         where
-            Con: Constraint<'a, DB>
+            Con: Constraint<DB>
     {
         self.constraints.push(Box::new(constraint));
         self
     }
 }
 
-pub  trait Constraint<'a, DB: Database + 'a>: QueryPart<DB> {
-    fn name(&'a self) -> Option<&'a str> {
+pub  trait Constraint<DB: Database>: QueryPart<DB> {
+    fn name<'a>(&'a self) -> Option<&'a str> {
         None
     }
 }
@@ -137,11 +137,11 @@ impl<'a> ForeignKeyConstraint<'a> {
     }
 }
 
-if_query_part!(NotNullConstraint<'a>, Constraint<'a, DB>);
-if_query_part!(UniqueConstraint<'a>, Constraint<'a, DB>);
-if_query_part!(PrimaryKeyConstraint<'a>, Constraint<'a, DB>);
-if_query_part!(ForeignKeyConstraint<'a>, Constraint<'a, DB>);
-if_query_part!(DefaultConstraint<'a, DB>, Constraint<'a, DB>);
+if_query_part!(NotNullConstraint<'a>, Constraint<DB>);
+if_query_part!(UniqueConstraint<'a>, Constraint<DB>);
+if_query_part!(PrimaryKeyConstraint<'a>, Constraint<DB>);
+if_query_part!(ForeignKeyConstraint<'a>, Constraint<DB>);
+if_query_part!(DefaultConstraint<'a, DB>, Constraint<DB>);
 
 impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
     where

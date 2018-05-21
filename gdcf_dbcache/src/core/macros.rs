@@ -143,7 +143,7 @@ macro_rules! create {
             where
                 $(
                     $(
-                        $cons_type: Constraint<'a, DB> + 'static,
+                        $cons_type: Constraint<DB> + 'static,
                     )*
                 )*
                 $(
