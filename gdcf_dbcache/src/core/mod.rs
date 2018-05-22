@@ -1,5 +1,7 @@
 use core::backend::Database;
 use core::backend::Error;
+use core::query::QueryPart;
+use core::statement::PreparedStatement;
 use std::fmt::Debug;
 
 #[macro_use]

@@ -10,8 +10,8 @@ use core::table::Table;
 
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
-    other: &'a Table,
-    join_condition: &'a Condition<DB>,
+    pub other: &'a Table,
+    pub join_condition: &'a Condition<DB>,
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Copy, Clone, Debug)]
@@ -22,18 +22,18 @@ pub enum Ordering {
 
 #[derive(Debug)]
 pub struct OrderBy<'a> {
-    field: &'a Field,
-    ordering: Ordering,
+    pub field: &'a Field,
+    pub ordering: Ordering,
 }
 
 #[derive(Debug)]
 pub struct Select<'a, DB: Database + 'a> {
-    table: &'a Table,
-    fields: Vec<&'a Field>,
-    joins: Vec<Join<'a, DB>>,
-    filter: Option<Box<Condition<DB>>>,
-    subset: (Option<usize>, Option<usize>),
-    order: Vec<OrderBy<'a>>,
+    pub table: &'a Table,
+    pub fields: Vec<&'a Field>,
+    pub joins: Vec<Join<'a, DB>>,
+    pub filter: Option<Box<Condition<DB>>>,
+    pub subset: (Option<usize>, Option<usize>),
+    pub order: Vec<OrderBy<'a>>,
 }
 
 impl<'a, DB: Database + 'a> Select<'a, DB> {

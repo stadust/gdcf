@@ -1,11 +1,17 @@
 use core::AsSql;
+use core::backend::Database;
 use core::backend::pg::Pg;
 use core::query::{Insert, QueryPart};
 use core::query::create::{Column, Create};
+use core::query::Select;
+use core::query::select::Join;
+use core::query::select::OrderBy;
+use core::query::select::Ordering;
 use core::statement::PreparedStatement;
 use core::statement::StatementPart;
+use core::table::Field;
 use core::table::FieldValue;
-use core::query::Select;
+use gdcf::ext::Join as __;
 
 // TODO: ON CONFLICT UPDATE
 impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
@@ -124,17 +130,79 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     //TODO: implement
     fn to_sql_unprepared(&self) -> String {
-        /*
-        SELECT column_list FROM table
-        JOIN table2
-        ON join_condition
-        WHERE filter
-        ORDER BY order
-        */
-        unimplemented!()
+        let qualify = !self.joins.is_empty();
+        let where_clause = if let Some(ref condition) = self.filter {
+            format!("WHERE {}", condition.to_sql_unprepared())
+        } else {
+            String::new()
+        };
+
+        let join_clause = self.joins.iter()
+            .map(|j| j.to_sql_unprepared())
+            .join(" ");
+
+        let order_clause = if !self.order.is_empty() {
+            format!("ORDER BY {}", self.order.iter()
+                .map(|o| o.to_sql_unprepared())
+                .join(","))
+        } else {
+            String::new()
+        };
+
+        let bounds = match self.subset {
+            (None, None) => String::new(),
+            (Some(limit), None) => format!("LIMIT {}", limit),
+            (None, Some(offset)) => format!("OFFSET {}", offset),
+            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset)
+        };
+
+        let field_list = if qualify {
+            self.fields.iter()
+                .map(|f| f.qualified_name())
+                .join(",")
+        } else {
+            self.fields.iter()
+                .map(|f| f.name())
+                .join(",")
+        };
+
+        format!("SELECT {} FROM {} {} {} {} {}", field_list, self.table.name, join_clause, where_clause, bounds, order_clause)
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         unimplemented!()
     }
+}
+
+impl<'a> QueryPart<Pg> for Join<'a, Pg> {
+    fn to_sql_unprepared(&self) -> String {
+        format!("JOIN {} ON {}", self.other.name, self.join_condition.to_sql_unprepared())
+    }
+
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+        unimplemented!()
+    }
+}
+
+impl<'a> QueryPart<Pg> for OrderBy<'a> {
+    fn to_sql_unprepared(&self) -> String {
+        match self.ordering {
+            Ordering::Asc => format!("{} ASC", self.field.name),
+            Ordering::Desc => format!("{} DESC", self.field.name)
+        }
+    }
+
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+        unimplemented!()
+    }
+}
+
+fn join_unprepared<DB: Database, QP: QueryPart<DB>>(parts: &[QP], sep: &str) -> String {
+    let mut sql = Vec::new();
+
+    for part in parts {
+        sql.push(part.to_sql_unprepared())
+    }
+
+    sql.join(sep)
 }

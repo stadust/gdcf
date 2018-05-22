@@ -123,7 +123,7 @@ impl Cache for DatabaseCache<Pg>
         let select = NewgroundsSong::select_from(&newgrounds_song::table);
 
         self.config.backend.query_one(&select)
-            .map_err(Into::into)
+            .map_err(Into::into)  // for some reason I can use the question mark operator?????
     }
 
     fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
