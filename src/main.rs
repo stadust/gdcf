@@ -16,7 +16,6 @@ use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use tokio_core::reactor::Core;
 
-//use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 
 fn main() {
     env_logger::init();
@@ -27,52 +26,16 @@ fn main() {
     let config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
     let cache = DatabaseCache::new(config);
 
-    gdcf_dbcache::test();
     cache.initialize().expect("Error initializing cache");
 
     let client = BoomlingsClient::new(&core.handle());
 
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-
-    gdcf.level(38515466u64.into());
-    gdcf.levels(LevelsRequest::new().search("Auto play area".to_string()));
-
-
+    gdcf.level(LevelRequest::new(38515466u64));
 
     core.run(until_all_done());
-
-    /*println!("{:?}", skyline(
-        &vec![11, 0, 2, 5],
-        &vec![2, 4, 4, 4],
-        &vec![4, 4, 8, 2],
-        0,
-        4,
-    ));*/
 }
-/*fn main() {
-    env_logger::init();
-
-    let mut core = Core::new().unwrap();
-
-    let client = BoomlingsClient::new(&core.handle());
-    let config = DatabaseCacheConfig::new("postgres://gdcf:gdcf@localhost/gdcf", Duration::seconds(0));
-    let cache = DatabaseCache::new(config);
-
-    let gdcf = ConsistentCacheManager::new(client, cache);
-
-    let levels = vec![38786978u64, 38515466u64, 11774780u64, 39599737u64, 3150u64];
-
-    for level in levels.into_iter() {
-        gdcf.level(LevelRequest::new(level));
-    }
-
-    gdcf.levels(LevelsRequest::new().search("Auto play area".to_string()));
-
-
-
-    core.run(until_all_done());
-}*/
 
 pub fn until_all_done() -> impl Future<Item=(), Error=()> {
     Thing {}

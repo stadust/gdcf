@@ -1,13 +1,13 @@
 use core::{AsSql, backend::Database, statement::PreparedStatement};
 use core::backend::Error;
-pub  use self::insert::{Insert, Insertable};
-pub  use self::select::{Select};
+pub use self::insert::{Insert, Insertable};
+pub use self::select::{Select};
 use std::fmt::Debug;
 
-pub  mod condition;
-pub  mod create;
-pub  mod insert;
-pub  mod select;
+pub mod condition;
+pub mod create;
+pub mod insert;
+pub mod select;
 
 pub trait QueryPart<DB: Database>: Debug {
     fn to_sql_unprepared(&self) -> String;

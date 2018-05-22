@@ -1,13 +1,13 @@
+use convert;
 use error::ValueError;
-use model::LevelRating;
 use model::level::Featured;
+use model::LevelRating;
+use model::raw::RawObject;
 use model::song::{MAIN_SONGS, MainSong, UNKNOWN};
 use percent_encoding::percent_decode;
 use std::num::ParseIntError;
 use std::str::{FromStr, Utf8Error};
-
-use convert;
-use model::raw::RawObject;
+use base64::DecodeError;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -33,6 +33,11 @@ pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>
     } else {
         Ok(None)
     }
+}
+
+pub(super) fn description(value: &str) -> Result<Option<String>, DecodeError> {
+    convert::to::b64_decoded_string(value)
+        .map(Option::Some)
 }
 
 pub(super) fn default_to_none<T>(value: &str) -> Result<Option<T>, <T as FromStr>::Err>

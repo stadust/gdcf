@@ -99,43 +99,42 @@ impl Cache for DatabaseCache<Pg>
     }
 
     fn store_partial_level(&mut self, level: PartialLevel) -> Result<(), CacheError<Self::Err>> {
-        Err(CacheError::NoStore)
+        let ts = Utc::now().naive_utc();
+
+        level.insert()
+            .with(partial_level::last_cached_at.set(&ts))
+            .on_conflict_update()
+            .execute(&self.config.backend)
+            .map_err(CacheError::Custom)
     }
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
-        println!("Test3");
         Err(CacheError::CacheMiss)
     }
 
-    fn store_level(&mut self, level: Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        println!("Test4");
+    fn store_level(&mut self, level: Level) -> Result<(), CacheError<Self::Err>> {
+        self.store_partial_level(level.base)?;
+
         Err(CacheError::NoStore)
     }
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
         return Err(CacheError::CacheMiss);
-        println!("Test5");
+
         let select = NewgroundsSong::select_from(&newgrounds_song::table);
 
         self.config.backend.query(&select)
             .map_err(|e| CacheError::Custom(e))
-            .map(|mut v| {
-                println!("{:?}", v);
-                v.remove(0)
-            })  // TODO: query one or sth
+            .map(|mut v| v.remove(0))  // TODO: query one or sth
     }
 
     fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
-        println!("Test6");
         let ts = Utc::now().naive_utc();
 
         song.insert()
             .with(newgrounds_song::last_cached_at.set(&ts))
             .on_conflict_update()
             .execute(&self.config.backend)
-            .map_err(|e| {
-                println!("{:?}", e);
-                CacheError::Custom(e)
-            })
+            .map_err(CacheError::Custom)
     }
 }

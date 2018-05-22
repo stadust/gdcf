@@ -7,8 +7,8 @@ use super::query::condition::{EqField, EqValue};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Table {
-    pub  name: &'static str,
-    pub  fields: &'static [&'static Field],
+    pub name: &'static str,
+    pub fields: &'static [&'static Field],
 }
 
 impl Table {
@@ -39,8 +39,8 @@ impl Table {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Field {
-    pub  table: &'static str,
-    pub  name: &'static str,
+    pub table: &'static str,
+    pub name: &'static str,
 }
 
 impl Field {
@@ -108,6 +108,6 @@ impl<'a, DB: Database, T: 'a> From<&'a T> for FieldValue<'a, DB>
 
 #[derive(Debug)]
 pub struct SetField<'a, DB: Database + 'a> {
-    pub  field: &'a Field,
-    pub  value: FieldValue<'a, DB>,
+    pub field: &'a Field,
+    pub value: FieldValue<'a, DB>,
 }

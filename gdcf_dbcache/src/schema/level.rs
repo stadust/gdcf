@@ -49,7 +49,7 @@ create! { partial_level,
 
     main_song => Unsigned<SmallInteger>,
 
-    gd_version[NotNull] => Text,
+    gd_version[NotNull] => Unsigned<SmallInteger>,
 
     likes[NotNull] => Integer,
 

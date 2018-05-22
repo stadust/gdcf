@@ -124,6 +124,13 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     //TODO: implement
     fn to_sql_unprepared(&self) -> String {
+        /*
+        SELECT column_list FROM table
+        JOIN table2
+        ON join_condition
+        WHERE filter
+        ORDER BY order
+        */
         unimplemented!()
     }
 

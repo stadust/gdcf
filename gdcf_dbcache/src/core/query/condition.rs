@@ -14,26 +14,26 @@ pub trait Condition<DB: Database>: QueryPart<DB> + Debug {
 
 #[derive(Debug, Copy, Clone)]
 pub struct EqField<'a> {
-    pub  field_1: &'a Field,
-    pub  field_2: &'a Field,
+    pub field_1: &'a Field,
+    pub field_2: &'a Field,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct EqValue<'a, DB: Database + 'a> {
-    pub  field: &'a Field,
-    pub  value: &'a AsSql<DB>,
+    pub field: &'a Field,
+    pub value: &'a AsSql<DB>,
 }
 
 #[derive(Debug)]
 pub struct And<DB: Database> {
-    pub  cond_1: Box<Condition<DB>>,
-    pub  cond_2: Box<Condition<DB>>,
+    pub cond_1: Box<Condition<DB>>,
+    pub cond_2: Box<Condition<DB>>,
 }
 
 #[derive(Debug)]
 pub struct Or<DB: Database> {
-    pub  cond_1: Box<Condition<DB>>,
-    pub  cond_2: Box<Condition<DB>>,
+    pub cond_1: Box<Condition<DB>>,
+    pub cond_2: Box<Condition<DB>>,
 }
 
 impl<'a, DB: Database + 'a> EqValue<'a, DB> {

@@ -7,14 +7,14 @@ use futures::Future;
 use model::GDObject;
 use std::fmt::Display;
 
-pub  trait ApiClientExt: ApiClient {
+pub trait ApiClientExt: ApiClient {
     fn make<R: Request + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
         Box::new(request.make(self)
             .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", request, err)))
     }
 }
 
-pub  trait CacheExt: Cache {
+pub trait CacheExt: Cache {
     fn store_all(&mut self, objects: impl IntoIterator<Item=GDObject>) -> Result<(), Vec<CacheError<Self::Err>>> {
         let errors = objects.into_iter()
             .map(|object| self.store_object(object))

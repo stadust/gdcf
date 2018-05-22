@@ -1,6 +1,6 @@
 macro_rules! table {
     ($model: ident => $table: ident {$($model_field: ident => $table_column: ident),*; $($unmapped_column: ident),*}) => {
-        pub  mod $table {
+        pub mod $table {
             use super::$model;
             use core::backend::Error;
             use core::query::insert::Insertable;
@@ -8,11 +8,11 @@ macro_rules! table {
             use core::table::{Field, Table, SetField};
 
             #[allow(non_upper_case_globals)]
-            pub  const table_name: &str = stringify!($table);
+            pub const table_name: &str = stringify!($table);
 
             $(
                 #[allow(non_upper_case_globals)]
-                pub  static $table_column: Field = Field {
+                pub static $table_column: Field = Field {
                     table: table_name,
                     name: stringify!($table_column)
                 };
@@ -20,14 +20,14 @@ macro_rules! table {
 
             $(
                 #[allow(non_upper_case_globals)]
-                pub  static $unmapped_column: Field = Field {
+                pub static $unmapped_column: Field = Field {
                     table: table_name,
                     name: stringify!($unmapped_column)
                 };
             )*
 
             #[allow(non_upper_case_globals)]
-            pub  static table: Table = Table {
+            pub static table: Table = Table {
                 name: table_name,
                 fields: &[
                     $(&$table_column,)*
@@ -139,7 +139,7 @@ macro_rules! create {
         use core::query::create::*;
         use core::backend::Database;
 
-        pub  fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
+        pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
             where
                 $(
                     $(

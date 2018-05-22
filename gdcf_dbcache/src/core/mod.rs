@@ -2,16 +2,13 @@ use core::backend::Database;
 use core::backend::Error;
 use std::fmt::Debug;
 
-//#[cfg(any(feature = "postgres", feature = "mysql", feature = "sqlite"))]
-//pub mod cache;
-//pub mod schema;
 #[macro_use]
-pub  mod macros;
-pub  mod query;
-pub  mod table;
-pub  mod backend;
-pub  mod statement;
-pub  mod types;
+pub mod macros;
+pub mod query;
+pub mod table;
+pub mod backend;
+pub mod statement;
+pub mod types;
 
 pub trait AsSql<DB: Database>: Debug {
     fn as_sql(&self) -> DB::Types;
@@ -31,7 +28,7 @@ impl<'a, T: 'a, DB: Database> AsSql<DB> for &'a T
     }
 }
 
-pub  trait FromSql<DB: Database> {
+pub trait FromSql<DB: Database> {
     fn from_sql(sql: &DB::Types) -> Result<Self, Error<DB>>
         where
             Self: Sized;

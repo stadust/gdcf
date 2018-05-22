@@ -36,6 +36,7 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
+extern crate base64;
 
 use api::client::ApiClient;
 use api::request::{LevelRequest, LevelsRequest, Request};

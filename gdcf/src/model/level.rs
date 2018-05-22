@@ -207,7 +207,7 @@ pub struct PartialLevel {
     ///
     /// ## GD Internals:
     /// This value is provided at index `3` and encoded using urlsafe base 64.
-    #[raw_data(index = 3, deserialize_with = "de::into_option", default)]
+    #[raw_data(index = 3, deserialize_with = "de::description", default)]
     pub description: Option<String>,
 
     /// The `PartialLevel`'s version. The version get incremented every time the level is updated,
