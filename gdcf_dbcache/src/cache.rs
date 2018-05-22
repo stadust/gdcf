@@ -86,6 +86,7 @@ impl Cache for DatabaseCache<Pg>
     // lifetime to the impl. This would force all structs used internally to be bound to
     // that lifetime, although they only live for the function they're used in.
     // Since that obviously results in compiler errors, we cant do that.
+    // (and we also cant add the lifetimes directly to the functions, because trait)
 
     type Config = DatabaseCacheConfig<Pg>;
     type Err = Error<Pg>;
@@ -119,13 +120,10 @@ impl Cache for DatabaseCache<Pg>
     }
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-        return Err(CacheError::CacheMiss);
-
         let select = NewgroundsSong::select_from(&newgrounds_song::table);
 
-        self.config.backend.query(&select)
-            .map_err(|e| CacheError::Custom(e))
-            .map(|mut v| v.remove(0))  // TODO: query one or sth
+        self.config.backend.query_one(&select)
+            .map_err(Into::into)
     }
 
     fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
@@ -136,5 +134,14 @@ impl Cache for DatabaseCache<Pg>
             .on_conflict_update()
             .execute(&self.config.backend)
             .map_err(CacheError::Custom)
+    }
+}
+
+impl<DB: Database> Into<CacheError<Error<DB>>> for Error<DB> {
+    fn into(self) -> CacheError<Error<DB>> {
+        match self {
+            Error::NoResult => CacheError::CacheMiss,
+            err => CacheError::Custom(err)
+        }
     }
 }
