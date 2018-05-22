@@ -15,7 +15,7 @@ pub mod int;
 pub mod to {
     use percent_encoding::percent_decode;
     use std::str::Utf8Error;
-    use base64::{self, DecodeError};
+    use base64::{self, DecodeError, URL_SAFE};
 
     pub fn decoded_url(encoded: &str) -> Result<String, Utf8Error> {
         let utf8_cow = percent_decode(encoded.as_bytes()).decode_utf8()?;
@@ -24,7 +24,7 @@ pub mod to {
     }
 
     pub fn b64_decoded_string(encoded: &str) -> Result<String, DecodeError> {
-        base64::decode(encoded).map(|bytes| String::from_utf8(bytes).unwrap())  // lets just trust the b64 lib to produce valid shit
+        base64::decode_config(encoded, URL_SAFE).map(|bytes| String::from_utf8(bytes).unwrap())  // lets just trust the b64 lib to produce valid shit
     }
 
     pub fn bool(value: u8) -> bool {
