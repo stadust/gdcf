@@ -62,13 +62,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
 
 impl<'a> QueryPart<Pg> for Column<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
-        let mut sql_constraints = Vec::new();
-
-        for constraint in &self.constraints {
-            sql_constraints.push(constraint.to_sql_unprepared())
-        }
-
-        format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), sql_constraints.join(" "))
+        format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join(" "))
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
@@ -87,17 +81,13 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
 
 impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
-        let mut column_sql = Vec::new();
-
-        for column in &self.columns {
-            column_sql.push(column.to_sql_unprepared())
-        }
-
         format!(
             "CREATE TABLE {} {} ({})",
             if self.ignore_if_exists { "IF NOT EXISTS" } else { "" },
             self.name,
-            column_sql.join(",")
+            self.columns.iter()
+                .map(|c| c.to_sql_unprepared())
+                .join(",")
         )
     }
 
@@ -195,14 +185,4 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         unimplemented!()
     }
-}
-
-fn join_unprepared<DB: Database, QP: QueryPart<DB>>(parts: &[QP], sep: &str) -> String {
-    let mut sql = Vec::new();
-
-    for part in parts {
-        sql.push(part.to_sql_unprepared())
-    }
-
-    sql.join(sep)
 }
