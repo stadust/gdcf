@@ -31,7 +31,7 @@ pub struct Select<'a, DB: Database + 'a> {
     pub table: &'a Table,
     pub fields: Vec<&'a Field>,
     pub joins: Vec<Join<'a, DB>>,
-    pub filter: Option<Box<Condition<DB>>>,
+    pub filter: Vec<Box<Condition<DB>>>,
     pub subset: (Option<usize>, Option<usize>),
     pub order: Vec<OrderBy<'a>>,
 }
@@ -42,7 +42,7 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
             table,
             fields,
             joins: Vec::new(),
-            filter: None,
+            filter: Vec::new(),
             subset: (None, None),
             order: Vec::new(),
         }
@@ -68,19 +68,11 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self
     }
 
-    pub fn filter<C: 'static>(mut self, cond: C) -> Select<'a, DB>
+    pub fn filter<Cond>(mut self, cond: Cond) -> Select<'a, DB>
         where
-            And<DB>: Condition<DB> + 'static,
-            C: Condition<DB>,
+            Cond: Condition<DB> + 'static,
     {
-        self.filter = match self.filter {
-            None => Some(Box::new(cond)),
-            Some(old) => Some(Box::new(And {
-                cond_1: old,
-                cond_2: Box::new(cond),
-            }))
-        };
-
+        self.filter.push(Box::new(cond));
         self
     }
 }

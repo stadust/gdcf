@@ -1,3 +1,6 @@
+use core::AsSql;
+use core::backend::Database;
+use core::query::QueryPart;
 use gdcf::ext::Join;
 
 #[derive(Debug)]
@@ -33,7 +36,7 @@ impl PreparedStatement {
         self.parts.push(part.into())
     }
 
-    pub fn pop(&mut self) -> Option<StatementPart>{
+    pub fn pop(&mut self) -> Option<StatementPart> {
         self.parts.pop()
     }
 

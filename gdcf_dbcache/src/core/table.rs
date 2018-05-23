@@ -16,11 +16,11 @@ impl Table {
         &self.fields
     }
 
-    pub fn filter<DB, Cond: 'static>(&self, cond: Cond) -> Select<DB>
+    pub fn filter<DB, Cond>(&self, cond: Cond) -> Select<DB>
         where
-            Cond: Condition<DB>,
+            Cond: Condition<DB> + 'static,
             DB: Database,
-            And<DB>: Condition<DB> + 'static,
+     //       And<DB>: Condition<DB> + 'static,
     {
         self.select().filter(cond)
     }
@@ -44,7 +44,7 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn eq<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
+    pub fn eq<'f, DB: Database, S: AsSql<DB> + 'static>(&'f self, value: S) -> EqValue<'f, DB> {
         EqValue::new(&self, value)
     }
 

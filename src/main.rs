@@ -12,6 +12,7 @@ use chrono::Duration;
 use futures::{Async, Future};
 use gdcf::{ConsistentCacheManager, Gdcf};
 use gdcf::api::request::{LevelRequest, LevelsRequest, Request};
+use gdcf::cache::Cache;
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use tokio_core::reactor::Core;

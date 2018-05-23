@@ -12,6 +12,7 @@ use core::statement::StatementPart;
 use core::table::Field;
 use core::table::FieldValue;
 use gdcf::ext::Join as __;
+// one underscore is unstable, but 2 are ok, kden
 
 // TODO: ON CONFLICT UPDATE
 impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
@@ -67,6 +68,9 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         let mut prep_stmt = PreparedStatement::new(vec![self.name.into(), self.sql_type.to_sql_unprepared().into()]);
+        //let (cons_stmt, values) = join_statements(&self.constraints, " ");
+        //prep_stmt.concat(cons_stmt);
+        // TODO: fix this because box
         let mut values = Vec::new();
 
         for constraint in &self.constraints {
@@ -92,7 +96,6 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
-        let mut values = Vec::new();
         let mut prep_stmt = PreparedStatement::new(
             vec![
                 "CREATE TABLE".into(),
@@ -102,15 +105,9 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
             ]
         );
 
-        for column in &self.columns {
-            let (mut prep_col, mut col_values) = column.to_sql();
+        let (column_stmt, values) = join_statements(&self.columns, ",");
 
-            values.append(&mut col_values);
-            prep_stmt.concat(prep_col);
-            prep_stmt.append(",");
-        }
-
-        prep_stmt.pop(); // Remove the last comma because it would cause a syntax error
+        prep_stmt.concat(column_stmt);
         prep_stmt.append(")");
 
         (prep_stmt, values)
@@ -121,8 +118,10 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     //TODO: implement
     fn to_sql_unprepared(&self) -> String {
         let qualify = !self.joins.is_empty();
-        let where_clause = if let Some(ref condition) = self.filter {
-            format!("WHERE {}", condition.to_sql_unprepared())
+        let where_clause = if !self.filter.is_empty() {
+            format!("WHERE {}", self.filter.iter()
+                .map(|c| c.to_sql_unprepared())
+                .join(" AND "))
         } else {
             String::new()
         };
@@ -185,4 +184,27 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
         unimplemented!()
     }
+}
+
+
+pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: &str) -> (PreparedStatement, Vec<&'a AsSql<DB>>)
+    where
+        DB: Database,
+        QP: QueryPart<DB>,
+        I: IntoIterator<Item=&'a QP>
+{
+    let mut result = PreparedStatement::new(Vec::new());
+    let mut values = Vec::new();
+    let mut sep = "";
+
+    for t in stmts {
+        let (mut stmt, mut vals) = t.to_sql();
+
+        result.concat_on(stmt, sep);
+        values.append(&mut vals);
+
+        sep = seperator;
+    }
+
+    (result, values)
 }

@@ -19,7 +19,7 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
             ")".into()
         ]);
 
-        (stmt, vec![self.value])
+        (stmt, vec![&*self.value])
     }
 }
 

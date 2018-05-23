@@ -18,10 +18,10 @@ pub struct EqField<'a> {
     pub field_2: &'a Field,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct EqValue<'a, DB: Database + 'a> {
+#[derive(Debug)]
+pub struct EqValue<'a, DB: Database> {
     pub field: &'a Field,
-    pub value: &'a AsSql<DB>,
+    pub value: Box<AsSql<DB>>,
 }
 
 #[derive(Debug)]
@@ -36,11 +36,11 @@ pub struct Or<DB: Database> {
     pub cond_2: Box<Condition<DB>>,
 }
 
-impl<'a, DB: Database + 'a> EqValue<'a, DB> {
-    pub fn new(field: &'a Field, value: &'a AsSql<DB>) -> EqValue<'a, DB> {
+impl<'f, 'sql, DB: Database + 'sql> EqValue<'f, DB> {
+    pub fn new<S: AsSql<DB> + 'static>(field: &'f Field, value: S) -> EqValue<'f, DB> {
         EqValue {
             field,
-            value,
+            value: Box::new(value),
         }
     }
 }
