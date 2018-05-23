@@ -7,6 +7,7 @@ use core::query::Query;
 use core::query::QueryPart;
 use core::table::Field;
 use core::table::Table;
+use core::query::condition::Or;
 
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
@@ -77,6 +78,23 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self.filter = match self.filter {
             None => Some(Box::new(cond)),
             Some(old) => Some(Box::new(And {
+                cond_1: old,
+                cond_2: Box::new(cond),
+            }))
+        };
+
+        self
+    }
+
+    pub fn or<Cond>(mut self, cond: Cond) -> Select<'a, DB>
+        where
+            DB: 'static,
+            Cond: Condition<DB> + 'static,
+            Or<DB>: Condition<DB>
+    {
+        self.filter = match self.filter {
+            None => Some(Box::new(cond)),
+            Some(old) => Some(Box::new(Or {
                 cond_1: old,
                 cond_2: Box::new(cond),
             }))
