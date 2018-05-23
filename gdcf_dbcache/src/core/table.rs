@@ -20,7 +20,7 @@ impl Table {
         where
             Cond: Condition<DB> + 'static,
             DB: Database,
-     //       And<DB>: Condition<DB> + 'static,
+            And<DB>: Condition<DB> + 'static,
     {
         self.select().filter(cond)
     }

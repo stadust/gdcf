@@ -118,13 +118,8 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     //TODO: implement
     fn to_sql_unprepared(&self) -> String {
         let qualify = !self.joins.is_empty();
-        let where_clause = if !self.filter.is_empty() {
-            format!("WHERE {}", self.filter.iter()
-                .map(|c| c.to_sql_unprepared())
-                .join(" AND "))
-        } else {
-            String::new()
-        };
+        let where_clause = self.filter.as_ref()
+            .map_or(String::new(), |c|c.to_sql_unprepared());
 
         let join_clause = self.joins.iter()
             .map(|j| j.to_sql_unprepared())
