@@ -1,4 +1,4 @@
-use core::{AsSql, query::{condition::{And, EqField, EqValue, Or}, QueryPart}, statement::{PreparedStatement, StatementPart}};
+use core::{AsSql, query::{condition::{And, EqField, EqValue, Or}, QueryPart}, statement::{Preparation, Prepare, PreparedStatement, StatementPart}};
 use super::Pg;
 
 impl<'a> QueryPart<Pg> for EqField<'a> {
@@ -12,14 +12,18 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
         format!("({} = {})", self.field.qualified_name(), self.value.as_sql_string())
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
-        let stmt = PreparedStatement::new(vec![
+    fn to_sql<'b>(&'b self) -> Preparation<Pg> {
+        Preparation::<Pg>::default()
+            .with_static(format!("({} = ", self.field.qualified_name()))
+            .with(self.value.to_sql())
+            .with_static(")")
+        /*let stmt = PreparedStatement::new(vec![
             format!("({} = ", self.field.qualified_name()).into(),
             StatementPart::Placeholder,
             ")".into()
         ]);
 
-        (stmt, vec![&*self.value])
+        (stmt, vec![&*self.value])*/
     }
 }
 
@@ -29,7 +33,13 @@ impl QueryPart<Pg> for And<Pg> {
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
-        let (mut stmt1, mut params1) = self.cond_1.to_sql();
+        Preparation::<Pg>::default()
+            .with_static("(")
+            .with(self.cond_1.to_sql())
+            .with_static(" AND ")
+            .with(self.cond_2.to_sql())
+            .with_static(")")
+        /*let (mut stmt1, mut params1) = self.cond_1.to_sql();
         let (mut stmt2, mut params2) = self.cond_1.to_sql();
 
         params1.append(&mut params2);
@@ -39,7 +49,7 @@ impl QueryPart<Pg> for And<Pg> {
 
         stmt1.concat_on(stmt2, " AND ");
 
-        (stmt1, params1)
+        (stmt1, params1)*/
     }
 }
 
@@ -50,7 +60,13 @@ impl QueryPart<Pg> for Or<Pg> {
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
-        let (mut stmt1, mut params1) = self.cond_1.to_sql();
+        Preparation::<Pg>::default()
+            .with_static("(")
+            .with(self.cond_1.to_sql())
+            .with_static(" OR ")
+            .with(self.cond_2.to_sql())
+            .with_static(")")
+        /*let (mut stmt1, mut params1) = self.cond_1.to_sql();
         let (mut stmt2, mut params2) = self.cond_1.to_sql();
 
         params1.append(&mut params2);
@@ -60,6 +76,6 @@ impl QueryPart<Pg> for Or<Pg> {
 
         stmt1.concat_on(stmt2, " OR ");
 
-        (stmt1, params1)
+        (stmt1, params1)*/
     }
 }

@@ -8,6 +8,7 @@ extern crate gdcf;
 #[cfg(feature = "pg")]
 extern crate postgres;
 
+#[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 use core::query::create::Create;
 use core::query::QueryPart;
@@ -20,7 +21,7 @@ mod de;
 pub mod schema;
 pub mod cache;
 
-pub fn test() {
+pub fn test() {/*
     let c: Create<Pg> = song::create();
 
     println!("{}", c.to_sql_unprepared());
@@ -30,7 +31,7 @@ pub fn test() {
         .ignore_if_exists();
 
     println!("{}", c2.to_sql_unprepared());
-
+*/
     /*let ins = Insert::new(
         &table,
         vec![

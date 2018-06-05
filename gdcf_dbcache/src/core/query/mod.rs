@@ -1,4 +1,4 @@
-use core::{AsSql, backend::Database, statement::PreparedStatement};
+use core::{AsSql, backend::Database, statement::Preparation};
 use core::backend::Error;
 pub use self::insert::{Insert, Insertable};
 pub use self::select::{Select};
@@ -12,7 +12,7 @@ pub mod select;
 pub trait QueryPart<DB: Database>: Debug {
     fn to_sql_unprepared(&self) -> String;
 
-    fn to_sql<'a>(&'a self) -> (PreparedStatement, Vec<&'a AsSql<DB>>) {
+    fn to_sql<'a>(&'a self) -> Preparation<'a, DB> {
         (self.to_sql_unprepared().into(), Vec::new())
     }
 }

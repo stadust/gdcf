@@ -3,6 +3,7 @@ use chrono::NaiveDateTime;
 use core::AsSql;
 use core::backend::Database;
 use core::backend::Error;
+#[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 // TODO: cfg(feature = "pg")
 use core::query::create::Create;
