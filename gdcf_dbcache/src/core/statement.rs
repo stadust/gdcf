@@ -15,6 +15,12 @@ pub struct PreparedStatement {
 }
 
 impl PreparedStatement {
+    pub fn placeholder() -> PreparedStatement {
+        PreparedStatement {
+            parts: vec!(StatementPart::Placeholder)
+        }
+    }
+
     pub fn concat(&mut self, mut other: PreparedStatement) {
         self.parts.append(&mut other.parts)
     }
