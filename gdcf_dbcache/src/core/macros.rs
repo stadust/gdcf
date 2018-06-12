@@ -188,3 +188,99 @@ macro_rules! simple_query_part {
         }
     };
 }
+
+macro_rules! create2 {
+    ($model: ident, @[], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [],
+            [$(($t, $bound))*],
+            [$($stack_tokens)*, ($column, $sql_type, [])],
+            $($rest)*
+        );
+    };
+
+    ($model: ident, @[$($constraint: expr),*$(,)?], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident[] => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [],
+            [$(($t, $bound))*],
+            [$($stack_tokens)*, ($column, $sql_type, [$($constraint,)*])],
+            $($rest)*
+        );
+    };
+
+    ($model: ident, @[$($constraint: expr),*$(,)?], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident[NotNull $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [NotNullConstraint::default(), $($constraint,)*],
+            [(NotNullConstraint<'a>, Constraint<DB>) $(($t, $bound))*],
+            [$($stack_tokens)*],
+            $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*
+        );
+    };
+
+    ($model: ident, @[$($constraint: expr),*$(,)?], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident[Unique $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [UniqueConstraint::default(), $($constraint,)*],
+            [(UniqueConstraint<'a>, Constraint<DB>) $(($t, $bound))*],
+            [$($stack_tokens)*],
+            $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*
+        );
+    };
+
+    ($model: ident, @[$($constraint: expr),*$(,)?], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident[Primary $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [PrimaryKeyConstraint::default(), $($constraint,)*],
+            [(PrimaryKeyConstraint<'a>, Constraint<DB>) $(($t, $bound))*],
+            [$($stack_tokens)*],
+            $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*
+        );
+    };
+
+    ($model: ident, @[$($constraint: expr),*$(,)?], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident[Default<$dt: ty>($value: expr) $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create2!($model,
+            @
+            [DefaultConstraint::new(None, $value), $($constraint,)*],
+            [(DefaultConstraint<'a, DB, $dt>, Constraint<DB>) ($dt, SqlExpr<DB>) $(($t, $bound))*],
+            [$($stack_tokens)*],
+            $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*
+        );
+    };
+
+    ($model: ident, @[], [$(($t: ty, $bound: path))*], [,$(($column: ident, $sql_type: ty, [$($constraint: expr),* $(,)?])),*], ) => {
+        use core::types::*;
+        use core::query::create::*;
+        use core::SqlExpr;
+        use core::backend::Database;
+
+        pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
+            where
+                $(
+                    $t: $bound + 'static,
+                )*
+                $(
+                    $sql_type: Type<DB>,
+                )*
+        {
+            $model::table.create()
+            $(
+                .with_column(Column::new($model::$column.name(), {let ty: $sql_type = Default::default(); ty})
+                    $(
+                        .constraint($constraint)
+                    )*
+                )
+            )*
+        }
+    };
+
+    ($model: ident, @$($tokens: tt)*) => {
+        compile_error!("You fucked up, good luck fixing it");
+    };
+
+    ($model: ident, $($tokens: tt)*) => {
+        create2!($model, @[], [], [], $($tokens)*,);
+    };
+}

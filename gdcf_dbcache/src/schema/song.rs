@@ -1,5 +1,5 @@
 use gdcf::model::NewgroundsSong;
-// use schema::NowAtUtc;
+use schema::NowAtUtc;
 
 table! {
     NewgroundsSong => newgrounds_song {
@@ -17,7 +17,7 @@ table! {
     }
 }
 
-create! { newgrounds_song,
+create2! { newgrounds_song,
     song_id[NotNull, Unique, Primary] => Unsigned<BigInteger>,
     song_name[NotNull] => Text,
     index_3 => Unsigned<BigInteger>,
@@ -27,6 +27,6 @@ create! { newgrounds_song,
     index_7 => Text,
     index_8 => Integer,
     song_link[NotNull] => Text,
-    first_cached_at[NotNull] => UtcTimestamp,
+    first_cached_at[NotNull, Default<NowAtUtc>(NowAtUtc)] => UtcTimestamp,
     last_cached_at[NotNull] => UtcTimestamp
 }
