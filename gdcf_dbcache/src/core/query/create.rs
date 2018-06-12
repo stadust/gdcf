@@ -1,9 +1,10 @@
-use core::AsSql;
 use core::backend::Database;
 use core::query::Query;
 use core::query::QueryPart;
+use core::SqlExpr;
 use core::table::Field;
 use core::types::Type;
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct Create<'a, DB: Database + 'a> {
@@ -35,8 +36,8 @@ impl<'a, DB: Database + 'a> Create<'a, DB> {
 #[derive(Debug)]
 pub struct Column<'a, DB: Database + 'a> {
     pub name: &'a str,
-    pub sql_type: Box<Type<DB>>,
-    pub constraints: Vec<Box<Constraint<DB>>>,
+    pub sql_type: Box<dyn Type<DB>>,
+    pub constraints: Vec<Box<dyn Constraint<DB>>>,
 }
 
 impl<'a, DB: Database + 'a> Column<'a, DB> {
@@ -69,9 +70,9 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         self.constraint(NotNullConstraint::default())
     }
 
-    pub fn default(self, default: &'a AsSql<DB>) -> Self
+    pub fn default<D: SqlExpr<DB>>(self, default: D) -> Self
         where
-            DefaultConstraint<'a, DB>: Constraint<DB> + 'static
+            DefaultConstraint<'a, DB, D>: Constraint<DB> + 'static
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
@@ -114,19 +115,22 @@ pub struct ForeignKeyConstraint<'a> {
 }
 
 #[derive(Debug)]
-pub struct DefaultConstraint<'a, DB: Database + 'a> {
-    name: Option<&'a str>,
-    default: &'a AsSql<DB>,
+pub struct DefaultConstraint<'a, DB: Database + 'a, D: SqlExpr<DB>> {
+    pub name: Option<&'a str>,
+    pub default: D,
+    _ghost: PhantomData<DB>
 }
 
-impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
-    pub fn new(name: Option<&'a str>, default: &'a AsSql<DB>) -> DefaultConstraint<'a, DB> {
+impl<'a, DB: Database + 'a, D: SqlExpr<DB>> DefaultConstraint<'a, DB, D> {
+    pub fn new(name: Option<&'a str>, default: D) -> DefaultConstraint<'a, DB, D> {
         DefaultConstraint {
             name,
             default,
+            _ghost: PhantomData
         }
     }
 }
+
 
 impl<'a> ForeignKeyConstraint<'a> {
     pub fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
@@ -141,8 +145,13 @@ if_query_part!(NotNullConstraint<'a>, Constraint<DB>);
 if_query_part!(UniqueConstraint<'a>, Constraint<DB>);
 if_query_part!(PrimaryKeyConstraint<'a>, Constraint<DB>);
 if_query_part!(ForeignKeyConstraint<'a>, Constraint<DB>);
-if_query_part!(DefaultConstraint<'a, DB>, Constraint<DB>);
 
 impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
     where
         Create<'a, DB>: QueryPart<DB> {}
+
+impl<'a, DB: Database + 'a, D: SqlExpr<DB>> Constraint<DB> for DefaultConstraint<'a, DB, D>
+    where
+        D: SqlExpr<DB>,
+        Self: QueryPart<DB>
+{}

@@ -32,20 +32,20 @@ impl Database for Pg {
         format!("${}", idx)
     }
 
-    fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), Error<Pg>> {
+    fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Pg>> {
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
-        let values: Vec<_> = comp.iter().map(|v| v as &ToPgSql).collect();
+        let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         self.conn.execute(&statement, &values[..])?;
         Ok(())
     }
 
-    fn query_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<Vec<Row<Pg>>, Error<Pg>>
+    fn query_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<Vec<Row<Pg>>, Error<Pg>>
         where
             Self: Sized
     {
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
-        let values: Vec<_> = comp.iter().map(|v| v as &ToPgSql).collect();
+        let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         let mut rows = Vec::new();
 

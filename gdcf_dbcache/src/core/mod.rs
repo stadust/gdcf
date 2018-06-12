@@ -1,9 +1,9 @@
 use core::backend::Database;
 use core::backend::Error;
 use core::query::QueryPart;
+use core::statement::Preparation;
 use core::statement::PreparedStatement;
 use std::fmt::Debug;
-use core::statement::Preparation;
 
 #[macro_use]
 pub mod macros;
@@ -18,7 +18,7 @@ pub trait AsSql<DB: Database>: Debug {
     fn as_sql_string(&self) -> String;
 }
 
-pub trait SqlExpression<DB: Database>: QueryPart<DB> {}
+pub trait SqlExpr<DB: Database>: QueryPart<DB> {}
 
 impl<'a, T: 'a, DB: Database> AsSql<DB> for &'a T
     where
@@ -52,7 +52,10 @@ impl<DB: Database, T> QueryPart<DB> for T
     }
 }
 
-impl<'a, DB: Database> QueryPart<DB> for AsSql<DB> + 'a {
+// Impl for trait objects
+// I honestly have no clue what that lifetime does, but without it seems to assume an
+// impl only for AsSql<DB> objects with a static lifetime
+impl<'a, DB: Database> QueryPart<DB> for dyn AsSql<DB> + 'a {
     fn to_sql_unprepared(&self) -> String {
         self.as_sql_string()
     }
@@ -61,3 +64,8 @@ impl<'a, DB: Database> QueryPart<DB> for AsSql<DB> + 'a {
         (PreparedStatement::placeholder(), vec!(self))
     }
 }
+
+impl<DB: Database, T> SqlExpr<DB> for T
+    where
+        T: AsSql<DB>
+{}

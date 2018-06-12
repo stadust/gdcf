@@ -21,19 +21,19 @@ pub struct EqField<'a> {
 #[derive(Debug)]
 pub struct EqValue<'a, DB: Database> {
     pub field: &'a Field,
-    pub value: Box<AsSql<DB>>,
+    pub value: Box<dyn AsSql<DB>>,
 }
 
 #[derive(Debug)]
 pub struct And<DB: Database> {
-    pub cond_1: Box<Condition<DB>>,
-    pub cond_2: Box<Condition<DB>>,
+    pub cond_1: Box<dyn Condition<DB>>,
+    pub cond_2: Box<dyn Condition<DB>>,
 }
 
 #[derive(Debug)]
 pub struct Or<DB: Database> {
-    pub cond_1: Box<Condition<DB>>,
-    pub cond_2: Box<Condition<DB>>,
+    pub cond_1: Box<dyn Condition<DB>>,
+    pub cond_2: Box<dyn Condition<DB>>,
 }
 
 impl<'f, 'sql, DB: Database + 'sql> EqValue<'f, DB> {

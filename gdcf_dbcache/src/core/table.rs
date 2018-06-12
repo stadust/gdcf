@@ -52,7 +52,7 @@ impl Field {
         EqField::new(&self, other)
     }
 
-    pub fn set<'a, DB: Database + 'a>(&'a self, value: &'a AsSql<DB>) -> SetField<'a, DB> {
+    pub fn set<'a, DB: Database + 'a>(&'a self, value: &'a dyn AsSql<DB>) -> SetField<'a, DB> {
         SetField {
             field: &self,
             value: FieldValue::Value(value),
@@ -78,7 +78,7 @@ impl Field {
 #[derive(Debug)]
 pub enum FieldValue<'a, DB: Database + 'a> {
     Default,
-    Value(&'a AsSql<DB>),
+    Value(&'a dyn AsSql<DB>),
 }
 
 impl<'a, DB: Database> FieldValue<'a, DB> {

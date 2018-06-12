@@ -12,7 +12,7 @@ use core::query::condition::Or;
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
     pub other: &'a Table,
-    pub join_condition: &'a Condition<DB>,
+    pub join_condition: &'a dyn Condition<DB>,
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Copy, Clone, Debug)]
@@ -32,7 +32,7 @@ pub struct Select<'a, DB: Database + 'a> {
     pub table: &'a Table,
     pub fields: Vec<&'a Field>,
     pub joins: Vec<Join<'a, DB>>,
-    pub filter: Option<Box<Condition<DB>>>,
+    pub filter: Option<Box<dyn Condition<DB>>>,
     pub subset: (Option<usize>, Option<usize>),
     pub order: Vec<OrderBy<'a>>,
 }

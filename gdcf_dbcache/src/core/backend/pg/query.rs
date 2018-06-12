@@ -8,8 +8,6 @@ use core::query::select::Join;
 use core::query::select::OrderBy;
 use core::query::select::Ordering;
 use core::statement::{Preparation, Prepare, PreparedStatement};
-use core::statement::StatementPart;
-use core::table::Field;
 use core::table::FieldValue;
 use gdcf::ext::Join as __;
 // one underscore is unstable, but 2 are ok, kden
@@ -32,7 +30,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         format!("INSERT INTO {} ({}) VALUES ({})", self.table().name, fields.join(","), values.join(","))
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("INSERT INTO ")
             .with_static(self.table().name);
@@ -63,7 +61,7 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
         format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join(" "))
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static(self.name)
             .with_static(" ")
@@ -103,7 +101,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
         )
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("CREATE TABLE ");
 
@@ -157,7 +155,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
         format!("SELECT {} FROM {} {} {} {} {}", field_list, self.table.name, join_clause, where_clause, bounds, order_clause)
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         unimplemented!()
     }
 }
@@ -167,7 +165,7 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
         format!("JOIN {} ON {}", self.other.name, self.join_condition.to_sql_unprepared())
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         unimplemented!()
     }
 }
@@ -180,7 +178,7 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
         }
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b AsSql<Pg>>) {
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         unimplemented!()
     }
 }
@@ -196,8 +194,10 @@ pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: &str) -> Prep
     let mut sep = "";
 
     for t in stmts {
-        p = p.with(t.to_sql())
-            .with_static(sep);
+        p = p.with_static(sep)
+            .with(t.to_sql());
+
+        sep = seperator;
     }
 
     p

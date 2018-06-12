@@ -1,18 +1,17 @@
 #![feature(trace_macros)]
 #![feature(macro_at_most_once_rep)]
 
+#![deny(
+bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+)]
+
+
 //trace_macros!(true);
 
 extern crate chrono;
 extern crate gdcf;
 #[cfg(feature = "pg")]
 extern crate postgres;
-
-#[cfg(feature = "pg")]
-use core::backend::pg::Pg;
-use core::query::create::Create;
-use core::query::QueryPart;
-use schema::{level, song};
 
 #[macro_use]
 mod core;

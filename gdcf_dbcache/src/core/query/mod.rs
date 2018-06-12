@@ -1,7 +1,7 @@
-use core::{AsSql, backend::Database, statement::Preparation};
+use core::{backend::Database, statement::Preparation};
 use core::backend::Error;
 pub use self::insert::{Insert, Insertable};
-pub use self::select::{Select};
+pub use self::select::Select;
 use std::fmt::Debug;
 
 pub mod condition;
@@ -22,6 +22,8 @@ pub trait Query<DB: Database>: QueryPart<DB> {
         where
             Self: Sized
     {
+        println!("{}", self.to_sql().0.to_statement(|_|String::new()));
+
         db.execute(self)
     }
 

@@ -130,8 +130,8 @@ macro_rules! create {
         create!($model, @[(PrimaryKeyConstraint<'a>, PrimaryKeyConstraint::default()), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
     };
 
-    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[Default($value: expr) $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
-        create!($model: ident, @[(DefaultConstraint<'a>, DefaultConstraint::new($value)), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
+    ($model: ident, @[$(($types: ty, $cons: expr)),*$(,)?], [$($stack_tokens: tt)*], $column: ident[Default<$t: ty>($value: expr) $(,$($cons_tokens: tt)*)?] => $sql_type: ty, $($rest: tt)*) => {
+        create!($model, @[(DefaultConstraint<'a, DB, $t>, DefaultConstraint::new(None, $value)), $(($types, $cons),)*], [$($stack_tokens)*], $column[$($($cons_tokens)*)?] => $sql_type, $($rest)*);
     };
 
     ($model: ident, @[], [,$(($column: ident, $sql_type: ty, [$(($cons_type: ty, $constraint: expr)),* $(,)?])),*], ) => {

@@ -8,7 +8,6 @@ use postgres::types::IsNull;
 use postgres::types::ToSql as ToPgSql;
 use postgres::types::Type;
 use std::error::Error as StdError;
-use chrono::format::StrftimeItems;
 
 #[derive(Debug)]
 pub enum PgTypes {
@@ -24,7 +23,7 @@ pub enum PgTypes {
 }
 
 impl FromPgSql for PgTypes {
-    fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<StdError + Send + Sync>> {
+    fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn StdError + Send + Sync>> {
         if <bool as FromPgSql>::accepts(ty) {
             <bool as FromPgSql>::from_sql(ty, raw).map(PgTypes::Boolean)
         } else if <i16 as FromPgSql>::accepts(ty) {
@@ -55,7 +54,7 @@ impl FromPgSql for PgTypes {
 }
 
 impl ToPgSql for PgTypes {
-    fn to_sql(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<StdError + Send + Sync>>
+    fn to_sql(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<dyn StdError + Send + Sync>>
         where
             Self: Sized
     {
@@ -83,7 +82,7 @@ impl ToPgSql for PgTypes {
         true
     }
 
-    fn to_sql_checked(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<StdError + Send + Sync>> {
+    fn to_sql_checked(&self, ty: &Type, out: &mut Vec<u8>) -> Result<IsNull, Box<dyn StdError + Send + Sync>> {
         match self {
             PgTypes::SmallInteger(value) => value.to_sql_checked(ty, out),
             PgTypes::Integer(value) => value.to_sql_checked(ty, out),

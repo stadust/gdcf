@@ -37,7 +37,7 @@ pub trait Database: Debug + Sized {
 
     fn prepare(idx: usize) -> String;
 
-    fn execute(&self, query: &Query<Self>) -> Result<(), Error<Self>>
+    fn execute(&self, query: &dyn Query<Self>) -> Result<(), Error<Self>>
         where
             Self: Sized
     {
@@ -45,16 +45,16 @@ pub trait Database: Debug + Sized {
         self.execute_raw(stmt.to_statement(Self::prepare), &params)
     }
 
-    fn execute_unprepared(&self, query: &Query<Self>) -> Result<(), Error<Self>>
+    fn execute_unprepared(&self, query: &dyn Query<Self>) -> Result<(), Error<Self>>
         where
             Self: Sized
     {
         self.execute_raw(query.to_sql_unprepared(), &[])
     }
 
-    fn execute_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<(), Error<Self>>;
+    fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Self>>;
 
-    fn query_one<T>(&self, query: &Query<Self>) -> Result<T, Error<Self>>
+    fn query_one<T>(&self, query: &dyn Query<Self>) -> Result<T, Error<Self>>
         where
             T: Queryable<Self>
     {
@@ -68,7 +68,7 @@ pub trait Database: Debug + Sized {
             Ok(result.remove(0))
         }
     }
-    fn query_one_unprepared<T>(&self, query: &Query<Self>) -> Result<T, Error<Self>>
+    fn query_one_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<T, Error<Self>>
         where
             T: Queryable<Self>
     {
@@ -83,7 +83,7 @@ pub trait Database: Debug + Sized {
         }
     }
 
-    fn query<T>(&self, query: &Query<Self>) -> Result<Vec<T>, Error<Self>>
+    fn query<T>(&self, query: &dyn Query<Self>) -> Result<Vec<T>, Error<Self>>
         where
             T: Queryable<Self>
     {
@@ -97,7 +97,7 @@ pub trait Database: Debug + Sized {
         Ok(ts)
     }
 
-    fn query_unprepared<T>(&self, query: &Query<Self>) -> Result<Vec<T>, Error<Self>>
+    fn query_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<Vec<T>, Error<Self>>
         where
             T: Queryable<Self>
     {
@@ -110,7 +110,7 @@ pub trait Database: Debug + Sized {
         Ok(ts)
     }
 
-    fn query_raw(&self, statement: String, params: &[&AsSql<Self>]) -> Result<Vec<Row<Self>>, Error<Self>>
+    fn query_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<Vec<Row<Self>>, Error<Self>>
         where
             Self: Sized;
 }

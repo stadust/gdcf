@@ -1,6 +1,5 @@
 use core::AsSql;
 use core::backend::Database;
-use core::query::QueryPart;
 use gdcf::ext::Join;
 
 #[derive(Debug)]
@@ -44,14 +43,14 @@ impl PreparedStatement {
     }
 }
 
-pub type Preparation<'a, DB> = (PreparedStatement, Vec<&'a AsSql<DB>>);
+pub type Preparation<'a, DB> = (PreparedStatement, Vec<&'a dyn AsSql<DB>>);
 
 pub trait Prepare<DB: Database>: Default {
-    fn with_static<S: Into<String>>(mut self, s: S) -> Self;
-    fn with(mut self, mut other: Self) -> Self;
+    fn with_static<S: Into<String>>(self, s: S) -> Self;
+    fn with(self, other: Self) -> Self;
 }
 
-impl<'a, DB: Database> Prepare<DB> for (PreparedStatement, Vec<&'a AsSql<DB>>) {
+impl<'a, DB: Database> Prepare<DB> for (PreparedStatement, Vec<&'a dyn AsSql<DB>>) {
     fn with_static<S: Into<String>>(mut self, s: S) -> Self {
         self.0.parts.push(StatementPart::Static(s.into()));
         self

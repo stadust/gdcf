@@ -1,13 +1,13 @@
 use chrono::NaiveDateTime;
 use core::backend::Database;
 use core::backend::Error;
+use core::backend::pg::Pg;
 use core::FromSql;
-use core::query::Insertable;
+use core::query::QueryPart;
 use core::query::select::Queryable;
 use core::query::select::Row;
-use core::table::SetField;
-use core::table::Table;
 use gdcf::cache::CachedObject;
+use core::SqlExpr;
 
 pub mod song;
 pub mod level;
@@ -24,3 +24,14 @@ impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
         Ok(CachedObject::new(t, first_cached, lasted_cached))
     }
 }
+
+#[derive(Debug)]
+struct NowAtUtc;
+
+impl QueryPart<Pg> for NowAtUtc {
+    fn to_sql_unprepared(&self) -> String {
+        String::from("(now() AT TIME ZONE 'utc')")
+    }
+}
+
+impl SqlExpr<Pg> for NowAtUtc {}
