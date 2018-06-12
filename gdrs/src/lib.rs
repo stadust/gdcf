@@ -1,6 +1,10 @@
 #![feature(pattern)]
 #![feature(try_from)]
 
+#![deny(
+bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+)]
+
 extern crate futures;
 extern crate gdcf;
 extern crate hyper;
@@ -18,9 +22,7 @@ use gdcf::api::ApiClient;
 use gdcf::api::client::ApiFuture;
 use gdcf::api::request::level::LevelRequest;
 use gdcf::api::request::level::LevelsRequest;
-use gdcf::api::response::ProcessedResponse;
 use gdcf::error::ApiError;
-use gdcf::model::raw::RawObject;
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper::Error;
@@ -38,7 +40,7 @@ mod macros;
 pub mod parse;
 mod ser;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(untagged)]
 pub enum Req<'a> {
     #[serde(with = "LevelRequestRem")]
@@ -48,6 +50,7 @@ pub enum Req<'a> {
     GetLevels(&'a LevelsRequest),
 }
 
+#[derive(Debug)]
 pub struct BoomlingsClient {
     client: Client<HttpConnector>,
 }

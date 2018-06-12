@@ -2,8 +2,6 @@ use gdcf::model::GameVersion;
 use gdcf::model::LevelLength;
 use gdcf::model::LevelRating;
 
-use self::util::Join;
-
 use serde::ser::SerializeMap;
 use serde::Serializer;
 
