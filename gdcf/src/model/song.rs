@@ -93,6 +93,7 @@ impl MainSong {
 
 lazy_static! {
     /// All current `MainSong`s, as of Geometry Dash 2.1
+    #[allow(missing_debug_implementations)]
     pub static ref MAIN_SONGS: [MainSong; 21] = [
         MainSong::new(0, "Stereo Madness", "ForeverBound"),
         MainSong::new(1, "Back on Track", "DJVI"),
@@ -121,6 +122,7 @@ lazy_static! {
     ///
     /// When resolving a main song by its ID, but you pass a wrong ID, or
     /// GDCF hasn't updated to include the new song yet, you will receive this object
+    #[allow(missing_debug_implementations)]
     pub static ref UNKNOWN: MainSong = MainSong::new(
         0xFF,
         "The song was added after the release of GDCF you're using",

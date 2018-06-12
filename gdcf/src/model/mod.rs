@@ -1,10 +1,6 @@
-use error::ValueError;
 pub use self::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 pub use self::song::{MainSong, NewgroundsSong};
-use std::error::Error;
 use std::fmt::{self, Display, Formatter};
-use std::iter;
-use std::str::FromStr;
 
 mod de;
 pub mod level;

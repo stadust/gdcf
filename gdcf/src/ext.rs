@@ -8,7 +8,7 @@ use model::GDObject;
 use std::fmt::Display;
 
 pub trait ApiClientExt: ApiClient {
-    fn make<R: Request + 'static>(&self, request: R) -> Box<Future<Item=ProcessedResponse, Error=()> + 'static> {
+    fn make<R: Request + 'static>(&self, request: R) -> Box<dyn Future<Item=ProcessedResponse, Error=()> + 'static> {
         Box::new(request.make(self)
             .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", request, err)))
     }

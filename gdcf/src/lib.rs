@@ -3,6 +3,10 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+#![deny(
+bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+)]
+
 //! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
 //! It provides all the core traits required to implement an API Client and
 //! a cache which are used by implementations of the [`Gdcf`] trait.
@@ -22,6 +26,7 @@
 //! automatically generate more requests if it notices that, i.e., a level you just retrieved
 //! doesn't have its newgrounds song cached.
 //!
+extern crate base64;
 extern crate chrono;
 extern crate futures;
 #[macro_use]
@@ -36,7 +41,6 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
-extern crate base64;
 
 use api::client::ApiClient;
 use api::request::{LevelRequest, LevelsRequest, Request};
@@ -69,11 +73,13 @@ pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     gdcf!(levels, LevelsRequest, lookup_partial_levels);
 }
 
+#[derive(Debug)]
 pub struct CacheManager<A: ApiClient + 'static, C: Cache + 'static> {
     client: Arc<Mutex<A>>,
     cache: Arc<Mutex<C>>,
 }
 
+#[derive(Debug)]
 pub struct ConsistentCacheManager<A: ApiClient + 'static, C: Cache + 'static> {
     client: Arc<Mutex<A>>,
     cache: Arc<Mutex<C>>,

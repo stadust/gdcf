@@ -1,12 +1,10 @@
 use convert;
 use error::ValueError;
-use model::level::Featured;
 use model::LevelRating;
 use model::raw::RawObject;
 use model::song::{MAIN_SONGS, MainSong, UNKNOWN};
-use percent_encoding::percent_decode;
 use std::num::ParseIntError;
-use std::str::{FromStr, Utf8Error};
+use std::str::FromStr;
 use base64::DecodeError;
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {

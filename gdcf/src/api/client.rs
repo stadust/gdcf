@@ -6,7 +6,7 @@ use api::response::ProcessedResponse;
 use std::error::Error;
 use error::ApiError;
 
-pub type ApiFuture<E> = Box<Future<Item=ProcessedResponse, Error=ApiError<E>> + 'static>;
+pub type ApiFuture<E> = Box<dyn Future<Item=ProcessedResponse, Error=ApiError<E>> + 'static>;
 
 pub trait ApiClient: Sized {
     type Err: Error + 'static;

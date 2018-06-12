@@ -5,6 +5,7 @@ use std::iter::Once;
 use std::slice::Iter;
 use std::vec::IntoIter;
 
+#[derive(Debug)]
 pub enum ProcessedResponse {
     One(GDObject),
     Many(Vec<GDObject>),
@@ -40,6 +41,7 @@ impl<'a> IntoIterator for &'a ProcessedResponse {
     }
 }
 
+#[derive(Debug)]
 pub enum RespIntoIter {
     One(Once<GDObject>),
     Many(IntoIter<GDObject>),
@@ -56,6 +58,7 @@ impl Iterator for RespIntoIter {
     }
 }
 
+#[derive(Debug)]
 pub enum RespIter<'a> {
     One(Once<&'a GDObject>),
     Many(Iter<'a, GDObject>),

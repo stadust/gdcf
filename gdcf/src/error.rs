@@ -7,7 +7,7 @@ use std::fmt::{self, Display, Formatter};
 pub enum ValueError {
     IndexOutOfBounds(usize),
     NoValue(usize),
-    Parse(usize, String, Box<Error>),
+    Parse(usize, String, Box<dyn Error>),
 }
 
 /// Type for errors that occur during cache access
