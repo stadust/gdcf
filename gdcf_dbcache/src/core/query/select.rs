@@ -104,6 +104,7 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
     }
 }
 
+#[derive(Debug)]
 pub struct Row<DB: Database> {
     fields: Vec<DB::Types>,
 }

@@ -1,11 +1,10 @@
-use core::query::QueryPart;
 use core::backend::pg::Pg;
-use core::query::create::{PrimaryKeyConstraint, UniqueConstraint, NotNullConstraint};
+use core::query::create::{NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint};
 use core::query::create::DefaultConstraint;
+use core::query::QueryPart;
+use core::SqlExpr;
 use core::statement::Preparation;
 use core::statement::Prepare;
-use core::query::create::Constraint;
-use core::SqlExpr;
 
 
 macro_rules! constraint_query_part {

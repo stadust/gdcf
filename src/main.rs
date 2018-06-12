@@ -30,7 +30,6 @@ fn main() {
     cache.initialize().expect("Error initializing cache");
 
     let client = BoomlingsClient::new(&core.handle());
-
     let gdcf = ConsistentCacheManager::new(client, cache);
 
     gdcf.level(LevelRequest::new(38515466u64));

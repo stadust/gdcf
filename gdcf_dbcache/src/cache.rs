@@ -20,6 +20,7 @@ use gdcf::model::PartialLevel;
 use schema::level::{self, partial_level};
 use schema::song::{self, newgrounds_song};
 
+#[derive(Debug)]
 pub struct DatabaseCacheConfig<DB: Database> {
     backend: DB
 }
@@ -48,6 +49,7 @@ impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
     }
 }
 
+#[derive(Debug)]
 pub struct DatabaseCache<DB: Database> {
     config: DatabaseCacheConfig<DB>
 }
