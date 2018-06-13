@@ -17,7 +17,7 @@ table! {
     }
 }
 
-create2! { newgrounds_song,
+create! { newgrounds_song,
     song_id[NotNull, Unique, Primary] => Unsigned<BigInteger>,
     song_name[NotNull] => Text,
     index_3 => Unsigned<BigInteger>,
