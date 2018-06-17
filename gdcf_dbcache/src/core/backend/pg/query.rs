@@ -121,7 +121,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
         let qualify = !self.joins.is_empty();
         let where_clause = self.filter.as_ref()
-            .map_or(String::new(), |c| c.to_sql_unprepared());
+            .map_or(String::new(), |c| format!(" WHERE {}", c.to_sql_unprepared()));
 
         let join_clause = self.joins.iter()
             .map(|j| j.to_sql_unprepared())
