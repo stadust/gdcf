@@ -22,8 +22,6 @@ pub trait Query<DB: Database>: QueryPart<DB> {
         where
             Self: Sized
     {
-        println!("{}", self.to_sql().0.to_statement(|_|String::new()));
-
         db.execute(self)
     }
 

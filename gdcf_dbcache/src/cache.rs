@@ -3,10 +3,8 @@ use core::backend::Database;
 use core::backend::Error;
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
-// TODO: cfg(feature = "pg")
 use core::query::insert::Insertable;
 use core::query::Query;
-use core::query::QueryPart;
 use core::query::select::Queryable;
 use gdcf::api::request::LevelRequest;
 use gdcf::api::request::LevelsRequest;
@@ -98,8 +96,6 @@ impl Cache for DatabaseCache<Pg>
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
         let select = PartialLevel::select_from(&partial_level::table);
 
-        println!("{}", select.to_sql_unprepared());
-
         /*self.config.backend.query_one(&select)
             .map_err(Into::into)*/
         Err(CacheError::CacheMiss)
@@ -128,8 +124,6 @@ impl Cache for DatabaseCache<Pg>
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
         let select = NewgroundsSong::select_from(&newgrounds_song::table)
             .filter(newgrounds_song::song_id.eq(newground_id));
-
-        println!("{}", select.to_sql_unprepared());
 
         self.config.backend.query_one(&select)
             .map_err(Into::into)  // for some reason I can use the question mark operator?????

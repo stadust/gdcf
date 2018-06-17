@@ -12,8 +12,6 @@ pub fn from_raw_object_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let generated = impl_from_raw_object(&ast);
 
-    println!("{:?}", generated);
-
     generated.into()
 }
 

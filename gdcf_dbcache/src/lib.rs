@@ -12,6 +12,8 @@ bare_trait_objects, missing_debug_implementations, unused_extern_crates, pattern
 
 extern crate chrono;
 extern crate gdcf;
+#[macro_use]
+extern crate log;
 #[cfg(feature = "pg")]
 extern crate postgres;
 
