@@ -1,4 +1,5 @@
 use gdcf::model::PartialLevel;
+use schema::NowAtUtc;
 
 table! {
     PartialLevel => partial_level {
@@ -69,6 +70,6 @@ create! { partial_level,
     object_amount[NotNull] => Unsigned<Integer>,
     index_46 => Text,
     index_47 => Text,
-    first_cached_at[NotNull] => UtcTimestamp,
+    first_cached_at[NotNull, Default<NowAtUtc>(NowAtUtc)] => UtcTimestamp,
     last_cached_at[NotNull] => UtcTimestamp
 }
