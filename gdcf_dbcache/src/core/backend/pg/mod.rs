@@ -46,13 +46,21 @@ impl Database for Pg {
         where
             Self: Sized
     {
+        debug!("Executing {}", statement);
+
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         let mut rows = Vec::new();
 
         for row in self.conn.query(&statement, &values)?.iter() {
-            rows.push(Row::new((0..row.len()).map(|i| row.get(i)).collect()))
+            let mut values = Vec::new();
+
+            for i in 0..row.len() {
+                values.push(row.get_opt(i).unwrap()?)
+            }
+
+            rows.push(Row::new(values));
         }
 
         Ok(rows)

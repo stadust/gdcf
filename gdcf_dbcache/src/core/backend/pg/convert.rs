@@ -45,6 +45,11 @@ impl FromPgSql for PgTypes {
         }
     }
 
+    fn from_sql_null(ty: &Type) -> Result<Self, Box<dyn StdError + Send + Sync>> {
+        Ok(PgTypes::Null)
+    }
+
+
     fn accepts(ty: &Type) -> bool {
         <bool as FromPgSql>::accepts(ty) || <i16 as FromPgSql>::accepts(ty) ||
             <i32 as FromPgSql>::accepts(ty) || <i64 as FromPgSql>::accepts(ty) ||
