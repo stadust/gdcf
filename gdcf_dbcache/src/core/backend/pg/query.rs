@@ -33,7 +33,8 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("INSERT INTO ")
-            .with_static(self.table().name);
+            .with_static(self.table().name)
+            .with_static("(");
 
         let mut pv = Preparation::<Pg>::default()
             .with_static(" VALUES (");
@@ -51,7 +52,8 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         p.0.pop();
         pv.0.pop();
 
-        p.with(pv)
+        p.with_static(")")
+            .with(pv)
             .with_static(")")
     }
 }
@@ -103,10 +105,36 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     }
 }
 
+impl<'a> Select<'a, Pg> {
+    fn qualify(&self) -> bool {
+        !self.joins.is_empty()
+    }
+
+    fn fields(&self) -> String {
+        if self.qualify() {
+            self.fields.iter()
+                .map(|f| f.qualified_name())
+                .join(",")
+        } else {
+            self.fields.iter()
+                .map(|f| f.name())
+                .join(",")
+        }
+    }
+
+    fn bounds(&self) -> String {
+        match self.subset {
+            (None, None) => String::new(),
+            (Some(limit), None) => format!("LIMIT {}", limit),
+            (None, Some(offset)) => format!("OFFSET {}", offset),
+            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset)
+        }
+    }
+}
+
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     //TODO: implement
     fn to_sql_unprepared(&self) -> String {
-        let qualify = !self.joins.is_empty();
         let where_clause = self.filter.as_ref()
             .map_or(String::new(), |c| format!(" WHERE {}", c.to_sql_unprepared()));
 
@@ -122,28 +150,24 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
             String::new()
         };
 
-        let bounds = match self.subset {
-            (None, None) => String::new(),
-            (Some(limit), None) => format!("LIMIT {}", limit),
-            (None, Some(offset)) => format!("OFFSET {}", offset),
-            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset)
-        };
-
-        let field_list = if qualify {
-            self.fields.iter()
-                .map(|f| f.qualified_name())
-                .join(",")
-        } else {
-            self.fields.iter()
-                .map(|f| f.name())
-                .join(",")
-        };
-
-        format!("SELECT {} FROM {} {} {} {} {}", field_list, self.table.name, join_clause, where_clause, bounds, order_clause)
+        format!("SELECT {} FROM {} {} {} {} {}", self.fields(), self.table.name, join_clause, where_clause, self.bounds(), order_clause)
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
-        unimplemented!()
+        let mut p = Preparation::<Pg>::default()
+            .with_static("SELECT ")
+            .with_static(self.fields())
+            .with_static(" FROM ")
+            .with_static(self.table.name)
+            .with(join_statements(&self.joins, " "));
+
+        if let Some(ref cond) = self.filter {
+            p = p.with_static(" WHERE ")
+                .with(cond.to_sql());
+        }
+
+        p.with_static(self.bounds())
+            .with(join_statements(&self.order, ","))
     }
 }
 
