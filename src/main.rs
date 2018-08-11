@@ -32,7 +32,8 @@ fn main() {
     let client = BoomlingsClient::new(&core.handle());
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    gdcf.level(LevelRequest::new(38515466u64));
+    //gdcf.level(LevelRequest::new(38515466u64));
+    gdcf.levels(LevelsRequest::new().search("Starfire".into()));
 
     core.run(until_all_done());
 }

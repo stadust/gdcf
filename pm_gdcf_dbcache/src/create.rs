@@ -95,7 +95,7 @@ impl Create {
                         column.constraints.push(constraint);
                     }
                     Some(crap) => panic!("Expected ident or ',', forgot {:?}", crap),
-                    None => break 'outer
+                    None => break 'outer columns.push(column)
                 }
 
                 next = iter.next();

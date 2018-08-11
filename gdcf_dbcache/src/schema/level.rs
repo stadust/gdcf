@@ -79,7 +79,7 @@ pub mod partial_level {
             index_46: Text,
             index_47: Text,
 
-            first_cached_at: UtcTimestamp NotNull Default<NowAtUtc>(NowAtUtc),
+            first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
             last_cached_at: UtcTimestamp NotNull
         }
     }

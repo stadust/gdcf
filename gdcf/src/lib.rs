@@ -141,7 +141,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
         where
             R: Request + 'static,
     {
-        let request_string = format!("{}", request);
+        let request_string = request.to_string();//format!("{}", request);
         let request_future = lock!(client_mutex).make(request);
 
         request_future.and_then(move |response| {
@@ -169,14 +169,16 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                 let integrity_future = join_all(integrity_futures)
                     .map(move |_| {
                         debug!("Successfully stored all data relevant for integrity!");
-                        lock!(cache_mutex).store_all(response).unwrap(); // TODO: proper error handling
+                        lock!(cache_mutex).store_all(response)
+                            .map_err(|err| error!("Failed to store response: {:?}", err));
                     })
                     .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", request_string));
 
                 lock!(client_mutex).spawn(integrity_future);
             } else {
                 debug!("Result of {} does not compromise cache integrity, proceeding!", request_string);
-                lock!(cache_mutex).store_all(response).unwrap(); // TODO: proper error handling
+                lock!(cache_mutex).store_all(response)
+                    .map_err(move |err| error!("Failed to store response to {}: {:?}", request_string, err));
             }
 
             Ok(())
