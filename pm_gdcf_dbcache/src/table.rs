@@ -126,7 +126,7 @@ impl Table {
         ).parse().unwrap()
     }
 
-    pub(super) fn thing(&self, feature: &str, module: &str, backend: &str) -> TokenStream {
+    pub(super) fn gated_impl(&self, feature: &str, module: &str, backend: &str) -> TokenStream {
         stream! {
             format!("#[cfg(feature=\"{0}\")] mod {0}", feature).parse().unwrap(),
             TokenTree::Group(Group::new(Delimiter::Brace, stream! {

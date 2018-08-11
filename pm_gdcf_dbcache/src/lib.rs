@@ -16,12 +16,7 @@ mod create;
 
 #[proc_macro]
 pub fn table(ts: TokenStream) -> TokenStream {
-    let tab = Table::parse(ts);
-    let stream = tab.generate();
-
-    //println!("{}", stream);
-
-    stream
+    Table::parse(ts).generate()
 }
 
 #[proc_macro]
@@ -30,7 +25,9 @@ pub fn iqtable(ts: TokenStream) -> TokenStream {
 
     stream! {
         tab.generate(),
-        tab.thing("pg", "pg", "Pg")
+        tab.gated_impl("pg", "pg", "Pg"),
+        tab.gated_impl("sqlite", "sqlite", "Sqlite"),
+        tab.gated_impl("mysql", "mysql", "Mysql")
     }
 }
 
