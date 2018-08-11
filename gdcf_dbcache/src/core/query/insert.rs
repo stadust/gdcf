@@ -14,7 +14,7 @@ enum OnConflict {
 #[derive(Debug)]
 pub struct Insert<'a, DB: Database + 'a> {
     table: &'a Table,
-    values: Vec<SetField<'a, DB>>,
+    values: Vec<SetField<'a, DB>>,  // TODO: multiple rows in one insert
     conflict: OnConflict,
 }
 

@@ -1,4 +1,4 @@
-macro_rules! table {
+/*macro_rules! table {
     ($model: ident => $table: ident {$($model_field: ident => $table_column: ident),*; $($unmapped_column: ident),*}) => {
         pub mod $table {
             use super::$model;
@@ -108,7 +108,7 @@ macro_rules! __queryable {
         __queryable!(@[], 0, $backend, $model, $($rest,)*);
     };
 }
-
+*/
 
 macro_rules! if_query_part {
     ($t: ty, $tr: ty) => {
@@ -128,7 +128,7 @@ macro_rules! simple_query_part {
         }
     };
 }
-
+/*
 macro_rules! create {
     ($model: ident, @[], [$(($t: ty, $bound: path))*], [$($stack_tokens: tt)*], $column: ident => $sql_type: ty, $($rest: tt)*) => {
         create!($model,
@@ -224,4 +224,4 @@ macro_rules! create {
     ($model: ident, $($tokens: tt)*) => {
         create!($model, @[], [], [], $($tokens)*,);
     };
-}
+}*/

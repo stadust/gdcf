@@ -1,75 +1,155 @@
-use gdcf::model::PartialLevel;
-use schema::NowAtUtc;
+pub mod partial_level {
+    use gdcf::model::PartialLevel;
 
-table! {
-    PartialLevel => partial_level {
-        level_id => level_id,
-        name => level_name,
-        description => description,
-        version => level_version,
-        creator_id => creator_id,
+    use core::backend::Error;
 
-        difficulty => difficulty,
+    use schema::NowAtUtc;
 
-        downloads => downloads,
+    use pm_gdcf_dbcache::{iqtable, create};
 
-        main_song => main_song,
+    iqtable! {
+        PartialLevel => partial_level {
+            level_id => level_id,
+            name => level_name,
+            description => description,
+            version => level_version,
+            creator_id => creator_id,
 
-        gd_version => gd_version,
-        likes => likes,
+            difficulty => difficulty,
 
-        length => level_length,
-        stars => stars,
+            downloads => downloads,
 
-        featured => featured,
+            main_song => main_song,
 
-        copy_of => copy_of,
-        custom_song_id => custom_song_id,
-        coin_amount => coin_amount,
-        index_38 => index_38,
-        stars_requested => stars_requested,
-        is_epic => is_epic,
-        index_43 => index_43,
-        object_amount => object_amount,
-        index_46 => index_46,
-        index_47 => index_47;
-        first_cached_at, last_cached_at
+            gd_version => gd_version,
+            likes => likes,
+
+            length => level_length,
+            stars => stars,
+
+            featured => featured,
+
+            copy_of => copy_of,
+            custom_song_id => custom_song_id,
+            coin_amount => coin_amount,
+            index_38 => index_38,
+            stars_requested => stars_requested,
+            is_epic => is_epic,
+            index_43 => index_43,
+            object_amount => object_amount,
+            index_46 => index_46,
+            index_47 => index_47,
+            first_cached_at,
+            last_cached_at
+        }
+    }
+
+    create! {
+        partial_level => {
+            level_id: Unsigned<BigInteger> NotNull Unique Primary,
+            level_name: Text NotNull,
+            description: Text,
+            level_version: Unsigned<Integer> NotNull,
+            creator_id: Unsigned<BigInteger> NotNull,
+
+            difficulty: Text NotNull,
+
+            downloads: Unsigned<Integer> NotNull,
+
+            main_song: Unsigned<SmallInteger>,
+
+            gd_version: Unsigned<SmallInteger> NotNull,
+
+            likes: Integer NotNull,
+
+            level_length: Text NotNull,
+
+            stars: Unsigned<SmallInteger> NotNull,
+
+            featured: Integer NotNull,
+
+            copy_of: Unsigned<BigInteger>,
+            custom_song_id: Unsigned<BigInteger>,
+            coin_amount: Unsigned<SmallInteger> NotNull,
+            index_38: Text,
+            stars_requested: Unsigned<SmallInteger>,
+            is_epic: Boolean NotNull,
+            index_43: Text,
+            object_amount: Unsigned<Integer> NotNull,
+            index_46: Text,
+            index_47: Text,
+
+            first_cached_at: UtcTimestamp NotNull Default<NowAtUtc>(NowAtUtc),
+            last_cached_at: UtcTimestamp NotNull
+        }
     }
 }
 
-create! { partial_level,
-    level_id[NotNull, Unique, Primary] => Unsigned<BigInteger>,
-    level_name[NotNull] => Text,
-    description => Text,
-    level_version[NotNull] => Unsigned<Integer>,
-    creator_id[NotNull] => Unsigned<BigInteger>,
+pub mod partial_levels {
+    use core::table::{Field, Table};
+    use core::query::create::{Column, Create};
+    use core::backend::Database;
+    use core::types::{Unsigned, BigInteger, Integer, Type};
+    use core::query::select::Select;
+    use gdcf::api::request::LevelsRequest;
 
-    difficulty[NotNull] => Text,
+    #[allow(non_upper_case_globals)]
+    pub const table_name: &str = "partial_levels";
 
-    downloads[NotNull] => Unsigned<Integer>,
+    #[allow(non_upper_case_globals)]
+    pub static level_id: Field = Field {
+        table: table_name,
+        name: "level_id",
+    };
 
-    main_song => Unsigned<SmallInteger>,
+    #[allow(non_upper_case_globals)]
+    pub static page: Field = Field {
+        table: table_name,
+        name: "page",
+    };
 
-    gd_version[NotNull] => Unsigned<SmallInteger>,
+    #[allow(non_upper_case_globals)]
+    pub static request_hash: Field = Field {
+        table: table_name,
+        name: "request_hash",
+    };
 
-    likes[NotNull] => Integer,
+    #[allow(non_upper_case_globals)]
+    pub static table: Table = Table {
+        name: table_name,
+        fields: &[
+            &level_id,
+            &page,
+            &request_hash
+        ]
+    };
 
-    level_length[NotNull] => Text,
+    pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
+        where
+            Unsigned<BigInteger> : Type<DB>,
+            Integer: Type<DB>
+    {
+        table.create()
+            .with_column(Column::new(level_id.name(), Unsigned::<BigInteger>::default()))   // TODO: foreign key constraint
+            .with_column(Column::new(page.name(), Integer::default()))
+            .with_column(Column::new(request_hash.name(), Unsigned::<BigInteger>::default()))
+    }
 
-    stars[NotNull] => Unsigned<SmallInteger>,
+    use core::query::condition::*;
+    use core::*;
 
-    featured[NotNull] => Integer,
+    pub fn lookup<'a, DB: Database + 'a>(req: &LevelsRequest) -> Select<'a, DB>
+        where
+            And<DB>: Condition<DB>,
+            EqValue<'a, DB>: Condition<DB> + 'static,
+            u32: AsSql<DB>,
+            u64: AsSql<DB>
+    {
+        let req_hash = 0u64; // TODO: proper values
 
-    copy_of => Unsigned<BigInteger>,
-    custom_song_id => Unsigned<BigInteger>,
-    coin_amount[NotNull] => Unsigned<SmallInteger>,
-    index_38 => Text,
-    stars_requested => Unsigned<SmallInteger>,
-    is_epic[NotNull] => Boolean,
-    index_43 => Text,
-    object_amount[NotNull] => Unsigned<Integer>,
-    index_46 => Text,
-    index_47 => Text,
-    first_cached_at[NotNull, Default<NowAtUtc>(NowAtUtc)] => UtcTimestamp,
-    last_cached_at[NotNull] => UtcTimestamp
+        Select::new(&table, Vec::new())
+            .filter(page.eq(req.page))
+            .filter(request_hash.eq(req_hash))
+            // TODO: join partial_level and only return those things.
+    }
 }

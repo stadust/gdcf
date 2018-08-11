@@ -1,0 +1,9 @@
+[package]
+name = "pm_gdcf_dbcache"
+version = "0.1.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+itertools = "0.7.8"

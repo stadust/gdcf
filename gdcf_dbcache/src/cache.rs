@@ -17,6 +17,8 @@ use gdcf::model::NewgroundsSong;
 use gdcf::model::PartialLevel;
 use schema::level::{self, partial_level};
 use schema::song::{self, newgrounds_song};
+use seahash::SeaHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug)]
 pub struct DatabaseCacheConfig<DB: Database> {
@@ -63,10 +65,10 @@ impl<DB: Database> DatabaseCache<DB> {
 #[cfg(feature = "pg")]
 impl DatabaseCache<Pg> {
     pub fn initialize(&self) -> Result<(), Error<Pg>> {
-        song::create()
+        song::newgrounds_song::create()
             .ignore_if_exists()
             .execute(&self.config.backend)?;
-        level::create()
+        level::partial_level::create()
             .ignore_if_exists()
             .execute(&self.config.backend)?;
 
@@ -96,6 +98,8 @@ impl Cache for DatabaseCache<Pg>
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
         let select = PartialLevel::select_from(&partial_level::table);
 
+        let h = hash(req);
+
         /*self.config.backend.query_one(&select)
             .map_err(Into::into)*/
         Err(CacheError::CacheMiss)
@@ -103,6 +107,7 @@ impl Cache for DatabaseCache<Pg>
 
     fn store_partial_level(&mut self, level: PartialLevel) -> Result<(), CacheError<Self::Err>> {
         let ts = Utc::now().naive_utc();
+        //let request_hash = hash(req);
 
         level.insert()
             .with(partial_level::last_cached_at.set(&ts))
@@ -147,4 +152,10 @@ impl<DB: Database> Into<CacheError<Error<DB>>> for Error<DB> {
             err => CacheError::Custom(err)
         }
     }
+}
+
+fn hash<H: Hash>(h: &H) -> u64 {
+    let mut hasher = SeaHasher::default();
+    h.hash(&mut hasher);
+    hasher.finish()
 }

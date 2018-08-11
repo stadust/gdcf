@@ -73,19 +73,6 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
         }
 
         p
-        /*let mut prep_stmt = PreparedStatement::new(vec![self.name.into(), self.sql_type.to_sql_unprepared().into()]);
-        //let (cons_stmt, values) = join_statements(&self.constraints, " ");
-        //prep_stmt.concat(cons_stmt);
-        // TODO: fix this because box
-        let mut values = Vec::new();
-
-        for constraint in &self.constraints {
-            let (prep_cons, mut cons_values) = constraint.to_sql();
-            prep_stmt.concat_on(prep_cons, " ");
-            values.append(&mut cons_values);
-        }
-
-        (prep_stmt, values)*/
     }
 }
 

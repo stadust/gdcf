@@ -5,6 +5,7 @@ version = "0.1.0"
 [dependencies]
 chrono = "^0.4.0"
 log = "^0.4.0"
+seahash = "^3.0.5"
 
 [dependencies.rusqlite]
 version = "^0.13.0"
@@ -17,6 +18,9 @@ features = ["with-chrono"]
 
 [dependencies.gdcf]
 path = "../gdcf"
+
+[dependencies.pm_gdcf_dbcache]
+path = "../pm_gdcf_dbcache"
 
 [features]
 default = ["pg"]

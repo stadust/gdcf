@@ -10,13 +10,15 @@ use api::client::ApiFuture;
 use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 
 use std::fmt::{Display, Formatter, Error};
+use std::hash::Hash;
+use std::hash::Hasher;
 
 /// Struct modelled after a request to `downloadGJLevel22.php`.
 ///
 /// In the Geometry Dash API, this endpoint is used to download a level from the servers
 /// and retrieve some additional information that isn't provided with the response to a
 /// [LevelsRequest](struct.LevelsRequest.html)
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Hash)]
 pub struct LevelRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -45,7 +47,7 @@ pub struct LevelRequest {
 /// In the Geometry Dash API, this endpoint is used to retrieve a list of levels matching
 /// the specified criteria, along with their [NewgroundsSong](../../../model/song/struct.NewgroundsSong.html)s
 /// and some basic information on their creators.
-#[derive(Debug, Default, Clone, Hash)]
+#[derive(Debug, Default, Clone)]
 pub struct LevelsRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -118,6 +120,20 @@ pub struct LevelsRequest {
     /// These values is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     pub search_filters: SearchFilters,
+}
+
+/// Manual Hash impl which doesn't hash the page
+impl Hash for LevelsRequest {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.search_filters.hash(state);
+        self.total.hash(state);
+        self.demon_rating.hash(state);
+        self.ratings.hash(state);
+        self.lengths.hash(state);
+        self.search_string.hash(state);
+        self.request_type.hash(state);
+        self.base.hash(state);
+    }
 }
 
 /// Struct containing the various search filters provided by the Geometry Dash client.
