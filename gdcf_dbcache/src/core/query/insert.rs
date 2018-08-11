@@ -1,21 +1,23 @@
 use core::backend::Database;
 use core::query::Query;
 use core::query::QueryPart;
+use core::table::Field;
 use core::table::SetField;
 use core::table::Table;
 
-#[derive(Debug, Ord, PartialOrd, PartialEq, Eq, Copy, Clone)]
-enum OnConflict {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) enum OnConflict {
     Fail,
     Ignore,
-    Update,
+    Update(Vec<&'static Field>),
 }
 
 #[derive(Debug)]
 pub struct Insert<'a, DB: Database + 'a> {
     table: &'a Table,
-    values: Vec<SetField<'a, DB>>,  // TODO: multiple rows in one insert
-    conflict: OnConflict,
+    values: Vec<SetField<'a, DB>>,
+    // TODO: multiple rows in one insert
+    pub(crate) conflict: OnConflict,
 }
 
 impl<'a, DB: Database + 'a> Insert<'a, DB> {
@@ -40,8 +42,8 @@ impl<'a, DB: Database + 'a> Insert<'a, DB> {
         self
     }
 
-    pub fn on_conflict_update(mut self) -> Insert<'a, DB> {
-        self.conflict = OnConflict::Update;
+    pub fn on_conflict_update(mut self, fields: Vec<&'static Field>) -> Insert<'a, DB> {
+        self.conflict = OnConflict::Update(fields);
         self
     }
 

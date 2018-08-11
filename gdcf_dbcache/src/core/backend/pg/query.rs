@@ -3,6 +3,7 @@ use core::backend::Database;
 use core::backend::pg::Pg;
 use core::query::{Insert, QueryPart};
 use core::query::create::{Column, Create};
+use core::query::insert::OnConflict;
 use core::query::Select;
 use core::query::select::Join;
 use core::query::select::OrderBy;
@@ -12,7 +13,24 @@ use core::table::FieldValue;
 use gdcf::ext::Join as __;
 // one underscore is unstable, but 2 are ok, kden
 
-// TODO: ON CONFLICT UPDATE
+impl<'a> Insert<'a, Pg> {
+    fn on_conflict(&self) -> String {
+        match self.conflict {
+            OnConflict::Ignore => "ON CONFLICT DO NOTHING".into(),
+            OnConflict::Update(ref target) => {
+                format!(
+                    "ON CONFLICT ({}) DO UPDATE SET {}",
+                    target.iter().map(|f| f.name()).join(","),
+                    self.values()
+                        .into_iter()
+                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name())).join(",")
+                )
+            }
+            _ => String::new()
+        }
+    }
+}
+
 impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
         let mut fields = Vec::new();
@@ -27,7 +45,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
             })
         }
 
-        format!("INSERT INTO {} ({}) VALUES ({})", self.table().name, fields.join(","), values.join(","))
+        format!("INSERT INTO {} ({}) VALUES ({}) {}", self.table().name, fields.join(","), values.join(","), self.on_conflict())
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
@@ -55,6 +73,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         p.with_static(")")
             .with(pv)
             .with_static(")")
+            .with_static(self.on_conflict())
     }
 }
 

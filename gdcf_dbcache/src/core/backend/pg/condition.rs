@@ -17,13 +17,6 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
             .with_static(format!("({} = ", self.field.qualified_name()))
             .with(self.value.to_sql())
             .with_static(")")
-        /*let stmt = PreparedStatement::new(vec![
-            format!("({} = ", self.field.qualified_name()).into(),
-            StatementPart::Placeholder,
-            ")".into()
-        ]);
-
-        (stmt, vec![&*self.value])*/
     }
 }
 
@@ -39,17 +32,6 @@ impl QueryPart<Pg> for And<Pg> {
             .with_static(" AND ")
             .with(self.cond_2.to_sql())
             .with_static(")")
-        /*let (mut stmt1, mut params1) = self.cond_1.to_sql();
-        let (mut stmt2, mut params2) = self.cond_1.to_sql();
-
-        params1.append(&mut params2);
-
-        stmt1.prepend("(");
-        stmt2.append(")");
-
-        stmt1.concat_on(stmt2, " AND ");
-
-        (stmt1, params1)*/
     }
 }
 
@@ -66,16 +48,5 @@ impl QueryPart<Pg> for Or<Pg> {
             .with_static(" OR ")
             .with(self.cond_2.to_sql())
             .with_static(")")
-        /*let (mut stmt1, mut params1) = self.cond_1.to_sql();
-        let (mut stmt2, mut params2) = self.cond_1.to_sql();
-
-        params1.append(&mut params2);
-
-        stmt1.prepend("(");
-        stmt2.append(")");
-
-        stmt1.concat_on(stmt2, " OR ");
-
-        (stmt1, params1)*/
     }
 }

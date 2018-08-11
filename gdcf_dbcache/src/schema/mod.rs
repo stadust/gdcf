@@ -29,7 +29,7 @@ impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
 // TODO: find a fancier way to do this. For now it works though (maybe some sort of RawSqlExpr?)
 
 #[derive(Debug)]
-struct NowAtUtc;
+pub struct NowAtUtc;
 
 #[cfg(feature = "pg")]
 impl QueryPart<Pg> for NowAtUtc {

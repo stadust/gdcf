@@ -111,7 +111,7 @@ impl Cache for DatabaseCache<Pg>
 
         level.insert()
             .with(partial_level::last_cached_at.set(&ts))
-            .on_conflict_update()
+            .on_conflict_update(vec![&partial_level::level_id])
             .execute(&self.config.backend)
             .map_err(CacheError::Custom)
     }
@@ -139,7 +139,7 @@ impl Cache for DatabaseCache<Pg>
 
         song.insert()
             .with(newgrounds_song::last_cached_at.set(&ts))
-            .on_conflict_update()
+            .on_conflict_update(vec![&newgrounds_song::song_id])
             .execute(&self.config.backend)
             .map_err(CacheError::Custom)
     }
