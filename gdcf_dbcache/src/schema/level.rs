@@ -86,53 +86,25 @@ pub mod partial_level {
 }
 
 pub mod partial_levels {
-    use core::table::{Field, Table};
-    use core::query::create::{Column, Create};
-    use core::backend::Database;
-    use core::types::{Unsigned, BigInteger, Integer, Type};
     use core::query::select::Select;
     use gdcf::api::request::LevelsRequest;
 
-    #[allow(non_upper_case_globals)]
-    pub const table_name: &str = "partial_levels";
+    use pm_gdcf_dbcache::{table, create};
 
-    #[allow(non_upper_case_globals)]
-    pub static level_id: Field = Field {
-        table: table_name,
-        name: "level_id",
-    };
+    table! {
+        _ => partial_levels {
+            level_id,
+            page,
+            request_hash
+        }
+    }
 
-    #[allow(non_upper_case_globals)]
-    pub static page: Field = Field {
-        table: table_name,
-        name: "page",
-    };
-
-    #[allow(non_upper_case_globals)]
-    pub static request_hash: Field = Field {
-        table: table_name,
-        name: "request_hash",
-    };
-
-    #[allow(non_upper_case_globals)]
-    pub static table: Table = Table {
-        name: table_name,
-        fields: &[
-            &level_id,
-            &page,
-            &request_hash
-        ]
-    };
-
-    pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB>
-        where
-            Unsigned<BigInteger> : Type<DB>,
-            Integer: Type<DB>
-    {
-        table.create()
-            .with_column(Column::new(level_id.name(), Unsigned::<BigInteger>::default()))   // TODO: foreign key constraint
-            .with_column(Column::new(page.name(), Integer::default()))
-            .with_column(Column::new(request_hash.name(), Unsigned::<BigInteger>::default()))
+    create! {
+        partial_levels => {
+            level_id: Unsigned<BigInteger>, // TODO: foreign key
+            page: Integer,
+            request_hash: Unsigned<BigInteger>
+        }
     }
 
     use core::query::condition::*;
