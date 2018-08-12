@@ -3,6 +3,8 @@ use core::backend::Database;
 use core::backend::Error;
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
+use core::query::delete::Delete;
+use core::query::Insert;
 use core::query::insert::Insertable;
 use core::query::Query;
 use core::query::select::Queryable;
@@ -16,10 +18,9 @@ use gdcf::model::GDObject;
 use gdcf::model::Level;
 use gdcf::model::NewgroundsSong;
 use gdcf::model::PartialLevel;
-use schema::level::{self, partial_level};
+use schema::level::{self, partial_level, partial_levels};
 use schema::song::{self, newgrounds_song};
 use util;
-use core::query::Insert;
 
 #[derive(Debug)]
 pub struct DatabaseCacheConfig<DB: Database> {
@@ -74,7 +75,10 @@ impl DatabaseCache<Pg> {
             .execute(&self.config.backend)?;
         level::partial_levels::create()
             .ignore_if_exists()
-            .execute(&self.config.backend);
+            .execute(&self.config.backend)?;
+        level::partial_levels::cached_at::create()
+            .ignore_if_exists()
+            .execute(&self.config.backend)?;
 
         Ok(())
     }
@@ -89,7 +93,7 @@ impl DatabaseCache<Pg> {
             .with(partial_level::last_cached_at.set(&ts))
             .on_conflict_update(vec![&partial_level::level_id])
             .execute(&self.config.backend)
-            .map_err(CacheError::Custom)
+            .map_err(convert_error)
     }
 
     fn store_song(&self, song: NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
@@ -99,7 +103,7 @@ impl DatabaseCache<Pg> {
             .with(newgrounds_song::last_cached_at.set(&ts))
             .on_conflict_update(vec![&newgrounds_song::song_id])
             .execute(&self.config.backend)
-            .map_err(CacheError::Custom)
+            .map_err(convert_error)
     }
 
     fn store_level(&self, level: Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
@@ -140,14 +144,30 @@ impl Cache for DatabaseCache<Pg>
 
     fn store_partial_levels(&mut self, req: &LevelsRequest, levels: Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
         let h = util::hash(req);
+        let ts = Utc::now().naive_utc();
+
+        // TODO: wrap this into a transaction if I can figure out how to implement them
+        Delete::new(&partial_levels::table)
+            .if_met(partial_levels::request_hash.eq(h))
+            .execute(&self.config.backend)
+            .map_err(convert_error)?;
+
+        Insert::new(&partial_levels::cached_at::table, Vec::new())
+            .with(partial_levels::cached_at::last_cached_at.set(&ts))
+            .with(partial_levels::cached_at::request_hash.set(&h))
+            .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
+            .execute(&self.config.backend)
+            .map_err(convert_error)?;
 
         for level in levels {
-            Insert::new(&level::partial_levels::table, Vec::new())
-                .with(level::partial_levels::request_hash.set(&h))
-                .with(level::partial_levels::page.set(&req.page))
-                .with(level::partial_levels::level_id.set(&level.level_id));
+            Insert::new(&partial_levels::table, Vec::new())
+                .with(partial_levels::request_hash.set(&h))
+                .with(partial_levels::level_id.set(&level.level_id))
+                .execute(&self.config.backend)
+                .map_err(convert_error)?;
         }
-        Err(CacheError::NoStore)
+
+        Ok(())
     }
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
@@ -159,7 +179,7 @@ impl Cache for DatabaseCache<Pg>
             .filter(newgrounds_song::song_id.eq(newground_id));
 
         self.config.backend.query_one(&select)
-            .map_err(Into::into)  // for some reason I can use the question mark operator?????
+            .map_err(convert_error)  // for some reason I can use the question mark operator?????
     }
 
     fn store_object(&self, obj: GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
@@ -171,11 +191,9 @@ impl Cache for DatabaseCache<Pg>
     }
 }
 
-impl<DB: Database> Into<CacheError<Error<DB>>> for Error<DB> {
-    fn into(self) -> CacheError<Error<DB>> {
-        match self {
-            Error::NoResult => CacheError::CacheMiss,
-            err => CacheError::Custom(err)
-        }
+fn convert_error<DB: Database>(db_error: Error<DB>) -> CacheError<Error<DB>> {
+    match db_error {
+        Error::NoResult => CacheError::CacheMiss,
+        _ => CacheError::Custom(db_error)
     }
 }

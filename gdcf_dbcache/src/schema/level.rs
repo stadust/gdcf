@@ -1,4 +1,4 @@
-pub mod partial_level {
+pub(crate) mod partial_level {
     use gdcf::model::PartialLevel;
 
     use core::backend::Error;
@@ -85,32 +85,54 @@ pub mod partial_level {
     }
 }
 
-pub mod partial_levels {
-    use core::query::select::Select;
-    use gdcf::api::request::LevelsRequest;
+pub(crate) mod partial_levels {
+    //use core::query::select::Select;
+    //use gdcf::api::request::LevelsRequest;
 
     use pm_gdcf_dbcache::{table, create};
 
-    use util;
+    //use util;
 
     table! {
         _ => partial_levels {
             level_id,
-            page,
-            request_hash
-            // TODO: first_cached_at and last_cached_at fields
+            request_hash,
+            first_cached_at,
+            last_cached_at
         }
     }
 
     create! {
         partial_levels => {
-            level_id: Unsigned<BigInteger>, // TODO: foreign key
-            page: Integer,
+            level_id: Unsigned<BigInteger>,
             request_hash: Unsigned<BigInteger>
         }
     }
 
-    use core::query::condition::*;
+    pub(crate) mod cached_at {
+        use schema::NowAtUtc;
+
+        use pm_gdcf_dbcache::{table, create};
+
+        table! {
+            _ => partial_levels_request_cached_at {
+                request_hash,
+                first_cached_at,
+                last_cached_at
+            }
+        }
+
+        create! {
+            partial_levels_request_cached_at => {
+                request_hash: Unsigned<BigInteger> Unique NotNull,
+
+                first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
+                last_cached_at: UtcTimestamp NotNull
+            }
+        }
+    }
+
+    /*use core::query::condition::*;
     use core::*;
 
     pub fn lookup<'a, DB: Database + 'a>(req: &LevelsRequest) -> Select<'a, DB>
@@ -123,8 +145,7 @@ pub mod partial_levels {
         let req_hash = util::hash(req);
 
         Select::new(&table, Vec::new())
-            .filter(page.eq(req.page))
             .filter(request_hash.eq(req_hash))
             // TODO: join partial_level and only return those things.
-    }
+    }*/
 }

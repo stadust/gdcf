@@ -1,4 +1,4 @@
-pub mod newgrounds_song {
+pub(crate) mod newgrounds_song {
     use gdcf::model::NewgroundsSong;
     use core::backend::Error;
 

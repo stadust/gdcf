@@ -11,6 +11,7 @@ use core::query::select::Ordering;
 use core::statement::{Preparation, Prepare, PreparedStatement};
 use core::table::FieldValue;
 use gdcf::ext::Join as __;
+use core::query::delete::Delete;
 // one underscore is unstable, but 2 are ok, kden
 
 impl<'a> Insert<'a, Pg> {
@@ -212,6 +213,27 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
     }
 }
 
+impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
+    fn to_sql_unprepared(&self) -> String {
+        match self.filter {
+            Some(ref filter) => format!("DELETE FROM {} WHERE {}", self.table.name, filter.to_sql_unprepared()),
+            None => format!("DELETE FROM {}", self.table.name)
+        }
+    }
+
+    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+        let mut p = Preparation::<Pg>::default()
+            .with_static("DELETE FROM ")
+            .with_static(self.table.name);
+
+        if let Some(ref filter) = self.filter {
+            p = p.with_static(" WHERE ")
+                .with(filter.to_sql());
+        }
+
+        p
+    }
+}
 
 pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: &str) -> Preparation<'a, DB>
     where

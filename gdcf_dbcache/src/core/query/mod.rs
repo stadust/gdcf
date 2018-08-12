@@ -8,6 +8,7 @@ pub mod condition;
 pub mod create;
 pub mod insert;
 pub mod select;
+pub mod delete;
 
 pub trait QueryPart<DB: Database>: Debug {
     fn to_sql_unprepared(&self) -> String;

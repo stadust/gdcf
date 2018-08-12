@@ -19,6 +19,7 @@ use model::GameVersion;
 pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
 use std::fmt::Display;
 use api::request::cacher::Cacher;
+use std::hash::Hash;
 
 pub mod level;
 pub mod cacher;
@@ -82,12 +83,15 @@ impl Default for BaseRequest {
 }
 
 /// Trait for types that are meant to be requests whose results can be cached by GDCF
-pub trait Request: Display + Default {
-    /// The result of the request
-    ///
-    /// This type needs to match with the return type of the database lookup the
-    /// request was connected with via the [gdcf!](../../macro.gdcf.html) macro.
-    //type Result;
+///
+/// A `Request`'s `Hash` result must be forward-compatible with new fields added to a request.
+/// This means that if the GD API adds a new fields to a requests, making a request without this
+/// fields should generate the same hash value as the same request in an old version of GDCF without
+/// the field in the first place.
+/// This means foremost, that `Hash` impls mustn't hash the `BaseRequest` they're built upon.
+/// If new fields are added in later version of GDCF, they may only be hashed if they are explicitly
+/// set to a value, to ensure the above-mentioned compatibility
+pub trait Request: Display + Default + Hash {
     type ResponseCacher: Cacher<Self>;
 
     /// Creates a default instance of this `Request`
