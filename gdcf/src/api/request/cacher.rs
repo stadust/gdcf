@@ -3,7 +3,6 @@ use api::request::Request;
 use api::response::ProcessedResponse;
 use cache::Cache;
 use error::CacheError;
-//use ext::CacheExt;
 use model::GDObject;
 
 pub trait Cacher<R: Request> {

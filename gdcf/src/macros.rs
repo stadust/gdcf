@@ -61,6 +61,7 @@ macro_rules! setter {
 
 macro_rules! lock {
     (@$mutex: expr) => {&*$mutex.lock().unwrap()};
+    (!$mutex: expr) => {&mut *$mutex.lock().unwrap()};
     ($mutex: expr) => {$mutex.lock().unwrap()};
 }
 

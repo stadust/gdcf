@@ -12,12 +12,14 @@ use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
 use gdcf::cache::Lookup;
 use gdcf::error::CacheError;
+use gdcf::model::GDObject;
 use gdcf::model::Level;
 use gdcf::model::NewgroundsSong;
 use gdcf::model::PartialLevel;
 use schema::level::{self, partial_level};
 use schema::song::{self, newgrounds_song};
 use util;
+use core::query::Insert;
 
 #[derive(Debug)]
 pub struct DatabaseCacheConfig<DB: Database> {
@@ -78,6 +80,35 @@ impl DatabaseCache<Pg> {
     }
 }
 
+#[cfg(feature = "pg")]
+impl DatabaseCache<Pg> {
+    fn store_partial_level(&self, level: PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        let ts = Utc::now().naive_utc();
+
+        level.insert()
+            .with(partial_level::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&partial_level::level_id])
+            .execute(&self.config.backend)
+            .map_err(CacheError::Custom)
+    }
+
+    fn store_song(&self, song: NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        let ts = Utc::now().naive_utc();
+
+        song.insert()
+            .with(newgrounds_song::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&newgrounds_song::song_id])
+            .execute(&self.config.backend)
+            .map_err(CacheError::Custom)
+    }
+
+    fn store_level(&self, level: Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        self.store_partial_level(level.base)?;
+
+        Err(CacheError::NoStore)
+    }
+}
+
 // TODO: turn cache impl into a macro
 #[cfg(feature = "pg")]
 impl Cache for DatabaseCache<Pg>
@@ -107,24 +138,20 @@ impl Cache for DatabaseCache<Pg>
         Err(CacheError::CacheMiss)
     }
 
-    fn store_partial_level(&mut self, level: PartialLevel) -> Result<(), CacheError<Self::Err>> {
-        let ts = Utc::now().naive_utc();
+    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
+        let h = util::hash(req);
 
-        level.insert()
-            .with(partial_level::last_cached_at.set(&ts))
-            .on_conflict_update(vec![&partial_level::level_id])
-            .execute(&self.config.backend)
-            .map_err(CacheError::Custom)
+        for level in levels {
+            Insert::new(&level::partial_levels::table, Vec::new())
+                .with(level::partial_levels::request_hash.set(&h))
+                .with(level::partial_levels::page.set(&req.page))
+                .with(level::partial_levels::level_id.set(&level.level_id));
+        }
+        Err(CacheError::NoStore)
     }
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
         Err(CacheError::CacheMiss)
-    }
-
-    fn store_level(&mut self, level: Level) -> Result<(), CacheError<Self::Err>> {
-        self.store_partial_level(level.base)?;
-
-        Err(CacheError::NoStore)
     }
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
@@ -135,14 +162,12 @@ impl Cache for DatabaseCache<Pg>
             .map_err(Into::into)  // for some reason I can use the question mark operator?????
     }
 
-    fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>> {
-        let ts = Utc::now().naive_utc();
-
-        song.insert()
-            .with(newgrounds_song::last_cached_at.set(&ts))
-            .on_conflict_update(vec![&newgrounds_song::song_id])
-            .execute(&self.config.backend)
-            .map_err(CacheError::Custom)
+    fn store_object(&self, obj: GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        match obj {
+            GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
+            GDObject::NewgroundsSong(song) => self.store_song(song),
+            GDObject::Level(lvl) => self.store_level(lvl)
+        }
     }
 }
 

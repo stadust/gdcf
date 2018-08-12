@@ -65,7 +65,6 @@ pub mod error;
 pub mod convert;
 
 pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
-    fn client(&self) -> MutexGuard<A>;
     fn cache(&self) -> MutexGuard<C>;
 
     fn refresh<R: Request + 'static>(&self, request: R);
@@ -161,7 +160,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                 let integrity_future = join_all(integrity_futures)
                     .map(move |_| {
                         debug!("Successfully stored all data relevant for integrity!");
-                        R::ResponseCacher::store_response(&mut *cache_mutex.lock().unwrap(), &request, response)
+                        R::ResponseCacher::store_response(lock!(!cache_mutex), &request, response)
                             .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
                     })
                     .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", req_str));
@@ -169,7 +168,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                 lock!(client_mutex).spawn(integrity_future);
             } else {
                 debug!("Result of {} does not compromise cache integrity, proceeding!", request);
-                R::ResponseCacher::store_response(&mut *cache_mutex.lock().unwrap(), &request, response)
+                R::ResponseCacher::store_response(lock!(!cache_mutex), &request, response)
                     .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
             }
 
@@ -179,10 +178,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
 }
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, C> {
-    fn client(&self) -> MutexGuard<A> {
-        lock!(self.client)
-    }
-
     fn cache(&self) -> MutexGuard<C> {
         lock!(self.cache)
     }
@@ -190,12 +185,12 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, 
     fn refresh<R: Request + 'static>(&self, request: R) {
         info!("Cache entry for {} is either expired or non existant, refreshing!", request);
 
-        let client = self.client();
+        let client = lock!(self.client);
         let cache = self.cache.clone();
 
         let future = client.make(&request)
             .map(move |response| {
-                R::ResponseCacher::store_response(&mut *cache.lock().unwrap(), &request, response)
+                R::ResponseCacher::store_response(lock!(!cache), &request, response)
                     .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
             });
 
@@ -204,10 +199,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, 
 }
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheManager<A, C> {
-    fn client(&self) -> MutexGuard<A> {
-        lock!(self.client)
-    }
-
     fn cache(&self) -> MutexGuard<C> {
         lock!(self.cache)
     }
@@ -217,6 +208,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
 
         let future = Self::with_integrity(request, self.client.clone(), self.cache.clone());
 
-        self.client().spawn(future);
+        lock!(self.client).spawn(future);
     }
 }

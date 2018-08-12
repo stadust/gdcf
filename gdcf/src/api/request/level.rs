@@ -1,4 +1,9 @@
 //! Module containing request definitions for retrieving levels
+//!
+//! Note that all `Hash` impls are to be forward compatible with new fields in the request.
+//! This means, that if an update to the GD API arrives which adds more fields to a request,
+//! those fields are hashed _only_ if they are different from their default values.
+//! This way, the hashes of requests made before the update will stay the same
 
 use api::ApiClient;
 use api::client::ApiFuture;
@@ -16,7 +21,7 @@ use api::request::cacher::{DefaultCacher, LevelsRequestCacher};
 /// In the Geometry Dash API, this endpoint is used to download a level from the servers
 /// and retrieve some additional information that isn't provided with the response to a
 /// [LevelsRequest](struct.LevelsRequest.html)
-#[derive(Debug, Default, Hash)]
+#[derive(Debug, Default)]
 pub struct LevelRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -38,6 +43,15 @@ pub struct LevelRequest {
     /// ## GD Internals:
     /// This field is called `extras` in the boomlings API and needs to be converted to an integer
     pub extra: bool,
+}
+
+/// Manual `Hash` impl that doesn't hash `base`.
+impl Hash for LevelRequest {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.level_id.hash(state);
+        self.inc.hash(state);
+        self.extra.hash(state);
+    }
 }
 
 /// Struct modelled after a request to `getGJLevels21.php`
@@ -120,7 +134,7 @@ pub struct LevelsRequest {
     pub search_filters: SearchFilters,
 }
 
-/// Manual Hash impl which doesn't hash the page
+/// Manual Hash impl which doesn't hash the base
 impl Hash for LevelsRequest {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.search_filters.hash(state);
@@ -130,7 +144,7 @@ impl Hash for LevelsRequest {
         self.lengths.hash(state);
         self.search_string.hash(state);
         self.request_type.hash(state);
-        self.base.hash(state);
+        self.page.hash(state);
     }
 }
 

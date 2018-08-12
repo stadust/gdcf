@@ -1,10 +1,7 @@
 use api::ApiClient;
 use api::request::Request;
 use api::response::ProcessedResponse;
-//use cache::Cache;
-//use error::CacheError;
 use futures::Future;
-//use model::GDObject;
 use std::fmt::Display;
 
 pub trait ApiClientExt: ApiClient {
@@ -14,33 +11,6 @@ pub trait ApiClientExt: ApiClient {
             .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", req_str, err)))
     }
 }
-/*
-pub trait CacheExt: Cache {
-    fn store_all(&mut self, objects: impl IntoIterator<Item=GDObject>) -> Result<(), Vec<CacheError<Self::Err>>> {
-        let errors = objects.into_iter()
-            .map(|object| self.store_object(object))
-            .filter(|result| result.is_err())
-            .map(|result| result.unwrap_err())
-            .collect::<Vec<_>>();
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
-    }
-
-    fn store_object(&mut self, object: GDObject) -> Result<(), CacheError<Self::Err>> {
-        info!("Caching {}", object);
-
-        match object {
-            GDObject::Level(level) => self.store_level(level),
-            //GDObject::PartialLevel(level) => self.store_partial_level(level),
-            GDObject::NewgroundsSong(song) => self.store_song(song),
-            _ => panic!()
-        }
-    }
-}*/
 
 pub trait Join: Iterator {
     fn join(self, seperator: &str) -> String
@@ -81,11 +51,6 @@ impl<T> ApiClientExt for T
         T: ApiClient
 {}
 
-/*impl<T> CacheExt for T
-    where
-        T: Cache
-{}
-*/
 impl<I> Join for I
     where
         I: Iterator,
