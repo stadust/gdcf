@@ -196,7 +196,11 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
-        unimplemented!()
+        Preparation::<Pg>::default()
+            .with_static("JOIN ")
+            .with_static(self.other.name)
+            .with_static(" ON ")
+            .with(self.join_condition.to_sql())
     }
 }
 

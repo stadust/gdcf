@@ -3,16 +3,16 @@ use core::backend::Error;
 use core::FromSql;
 use core::query::condition::And;
 use core::query::condition::Condition;
+use core::query::condition::Or;
 use core::query::Query;
 use core::query::QueryPart;
 use core::table::Field;
 use core::table::Table;
-use core::query::condition::Or;
 
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
     pub other: &'a Table,
-    pub join_condition: &'a dyn Condition<DB>,
+    pub join_condition: Box<dyn Condition<DB>>,
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Copy, Clone, Debug)]
@@ -47,6 +47,15 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
             subset: (None, None),
             order: Vec::new(),
         }
+    }
+
+    pub fn join<Cond>(mut self, other: &'a Table, condition: Cond) -> Select<'a, DB>
+        where
+            DB: 'static,
+            Cond: Condition<DB> + 'static
+    {
+        self.joins.push(Join { other, join_condition: Box::new(condition) });
+        self
     }
 
     pub fn limit(mut self, limit: usize) -> Select<'a, DB> {

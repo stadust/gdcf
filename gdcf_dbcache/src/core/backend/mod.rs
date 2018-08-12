@@ -68,6 +68,19 @@ pub trait Database: Debug + Sized {
             Ok(result.remove(0))
         }
     }
+
+    fn query_one_row(&self, query: &dyn Query<Self>) -> Result<Row<Self>, Error<Self>> {
+        let mut result = self.query_rows(query)?;
+
+        if result.is_empty() {
+            Err(Error::NoResult)
+        } else if result.len() > 1 {
+            Err(Error::TooManyRows)
+        } else {
+            Ok(result.remove(0))
+        }
+    }
+
     fn query_one_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<T, Error<Self>>
         where
             T: Queryable<Self>
@@ -95,6 +108,12 @@ pub trait Database: Debug + Sized {
         }
 
         Ok(ts)
+    }
+
+    fn query_rows(&self, query: &dyn Query<Self>) -> Result<Vec<Row<Self>>, Error<Self>> {
+        let (stmt, params) = query.to_sql();
+
+        self.query_raw(stmt.to_statement(Self::prepare), &params)
     }
 
     fn query_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<Vec<T>, Error<Self>>

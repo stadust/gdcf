@@ -7,11 +7,13 @@ use core::query::delete::Delete;
 use core::query::Insert;
 use core::query::insert::Insertable;
 use core::query::Query;
+use core::query::Select;
 use core::query::select::Queryable;
 use gdcf::api::request::LevelRequest;
 use gdcf::api::request::LevelsRequest;
 use gdcf::cache::Cache;
 use gdcf::cache::CacheConfig;
+use gdcf::cache::CachedObject;
 use gdcf::cache::Lookup;
 use gdcf::error::CacheError;
 use gdcf::model::GDObject;
@@ -25,13 +27,19 @@ use util;
 #[derive(Debug)]
 pub struct DatabaseCacheConfig<DB: Database> {
     backend: DB,
+    invalidate_after: Duration,
 }
 
 impl<DB: Database> DatabaseCacheConfig<DB> {
     pub fn new(backend: DB) -> DatabaseCacheConfig<DB> {
         DatabaseCacheConfig {
-            backend
+            backend,
+            invalidate_after: Duration::zero(),
         }
+    }
+
+    pub fn invalidate_after(&mut self, duration: Duration) {
+        self.invalidate_after = duration;
     }
 }
 
@@ -47,7 +55,7 @@ impl DatabaseCacheConfig<Pg> {
 impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
     // TODO: figure out a way to specify this
     fn invalidate_after(&self) -> Duration {
-        unimplemented!()
+        self.invalidate_after
     }
 }
 
@@ -133,13 +141,31 @@ impl Cache for DatabaseCache<Pg>
     }
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
-        let select = PartialLevel::select_from(&partial_level::table);
-
         let h = util::hash(req);
 
-        /*self.config.backend.query_one(&select)
-            .map_err(Into::into)*/
-        Err(CacheError::CacheMiss)
+        let select = Select::new(
+            &partial_levels::cached_at::table,
+            vec![&partial_levels::cached_at::first_cached_at, &partial_levels::cached_at::last_cached_at],
+        ).filter(partial_levels::cached_at::request_hash.eq(h));
+
+        let row = self.config.backend.query_one_row(&select)
+            .map_err(convert_error)?;
+
+        let first_cached_at = row.get(0)
+            .unwrap()
+            .map_err(convert_error)?;
+
+        let last_cached_at = row.get(1)
+            .unwrap()
+            .map_err(convert_error)?;
+
+        let select = partial_level::table.select()
+            .join(&partial_levels::table, partial_level::level_id.same_as(&partial_levels::level_id));
+
+        let levels: Vec<PartialLevel> = self.config.backend.query(&select)
+            .map_err(convert_error)?;
+
+        Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
     }
 
     fn store_partial_levels(&mut self, req: &LevelsRequest, levels: Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
