@@ -1,19 +1,20 @@
 use api::ApiClient;
 use api::request::Request;
 use api::response::ProcessedResponse;
-use cache::Cache;
-use error::CacheError;
+//use cache::Cache;
+//use error::CacheError;
 use futures::Future;
-use model::GDObject;
+//use model::GDObject;
 use std::fmt::Display;
 
 pub trait ApiClientExt: ApiClient {
-    fn make<R: Request + 'static>(&self, request: R) -> Box<dyn Future<Item=ProcessedResponse, Error=()> + 'static> {
+    fn make<R: Request + 'static>(&self, request: &R) -> Box<dyn Future<Item=ProcessedResponse, Error=()> + 'static> {
+        let req_str = request.to_string();
         Box::new(request.make(self)
-            .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", request, err)))
+            .map_err(move |err| error!("Unexpected error while processing api response to request {}: {:?}", req_str, err)))
     }
 }
-
+/*
 pub trait CacheExt: Cache {
     fn store_all(&mut self, objects: impl IntoIterator<Item=GDObject>) -> Result<(), Vec<CacheError<Self::Err>>> {
         let errors = objects.into_iter()
@@ -34,11 +35,12 @@ pub trait CacheExt: Cache {
 
         match object {
             GDObject::Level(level) => self.store_level(level),
-            GDObject::PartialLevel(level) => self.store_partial_level(level),
-            GDObject::NewgroundsSong(song) => self.store_song(song)
+            //GDObject::PartialLevel(level) => self.store_partial_level(level),
+            GDObject::NewgroundsSong(song) => self.store_song(song),
+            _ => panic!()
         }
     }
-}
+}*/
 
 pub trait Join: Iterator {
     fn join(self, seperator: &str) -> String
@@ -79,11 +81,11 @@ impl<T> ApiClientExt for T
         T: ApiClient
 {}
 
-impl<T> CacheExt for T
+/*impl<T> CacheExt for T
     where
         T: Cache
 {}
-
+*/
 impl<I> Join for I
     where
         I: Iterator,

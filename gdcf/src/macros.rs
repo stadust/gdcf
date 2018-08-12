@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! gdcf {
-    ($api: ident, $req_type: tt, $lookup: ident) => {
-        fn $api(&self, req: $req_type) -> Result<<$req_type as Request>::Result, CacheError<C::Err>> {
+    ($api: ident, $req_type: tt, $lookup: ident, $result: ty) => {
+        fn $api(&self, req: $req_type) -> Result<$result, CacheError<C::Err>> {
             debug!("Received request {}, initiating cache lookup!", req);
 
             let cache = self.cache();

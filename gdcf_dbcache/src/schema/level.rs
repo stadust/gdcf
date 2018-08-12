@@ -98,6 +98,7 @@ pub mod partial_levels {
             level_id,
             page,
             request_hash
+            // TODO: first_cached_at and last_cached_at fields
         }
     }
 

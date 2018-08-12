@@ -18,8 +18,10 @@ use api::client::{ApiClient, ApiFuture};
 use model::GameVersion;
 pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
 use std::fmt::Display;
+use api::request::cacher::Cacher;
 
 pub mod level;
+pub mod cacher;
 
 /// Base data included in every request made
 ///
@@ -31,7 +33,7 @@ pub struct BaseRequest {
     ///
     /// ## GD Internals:
     /// This field is called `gameVersion` in the boomlings API and needs to be converted to a string
-    ///
+    ///response
     /// The value of this field doesn't matter, and the request will succeed regardless of
     /// what it's been set to
     pub game_version: GameVersion,
@@ -85,7 +87,8 @@ pub trait Request: Display + Default {
     ///
     /// This type needs to match with the return type of the database lookup the
     /// request was connected with via the [gdcf!](../../macro.gdcf.html) macro.
-    type Result;
+    //type Result;
+    type ResponseCacher: Cacher<Self>;
 
     /// Creates a default instance of this `Request`
     fn new() -> Self {

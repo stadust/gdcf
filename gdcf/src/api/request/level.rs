@@ -1,17 +1,15 @@
 //! Module containing request definitions for retrieving levels
 
-#[cfg(feature = "deser")]
-use serde::{Serialize, Serializer, Deserialize};
-
-use api::request::{BaseRequest, Request};
 use api::ApiClient;
 use api::client::ApiFuture;
-
-use model::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
-
-use std::fmt::{Display, Formatter, Error};
+use api::request::{BaseRequest, Request};
+use model::{DemonRating, LevelLength, LevelRating};
+#[cfg(feature = "deser")]
+use serde::{Deserialize, Serialize, Serializer};
+use std::fmt::{Display, Error, Formatter};
 use std::hash::Hash;
 use std::hash::Hasher;
+use api::request::cacher::{DefaultCacher, LevelsRequestCacher};
 
 /// Struct modelled after a request to `downloadGJLevel22.php`.
 ///
@@ -477,7 +475,8 @@ impl From<u64> for LevelRequest {
 }
 
 impl Request for LevelRequest {
-    type Result = Level;
+    //type Result = Level;
+    type ResponseCacher = DefaultCacher;
 
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.level(&self)
@@ -485,7 +484,8 @@ impl Request for LevelRequest {
 }
 
 impl Request for LevelsRequest {
-    type Result = Vec<PartialLevel>;
+    //type Result = Vec<PartialLevel>;
+    type ResponseCacher = LevelsRequestCacher;
 
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.levels(&self)
