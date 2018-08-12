@@ -25,5 +25,6 @@ extern crate seahash;
 mod core;
 mod ser;
 mod de;
+mod util;
 pub mod schema;
 pub mod cache;

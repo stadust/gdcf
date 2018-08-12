@@ -152,7 +152,6 @@ impl<'a> Select<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
-    //TODO: implement
     fn to_sql_unprepared(&self) -> String {
         let where_clause = self.filter.as_ref()
             .map_or(String::new(), |c| format!(" WHERE {}", c.to_sql_unprepared()));

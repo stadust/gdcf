@@ -91,6 +91,8 @@ pub mod partial_levels {
 
     use pm_gdcf_dbcache::{table, create};
 
+    use util;
+
     table! {
         _ => partial_levels {
             level_id,
@@ -117,7 +119,7 @@ pub mod partial_levels {
             u32: AsSql<DB>,
             u64: AsSql<DB>
     {
-        let req_hash = 0u64; // TODO: proper values
+        let req_hash = util::hash(req);
 
         Select::new(&table, Vec::new())
             .filter(page.eq(req.page))
