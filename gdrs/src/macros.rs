@@ -12,13 +12,13 @@ macro_rules! prepare_future {
             .map_err(|err| ApiError::Custom(err))
             .and_then(|resp| {
                 match resp.status() {
-                    StatusCode::InternalServerError => Err(ApiError::InternalServerError),
-                    StatusCode::NotFound => Err(ApiError::NoData),
+                    StatusCode::INTERNAL_SERVER_ERROR => Err(ApiError::InternalServerError),
+                    StatusCode::NOT_FOUND => Err(ApiError::NoData),
                     _ => Ok(resp),
                 }
             })
             .and_then(|resp| {
-                resp.body()
+                resp.into_body()
                     .concat2()
                     .map_err(|err| ApiError::Custom(err))
                     .and_then(|body| {

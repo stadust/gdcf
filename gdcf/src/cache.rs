@@ -3,10 +3,9 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
 use model::{Level, NewgroundsSong, PartialLevel};
 use std::error::Error;
-use std::result;
 use model::GDObject;
 
-pub type Lookup<T, E> = result::Result<CachedObject<T>, CacheError<E>>;
+pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
 
 pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;
@@ -22,11 +21,9 @@ pub trait Cache {
     fn store_partial_levels(&mut self, req: &LevelsRequest, levels: Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>>;
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err>;
-    //fn store_level(&mut self, level: Level) -> Result<(), CacheError<Self::Err>>;
-
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
-    //fn store_song(&mut self, song: NewgroundsSong) -> Result<(), CacheError<Self::Err>>;
 
+    /// Stores an arbitrary `GDObject` in this `Cache`
     fn store_object(&self, obj: GDObject) -> Result<(), CacheError<Self::Err>>;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {

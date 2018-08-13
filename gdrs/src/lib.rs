@@ -14,7 +14,8 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_urlencoded;
-extern crate tokio_core;
+//extern crate tokio_core;
+extern crate tokio;
 
 use futures::Future;
 use futures::Stream;
@@ -26,14 +27,14 @@ use gdcf::error::ApiError;
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper::Error;
-use hyper::header::{ContentLength, ContentType};
 use hyper::Method;
 use hyper::Request;
 use hyper::StatusCode;
+use hyper::Body;
 use ser::LevelRequestRem;
 use ser::LevelsRequestRem;
 use std::str;
-use tokio_core::reactor::Handle;
+use hyper::header::HeaderValue;
 
 #[macro_use]
 mod macros;
@@ -56,23 +57,26 @@ pub struct BoomlingsClient {
 }
 
 impl BoomlingsClient {
-    pub fn new(handle: &Handle) -> BoomlingsClient {
+    pub fn new() -> BoomlingsClient {
         info!("Creating new BoomlingsApiClient");
 
         BoomlingsClient {
-            client: Client::new(handle),
+            client: Client::new(),
         }
     }
 
-    fn make_request(&self, endpoint: &str, req: Req) -> Request {
+    fn make_request(&self, endpoint: &str, req: Req) -> Request<Body> {
         let body = serde_urlencoded::to_string(req).unwrap();
-        let mut req = Request::new(Method::Post, endpoint!(endpoint));
+        let len = body.len();
 
         debug!("Preparing request {} to {}", body, endpoint);
 
-        req.headers_mut().set(ContentType::form_url_encoded());
-        req.headers_mut().set(ContentLength(body.len() as u64));
-        req.set_body(body);
+        let mut req = Request::new(Body::from(body));
+
+        *req.method_mut() = Method::POST;
+        *req.uri_mut() = endpoint!(endpoint);
+        req.headers_mut().insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
+        req.headers_mut().insert("Content-Length", HeaderValue::from_str(&len.to_string()).unwrap());
 
         req
     }
@@ -99,6 +103,6 @@ impl ApiClient for BoomlingsClient {
     {
         debug!("Spawning a future!");
 
-        self.client.handle().spawn(f);
+        tokio::executor::current_thread::spawn(f);
     }
 }

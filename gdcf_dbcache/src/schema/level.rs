@@ -165,6 +165,7 @@ pub(crate) mod full_level {
         }
     }
 
+    // TODO: the other backends
     #[cfg(feature = "pg")]
     use core::backend::pg::Pg;
     #[cfg(feature = "pg")]
@@ -174,7 +175,7 @@ pub(crate) mod full_level {
             Select::new(from, Vec::new())
                 .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
                 .select(&super::partial_level::table.fields()[..24])
-                .select(&from.fields()[1..8])
+                .select(&from.fields()[1..])
         }
 
         fn from_row(row: &Row<Pg>, offset: isize) -> Result<Self, Error<Pg>> {
