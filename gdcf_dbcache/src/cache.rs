@@ -20,7 +20,7 @@ use gdcf::model::GDObject;
 use gdcf::model::Level;
 use gdcf::model::NewgroundsSong;
 use gdcf::model::PartialLevel;
-use schema::level::{self, partial_level, partial_levels};
+use schema::level::{self, partial_level, partial_levels, full_level};
 use schema::song::{self, newgrounds_song};
 use util;
 
@@ -87,6 +87,9 @@ impl DatabaseCache<Pg> {
         level::partial_levels::cached_at::create()
             .ignore_if_exists()
             .execute(&self.config.backend)?;
+        level::full_level::create()
+            .ignore_if_exists()
+            .execute(&self.config.backend)?;
 
         Ok(())
     }
@@ -115,9 +118,16 @@ impl DatabaseCache<Pg> {
     }
 
     fn store_level(&self, level: Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        self.store_partial_level(level.base)?;
+        let ts = Utc::now().naive_utc();
 
-        Err(CacheError::NoStore)
+        level.insert()
+            .with(full_level::level_id.set(&level.base.level_id))
+            .with(full_level::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&full_level::level_id])
+            .execute(&self.config.backend)
+            .map_err(convert_error)?;
+
+        self.store_partial_level(level.base)
     }
 }
 
@@ -197,7 +207,11 @@ impl Cache for DatabaseCache<Pg>
     }
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
-        Err(CacheError::CacheMiss)
+        let select = Level::select_from(&full_level::table)
+            .filter(full_level::level_id.eq(req.level_id));
+
+        self.config.backend.query_one(&select)
+            .map_err(convert_error)
     }
 
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {

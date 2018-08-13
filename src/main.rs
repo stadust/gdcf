@@ -32,7 +32,14 @@ fn main() {
     let client = BoomlingsClient::new(&core.handle());
     let gdcf = ConsistentCacheManager::new(client, cache);
 
-    //gdcf.level(LevelRequest::new(38515466u64));
+    for id in vec![38515466u64, 47620786, 47998429, 47849218, 47339027] {
+        println!(
+            "{:?}",
+            gdcf.level(LevelRequest::new(id))
+                .map(|l| l.password)
+        );
+    }
+
     gdcf.levels(LevelsRequest::new().search("Starfire".into()));
 
     core.run(until_all_done());

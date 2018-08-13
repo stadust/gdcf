@@ -1,7 +1,6 @@
 pub(crate) mod partial_level {
-    use gdcf::model::PartialLevel;
-
     use core::backend::Error;
+    use gdcf::model::PartialLevel;
 
     use schema::NowAtUtc;
 
@@ -86,12 +85,7 @@ pub(crate) mod partial_level {
 }
 
 pub(crate) mod partial_levels {
-    //use core::query::select::Select;
-    //use gdcf::api::request::LevelsRequest;
-
     use pm_gdcf_dbcache::{table, create};
-
-    //use util;
 
     table! {
         _ => partial_levels {
@@ -124,28 +118,77 @@ pub(crate) mod partial_levels {
 
         create! {
             partial_levels_request_cached_at => {
-                request_hash: Unsigned<BigInteger> Unique NotNull,
+                request_hash: Unsigned<BigInteger> Unique NotNull Primary,
 
                 first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
                 last_cached_at: UtcTimestamp NotNull
             }
         }
     }
+}
 
-    /*use core::query::condition::*;
-    use core::*;
+pub(crate) mod full_level {
+    use pm_gdcf_dbcache::{itable, create};
 
-    pub fn lookup<'a, DB: Database + 'a>(req: &LevelsRequest) -> Select<'a, DB>
-        where
-            And<DB>: Condition<DB>,
-            EqValue<'a, DB>: Condition<DB> + 'static,
-            u32: AsSql<DB>,
-            u64: AsSql<DB>
+    use schema::NowAtUtc;
+    use gdcf::model::{Level, PartialLevel};
+    use core::query::select::Queryable;
+    use core::query::select::Row;
+    use core::backend::Error;
+    use core::query::Select;
+
+    itable! {
+        Level => level {
+            level_id,
+            level_data => level_data,
+            password => level_password,
+            time_since_upload => time_since_upload,
+            time_since_update => time_since_update,
+            index_36 => index_36,
+
+            first_cached_at,
+            last_cached_at
+        }
+    }
+
+    create! {
+        level => {
+            level_id: Unsigned<BigInteger> NotNull Unique Primary,
+            level_data: Text NotNull,
+            level_password: Text,
+            time_since_upload: Text,
+            time_since_update: Text,
+            index_36: Text,
+
+            first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
+            last_cached_at: UtcTimestamp NotNull
+        }
+    }
+
+    #[cfg(feature = "pg")]
+    use core::backend::pg::Pg;
+    #[cfg(feature = "pg")]
+    impl Queryable<Pg> for Level
     {
-        let req_hash = util::hash(req);
+        fn select_from(from: &Table) -> Select<Pg> {
+            Select::new(from, Vec::new())
+                .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
+                .select(&super::partial_level::table.fields()[..24])
+                .select(&from.fields()[1..8])
+        }
 
-        Select::new(&table, Vec::new())
-            .filter(request_hash.eq(req_hash))
-            // TODO: join partial_level and only return those things.
-    }*/
+        fn from_row(row: &Row<Pg>, offset: isize) -> Result<Self, Error<Pg>> {
+            let base = PartialLevel::from_row(row, offset)?;
+
+            Ok(Level {
+                base,
+                level_data: row.get(offset + 24).unwrap()?,
+                password: row.get(offset + 25).unwrap()?,
+                time_since_upload: row.get(offset + 26).unwrap()?,
+                time_since_update: row.get(offset + 27).unwrap()?,
+                index_36: row.get(offset + 28).unwrap()?,
+            })
+        }
+    }
+
 }

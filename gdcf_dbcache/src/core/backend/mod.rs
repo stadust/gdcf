@@ -27,7 +27,7 @@ pub enum Error<DB: Database> {
     /// The query passed to `query_one` didn't yield and rows
     NoResult,
 
-    /// The query passed to `query_on` yieled more than one row
+    /// The query passed to `query_one` yielded more than one row
     TooManyRows,
 }
 

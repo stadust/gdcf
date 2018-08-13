@@ -68,8 +68,8 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self
     }
 
-    pub fn select(mut self, fields: Vec<&'a Field>) -> Select<'a, DB> {
-        self.fields = fields;
+    pub fn select(mut self, fields: &[&'a Field]) -> Select<'a, DB> {
+        self.fields.extend(fields);
         self
     }
 

@@ -16,6 +16,7 @@ pub mod to {
     use percent_encoding::percent_decode;
     use std::str::Utf8Error;
     use base64::{self, DecodeError, URL_SAFE};
+    use model::level::Password;
 
     pub fn decoded_url(encoded: &str) -> Result<String, Utf8Error> {
         let utf8_cow = percent_decode(encoded.as_bytes()).decode_utf8()?;
@@ -29,6 +30,27 @@ pub mod to {
 
     pub fn bool(value: u8) -> bool {
         value != 0
+    }
+
+    pub fn level_password(encrypted: &str) -> Result<Password, DecodeError> {
+        match encrypted.as_ref() {
+            "0" => Ok(Password::NoCopy),
+            "1" => Ok(Password::FreeCopy),
+            pass => xor_decrypted(pass, "26364")
+                .map(|mut decrypted| {
+                    decrypted.remove(0);
+                    Password::PasswordCopy(decrypted)
+                })
+        }
+    }
+
+    fn xor_decrypted(encrypted: &str, key: &str) -> Result<String, DecodeError> {
+        let decoded = b64_decoded_string(encrypted)?;
+
+        Ok(decoded.bytes()
+            .zip(key.bytes().cycle())
+            .map(|(enc_byte, key_byte)|(enc_byte ^ key_byte) as char)
+            .collect())
     }
 }
 

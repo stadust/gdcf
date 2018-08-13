@@ -4,6 +4,7 @@ use model::de;
 use std::convert::TryFrom;
 use std::fmt::{Display, Error, Formatter};
 use model::raw::RawObject;
+use convert;
 
 /// Enum representing the possible level lengths known to GDCF
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -156,6 +157,21 @@ pub enum Featured {
     /// The featured weight determines how high on the featured pages the level appear, where a
     /// higher value means a higher position.
     Featured(u32),
+}
+
+/// Enum representing a level's copy status
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+pub enum Password {
+    /// The level isn't copyable (which I see the irony off, considering we literally have a copy
+    /// of it in the GDCF database. shush.)
+    NoCopy,
+
+    /// The level is free to copy
+    FreeCopy,
+
+    /// The level requires the specified password to copy
+    PasswordCopy(String)
 }
 
 /// Struct representing partial levels. These are returned to [LevelsRequest](../../api/request/level/struct.LevelsRequest.html)s
@@ -343,6 +359,8 @@ pub struct PartialLevel {
     pub index_47: String,
 }
 
+/// Struct representing full levels, extending `PartialLevel` with the fields only retrieved when
+/// fully downloading a level.
 #[derive(Debug, FromRawObject)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct Level {
@@ -358,12 +376,12 @@ pub struct Level {
     #[raw_data(index = 4)]
     pub level_data: String,
 
-    /// The request's password
+    /// The level's password
     ///
     /// ## GD Internals:
-    /// This value is provided at index `27`, and "encrypted" using robtop's XOR routine with key <TODO: key>
-    #[raw_data(index = 27)]
-    pub password: String,
+    /// This value is provided at index `27`, and "encrypted" using robtop's XOR routine with key `26364`
+    #[raw_data(index = 27, deserialize_with = "convert::to::level_password")]
+    pub password: Password,
 
     /// The time passed since the `Level` was uploaded
     ///

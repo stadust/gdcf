@@ -1,6 +1,6 @@
-use proc_macro::{Ident, Spacing, TokenStream, TokenTree, Group, Delimiter};
-use std::iter::FromIterator;
 use itertools::Itertools;
+use proc_macro::{Delimiter, Group, Ident, Spacing, TokenStream, TokenTree};
+use std::iter::FromIterator;
 
 pub(super) struct Table {
     model_name: Ident,
@@ -134,6 +134,17 @@ impl Table {
                 "use super::*;".parse().unwrap(),
                 self.insert(backend),
                 self.query(backend)
+            })).into()
+        }
+    }
+
+    pub(super) fn gated_insertable_impl(&self, feature: &str, module: &str, backend: &str) -> TokenStream {
+        stream! {
+            format!("#[cfg(feature=\"{0}\")] mod {0}", feature).parse().unwrap(),
+            TokenTree::Group(Group::new(Delimiter::Brace, stream! {
+                format!("use core::backend::{}::{};", module, backend).parse().unwrap(),
+                "use super::*;".parse().unwrap(),
+                self.insert(backend)
             })).into()
         }
     }

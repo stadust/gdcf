@@ -3,6 +3,7 @@ use core::backend::Error;
 use core::FromSql;
 use gdcf::model::GameVersion;
 use gdcf::model::level::Featured;
+use gdcf::model::level::Password;
 use gdcf::model::LevelLength;
 use gdcf::model::LevelRating;
 use gdcf::model::MainSong;
@@ -64,5 +65,28 @@ impl<DB: Database> FromSql<DB> for Featured
             Self: Sized
     {
         i32::from_sql(sql).map(Featured::from)
+    }
+}
+
+impl<DB: Database> FromSql<DB> for Password
+    where
+        Option<String>: FromSql<DB>
+{
+    fn from_sql(sql: &<DB as Database>::Types) -> Result<Self, Error<DB>>
+        where
+            Self: Sized
+    {
+        let pass = Option::<String>::from_sql(sql)?;
+
+        Ok(match pass {
+            None => Password::NoCopy,
+            Some(pass) => {
+                if pass == "1" {
+                    Password::FreeCopy
+                } else {
+                    Password::PasswordCopy(pass.to_string())
+                }
+            }
+        })
     }
 }
