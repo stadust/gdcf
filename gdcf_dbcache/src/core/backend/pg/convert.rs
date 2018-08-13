@@ -19,6 +19,7 @@ pub enum PgTypes {
     Double(f64),
     Boolean(bool),
     Timestamp(NaiveDateTime),
+    Bytes(Vec<u8>),
     Null,
 }
 
@@ -40,6 +41,8 @@ impl FromPgSql for PgTypes {
             <f64 as FromPgSql>::from_sql(ty, raw).map(PgTypes::Double)
         } else if <NaiveDateTime as FromPgSql>::accepts(ty) {
             <NaiveDateTime as FromPgSql>::from_sql(ty, raw).map(PgTypes::Timestamp)
+        } else if <Vec<u8> as FromPgSql>::accepts(ty) {
+            <Vec<u8> as FromPgSql>::from_sql(ty, raw).map(PgTypes::Bytes)
         } else {
             panic!("oh no!")
         }
@@ -49,12 +52,12 @@ impl FromPgSql for PgTypes {
         Ok(PgTypes::Null)
     }
 
-
     fn accepts(ty: &Type) -> bool {
         <bool as FromPgSql>::accepts(ty) || <i16 as FromPgSql>::accepts(ty) ||
             <i32 as FromPgSql>::accepts(ty) || <i64 as FromPgSql>::accepts(ty) ||
             <String as FromPgSql>::accepts(ty) || <f32 as FromPgSql>::accepts(ty) ||
-            <f64 as FromPgSql>::accepts(ty) || <NaiveDateTime as FromPgSql>::accepts(ty)
+            <f64 as FromPgSql>::accepts(ty) || <NaiveDateTime as FromPgSql>::accepts(ty) ||
+            <Vec<u8> as FromPgSql>::accepts(ty)
     }
 }
 
@@ -72,6 +75,7 @@ impl ToPgSql for PgTypes {
             PgTypes::Float(value) => value.to_sql(ty, out),
             PgTypes::Boolean(value) => value.to_sql(ty, out),
             PgTypes::Timestamp(value) => value.to_sql(ty, out),
+            PgTypes::Bytes(value) => value.to_sql(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
     }
@@ -97,6 +101,7 @@ impl ToPgSql for PgTypes {
             PgTypes::Float(value) => value.to_sql_checked(ty, out),
             PgTypes::Boolean(value) => value.to_sql_checked(ty, out),
             PgTypes::Timestamp(value) => value.to_sql_checked(ty, out),
+            PgTypes::Bytes(value) => value.to_sql_checked(ty, out),
             PgTypes::Null => Ok(IsNull::Yes)
         }
     }
@@ -255,6 +260,16 @@ impl<T> AsSql<Pg> for Option<T>
     }
 }
 
+impl AsSql<Pg> for Vec<u8> {
+    fn as_sql(&self) -> PgTypes {
+        PgTypes::Bytes(self.clone())
+    }
+
+    fn as_sql_string(&self) -> String {
+        unimplemented!()
+    }
+}
+
 impl FromSql<Pg> for u8 {
     fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
         where
@@ -366,6 +381,18 @@ impl FromSql<Pg> for NaiveDateTime {
         match sql {
             PgTypes::Timestamp(ts) => Ok(*ts),
             _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime"))
+        }
+    }
+}
+
+impl FromSql<Pg> for Vec<u8> {
+    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
+        where
+            Self: Sized
+    {
+        match sql {
+            PgTypes::Bytes(vec) => Ok(vec.clone()),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "Vec<u8>"))
         }
     }
 }

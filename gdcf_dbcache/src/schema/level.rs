@@ -154,7 +154,7 @@ pub(crate) mod full_level {
     create! {
         level => {
             level_id: Unsigned<BigInteger> NotNull Unique Primary,
-            level_data: Text NotNull,
+            level_data: Bytes NotNull,
             level_password: Text,
             time_since_upload: Text,
             time_since_update: Text,

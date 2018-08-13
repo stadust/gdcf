@@ -24,8 +24,12 @@ pub mod to {
         Ok(utf8_cow.to_string())
     }
 
+    pub fn b64_decoded_bytes(encoded: &str) -> Result<Vec<u8>, DecodeError> {
+        base64::decode_config(encoded, URL_SAFE)
+    }
+
     pub fn b64_decoded_string(encoded: &str) -> Result<String, DecodeError> {
-        base64::decode_config(encoded, URL_SAFE).map(|bytes| String::from_utf8(bytes).unwrap())  // lets just trust the b64 lib to produce valid shit
+        b64_decoded_bytes(encoded).map(|bytes| String::from_utf8(bytes).unwrap())  // lets just trust the b64 lib to produce valid shit
     }
 
     pub fn bool(value: u8) -> bool {

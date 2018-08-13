@@ -368,13 +368,15 @@ pub struct Level {
     #[raw_data(flatten)]
     pub base: PartialLevel,
 
-    /// The raw level data
+    /// The raw level data. Note that GDCF performs the base64 decoding, though not the DEFLATE
+    /// decompression - The base64 decoded version of the level data requires the least amount
+    /// of space.
     ///
     /// ## GD Internals:
     /// This value is provided at index `4`, and is urlsafe base64 encoded and DEFLATE
     /// compressed
-    #[raw_data(index = 4)]
-    pub level_data: String,
+    #[raw_data(index = 4, deserialize_with = "convert::to::b64_decoded_bytes")]
+    pub level_data: Vec<u8>,
 
     /// The level's password
     ///

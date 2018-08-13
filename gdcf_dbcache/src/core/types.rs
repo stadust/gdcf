@@ -30,6 +30,9 @@ pub struct Boolean;
 #[derive(Debug, Default)]
 pub struct Unsigned<Signed>(Signed);
 
+#[derive(Debug, Default)]
+pub struct Bytes;
+
 if_query_part!(SmallInteger, Type<DB>);
 if_query_part!(Integer, Type<DB>);
 if_query_part!(BigInteger, Type<DB>);
@@ -38,6 +41,7 @@ if_query_part!(Double, Type<DB>);
 if_query_part!(Float, Type<DB>);
 if_query_part!(Boolean, Type<DB>);
 if_query_part!(UtcTimestamp, Type<DB>);
+if_query_part!(Bytes, Type<DB>);
 
 impl<DB: Database, Signed> Type<DB> for Unsigned<Signed>
     where
