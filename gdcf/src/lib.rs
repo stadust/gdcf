@@ -41,7 +41,7 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
-
+/*
 use api::client::ApiClient;
 use api::request::{LevelRequest, LevelsRequest, Request};
 use api::request::cacher::Cacher;
@@ -52,7 +52,7 @@ use futures::Future;
 use futures::future::join_all;
 use model::GDObject;
 use model::level::{Level, PartialLevel};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};*/
 
 #[macro_use]
 mod macros;
@@ -64,8 +64,7 @@ pub mod model;
 pub mod error;
 pub mod convert;
 mod gcdf2;
-//mod selfless;
-
+/*
 pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     fn cache(&self) -> MutexGuard<C>;
 
@@ -215,4 +214,4 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
         // TODO: this
         //lock!(self.client).spawn(future);
     }
-}
+}*/

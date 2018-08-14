@@ -1,5 +1,6 @@
 use api::ApiClient;
 use api::request::level::SearchFilters;
+use api::request::LevelRequest;
 use api::request::LevelsRequest;
 use api::response::ProcessedResponse;
 use cache::Cache;
@@ -9,13 +10,14 @@ use futures::Async;
 use futures::Future;
 use futures::future::Either;
 use futures::future::join_all;
+use futures::future::result;
 use model::GDObject;
+use model::Level;
 use model::PartialLevel;
 use std::error::Error;
 use std::mem;
 use std::sync::Arc;
 use std::sync::Mutex;
-use futures::future::result;
 
 #[derive(Debug)]
 struct Gdcf2<A: ApiClient + 'static, C: Cache + 'static> {
@@ -27,7 +29,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf2<A, C> {
     fn clone(&self) -> Self {
         Gdcf2 {
             client: self.client.clone(),
-            cache: self.cache.clone()
+            cache: self.cache.clone(),
         }
     }
 }
@@ -35,6 +37,25 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf2<A, C> {
 // TODO: figure out the race conditions later
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf2<A, C> {
+    pub fn level(&self, req: LevelRequest) -> GdcfFuture<Level, A::Err, C::Err> {
+        let cache = lock!(self.cache);
+        let clone = self.clone();
+
+        match cache.lookup_level(&req) {
+            Ok(cached) => {
+                if cache.is_expired(&cached) {
+                    GdcfFuture::outdated(cached.extract(), clone.level_future(req))
+                } else {
+                    GdcfFuture::up_to_date(cached.extract())
+                }
+            }
+
+            Err(CacheError::CacheMiss) => GdcfFuture::absent(clone.level_future(req)),
+
+            Err(err) => panic!("Error accessing cache! {:?}", err)
+        }
+    }
+
     pub fn levels(&self, req: LevelsRequest) -> GdcfFuture<Vec<PartialLevel>, A::Err, C::Err> {
         let cache = lock!(self.cache);
         let clone = self.clone();
@@ -54,15 +75,37 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf2<A, C> {
         }
     }
 
+    fn level_future(self, req: LevelRequest) -> impl Future<Item=Level, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
+        let cache = self.cache.clone();
+        let future = lock!(self.client).level(&req);
+
+        future.map_err(GdcfError::Api)
+            .and_then(move |response| self.integrity(response))
+            .and_then(move |response| {
+                let mut level = None;
+                let cache = lock!(cache);
+
+                for obj in response {
+                    cache.store_object(&obj)?;
+
+                    if let GDObject::Level(lvl) = obj {
+                        level = Some(lvl);
+                    }
+                }
+
+                Ok(level.unwrap())
+            })
+    }
+
     fn levels_future(self, req: LevelsRequest) -> impl Future<Item=Vec<PartialLevel>, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
         let cache = self.cache.clone();
-        let future = self.client.lock().unwrap().levels(&req);
+        let future = lock!(self.client).levels(&req);
 
-        future.map_err(|api_error| GdcfError::Api(api_error))
+        future.map_err(GdcfError::Api)
             .and_then(move |response| self.integrity(response))
             .and_then(move |response| {
                 let mut levels = Vec::new();
-                let cache = cache.lock().unwrap();
+                let cache = lock!(cache);
 
                 for obj in response {
                     match obj {
@@ -71,7 +114,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf2<A, C> {
                     }
                 }
 
-                cache.store_partial_levels(&req, &levels);
+                cache.store_partial_levels(&req, &levels)?;
                 Ok(levels)
             })
     }
