@@ -33,7 +33,7 @@ pub enum Error<DB: Database> {
 
 pub trait Database: Debug + Sized {
     type Types: Debug;
-    type Error: StdError;
+    type Error: StdError + Send + 'static;
 
     fn prepare(idx: usize) -> String;
 

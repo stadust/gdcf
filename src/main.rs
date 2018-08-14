@@ -4,20 +4,22 @@ extern crate futures;
 extern crate gdcf;
 extern crate gdcf_dbcache;
 extern crate gdrs;
+#[macro_use]
+extern crate log;
+extern crate tokio;
 
 use chrono::Duration;
-use futures::{Async, Future};
-use gdcf::{ConsistentCacheManager, Gdcf};
+use futures::{Async, Future, lazy};
 use gdcf::api::request::{LevelRequest, LevelsRequest, Request};
+use gdcf::api::request::LevelRequestType;
 use gdcf::cache::Cache;
+use gdcf::Gdcf;
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
-
+use tokio::executor::current_thread;
 
 fn main() {
     env_logger::init();
-
-    // Rust built-in await/async WHEN
 
     let config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
     let cache = DatabaseCache::new(config);
@@ -25,30 +27,23 @@ fn main() {
     cache.initialize().expect("Error initializing cache");
 
     let client = BoomlingsClient::new();
-    let gdcf = ConsistentCacheManager::new(client, cache);
+    let gdcf = Gdcf::new(client, cache);
 
-    for id in vec![38515466u64, 47620786, 47998429, 47849218, 47339027] {
-        println!(
-            "{:?}",
-            gdcf.level(LevelRequest::new(id))
-                .map(|l| l.password)
-        );
-    }
+    tokio::run(lazy(move || {
+        let request = LevelsRequest::default()
+            .request_type(LevelRequestType::Featured)
+            .page(5);
 
-    gdcf.levels(LevelsRequest::new().search("Starfire".into()));
-}
+        gdcf.levels(request)
+            .map_err(|error| eprintln!("Error retrieving 5th page of featured levels!"))
+            .map(move |levels| {
+                for level in levels {
+                    let future = gdcf.level(LevelRequest::new(level.level_id))
+                        .map(|l| println!("Password of level {}: {:?}", l, l.password))
+                        .map_err(move |error| eprintln!("Error downloading level {}: {:?}", level.level_id, error));
 
-pub fn until_all_done() -> impl Future<Item=(), Error=()> {
-    Thing {}
-}
-
-struct Thing;
-
-impl Future for Thing {
-    type Item = ();
-    type Error = ();
-
-    fn poll(&mut self) -> Result<Async<()>, ()> {
-        Ok(Async::NotReady)
-    }
+                    tokio::spawn(future);
+                }
+            })
+    }));
 }

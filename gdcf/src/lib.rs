@@ -91,6 +91,13 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf<A, C> {
 // TODO: figure out the race conditions later
 
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
+    pub fn new(client: A, cache: C) -> Gdcf<A, C> {
+        Gdcf {
+            client: Arc::new(Mutex::new(client)),
+            cache: Arc::new(Mutex::new(cache)),
+        }
+    }
+
     pub fn level(&self, req: LevelRequest) -> GdcfFuture<Level, A::Err, C::Err> {
         let cache = lock!(self.cache);
         let clone = self.clone();
@@ -202,6 +209,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
         }
 
         if reqs.is_empty() {
+            debug!("No integrity requests required");
+
             Either::B(result(Ok(response)))
         } else {
             Either::A(join_all(reqs)
@@ -219,6 +228,8 @@ pub struct GdcfFuture<T, AE: Error + Send + 'static, CE: Error + Send + 'static>
 
 impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE, CE> {
     fn up_to_date(object: T) -> GdcfFuture<T, AE, CE> {
+        debug!("Creating new up-to-date GdcfFuture!");
+
         GdcfFuture {
             cached: Some(object),
             refresher: None,
@@ -229,6 +240,8 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
         where
             F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
     {
+        debug!("Creating new outdated GdcfFuture!");
+
         GdcfFuture {
             cached: Some(object),
             refresher: Some(Box::new(f)),
@@ -239,6 +252,8 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
         where
             F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
     {
+        debug!("Creating new absent GdcfFuture!");
+
         GdcfFuture {
             cached: None,
             refresher: Some(Box::new(f)),

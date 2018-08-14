@@ -14,8 +14,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_urlencoded;
-//extern crate tokio_core;
-extern crate tokio;
 
 use futures::Future;
 use futures::Stream;
@@ -24,17 +22,19 @@ use gdcf::api::client::ApiFuture;
 use gdcf::api::request::level::LevelRequest;
 use gdcf::api::request::level::LevelsRequest;
 use gdcf::error::ApiError;
+use hyper::Body;
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper::Error;
+use hyper::header::HeaderValue;
 use hyper::Method;
 use hyper::Request;
 use hyper::StatusCode;
-use hyper::Body;
 use ser::LevelRequestRem;
 use ser::LevelsRequestRem;
 use std::str;
-use hyper::header::HeaderValue;
+use futures::future::Executor;
+use hyper::client::Builder;
 
 #[macro_use]
 mod macros;
@@ -62,6 +62,19 @@ impl BoomlingsClient {
 
         BoomlingsClient {
             client: Client::new(),
+        }
+    }
+
+    pub fn with_exec<E>(exec: E) -> Self
+        where
+            E: Executor<Box<dyn Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
+    {
+        let client = Builder::default()
+            .executor(exec)
+            .build_http();
+
+        BoomlingsClient {
+            client
         }
     }
 
@@ -95,14 +108,5 @@ impl ApiClient for BoomlingsClient {
         let req = self.make_request("getGJLevels21", Req::GetLevels(req));
 
         prepare_future!(self.client.request(req), parse::levels)
-    }
-
-    fn spawn<F>(&self, f: F)
-        where
-            F: Future<Item=(), Error=()> + 'static
-    {
-        debug!("Spawning a future!");
-
-        tokio::executor::current_thread::spawn(f);
     }
 }

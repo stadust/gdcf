@@ -97,7 +97,7 @@ impl DatabaseCache<Pg> {
 
 #[cfg(feature = "pg")]
 impl DatabaseCache<Pg> {
-    fn store_partial_level(&self, level: PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
+    fn store_partial_level(&self, level: &PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
         let ts = Utc::now().naive_utc();
 
         level.insert()
@@ -107,7 +107,7 @@ impl DatabaseCache<Pg> {
             .map_err(convert_error)
     }
 
-    fn store_song(&self, song: NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
+    fn store_song(&self, song: &NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
         let ts = Utc::now().naive_utc();
 
         song.insert()
@@ -117,17 +117,17 @@ impl DatabaseCache<Pg> {
             .map_err(convert_error)
     }
 
-    fn store_level(&self, level: Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
+    fn store_level(&self, level: &Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
         let ts = Utc::now().naive_utc();
+
+        self.store_partial_level(&level.base)?;
 
         level.insert()
             .with(full_level::level_id.set(&level.base.level_id))
             .with(full_level::last_cached_at.set(&ts))
             .on_conflict_update(vec![&full_level::level_id])
             .execute(&self.config.backend)
-            .map_err(convert_error)?;
-
-        self.store_partial_level(level.base)
+            .map_err(convert_error)
     }
 }
 
@@ -178,7 +178,7 @@ impl Cache for DatabaseCache<Pg>
         Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
     }
 
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
+    fn store_partial_levels(&self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
         let h = util::hash(req);
         let ts = Utc::now().naive_utc();
 
@@ -222,7 +222,7 @@ impl Cache for DatabaseCache<Pg>
             .map_err(convert_error)  // for some reason I can use the question mark operator?????
     }
 
-    fn store_object(&self, obj: GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
+    fn store_object(&self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
         match obj {
             GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
             GDObject::NewgroundsSong(song) => self.store_song(song),
