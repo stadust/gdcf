@@ -18,11 +18,9 @@ use api::client::{ApiClient, ApiFuture};
 use model::GameVersion;
 pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
 use std::fmt::Display;
-use api::request::cacher::Cacher;
 use std::hash::Hash;
 
 pub mod level;
-pub mod cacher;
 
 /// Base data included in every request made
 ///
@@ -92,8 +90,6 @@ impl Default for BaseRequest {
 /// If new fields are added in later version of GDCF, they may only be hashed if they are explicitly
 /// set to a value, to ensure the above-mentioned compatibility
 pub trait Request: Display + Default + Hash {
-    type ResponseCacher: Cacher<Self>;
-
     /// Creates a default instance of this `Request`
     fn new() -> Self {
         Default::default()

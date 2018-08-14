@@ -41,18 +41,27 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
-/*
-use api::client::ApiClient;
-use api::request::{LevelRequest, LevelsRequest, Request};
-use api::request::cacher::Cacher;
+
+use api::ApiClient;
+use api::request::level::SearchFilters;
+use api::request::LevelRequest;
+use api::request::LevelsRequest;
+use api::response::ProcessedResponse;
 use cache::Cache;
 use error::CacheError;
-use ext::ApiClientExt;
+use error::GdcfError;
+use futures::Async;
 use futures::Future;
+use futures::future::Either;
 use futures::future::join_all;
+use futures::future::result;
 use model::GDObject;
-use model::level::{Level, PartialLevel};
-use std::sync::{Arc, Mutex, MutexGuard};*/
+use model::Level;
+use model::PartialLevel;
+use std::error::Error;
+use std::mem;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[macro_use]
 mod macros;
@@ -63,155 +72,196 @@ pub mod cache;
 pub mod model;
 pub mod error;
 pub mod convert;
-mod gcdf2;
-/*
-pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
-    fn cache(&self) -> MutexGuard<C>;
-
-    fn refresh<R: Request + 'static>(&self, request: R);
-
-    gdcf!(level, LevelRequest, lookup_level, Level);
-    gdcf!(levels, LevelsRequest, lookup_partial_levels, Vec<PartialLevel>);
-}
 
 #[derive(Debug)]
-pub struct CacheManager<A: ApiClient + 'static, C: Cache + 'static> {
+pub struct Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     client: Arc<Mutex<A>>,
     cache: Arc<Mutex<C>>,
 }
 
-#[derive(Debug)]
-pub struct ConsistentCacheManager<A: ApiClient + 'static, C: Cache + 'static> {
-    client: Arc<Mutex<A>>,
-    cache: Arc<Mutex<C>>,
-}
-
-impl<A: ApiClient + 'static, C: Cache + 'static> CacheManager<A, C> {
-    pub fn new(client: A, cache: C) -> CacheManager<A, C> {
-        info!("Created new CacheManager");
-
-        CacheManager {
-            client: Arc::new(Mutex::new(client)),
-            cache: Arc::new(Mutex::new(cache)),
+impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf<A, C> {
+    fn clone(&self) -> Self {
+        Gdcf {
+            client: self.client.clone(),
+            cache: self.cache.clone(),
         }
     }
 }
 
-impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
-    pub fn new(client: A, cache: C) -> ConsistentCacheManager<A, C> {
-        info!("Created new ConsistentCacheManager");
+// TODO: figure out the race conditions later
 
-        ConsistentCacheManager {
-            client: Arc::new(Mutex::new(client)),
-            cache: Arc::new(Mutex::new(cache)),
+impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
+    pub fn level(&self, req: LevelRequest) -> GdcfFuture<Level, A::Err, C::Err> {
+        let cache = lock!(self.cache);
+        let clone = self.clone();
+
+        match cache.lookup_level(&req) {
+            Ok(cached) => {
+                if cache.is_expired(&cached) {
+                    GdcfFuture::outdated(cached.extract(), clone.level_future(req))
+                } else {
+                    GdcfFuture::up_to_date(cached.extract())
+                }
+            }
+
+            Err(CacheError::CacheMiss) => GdcfFuture::absent(clone.level_future(req)),
+
+            Err(err) => panic!("Error accessing cache! {:?}", err)
         }
     }
 
-    fn ensure_integrity(cache: &C, object: &GDObject) -> Result<Option<impl Request>, CacheError<C::Err>> {
-        use api::request::level::SearchFilters;
+    pub fn levels(&self, req: LevelsRequest) -> GdcfFuture<Vec<PartialLevel>, A::Err, C::Err> {
+        let cache = lock!(self.cache);
+        let clone = self.clone();
 
-        match *object {
-            GDObject::Level(ref level) => {
-                if let Some(song_id) = level.base.custom_song_id {
-                    on_miss! {
-                        cache.lookup_song(song_id) => {
-                            Ok(Some(LevelsRequest::default()
-                                .with_id(level.base.level_id)
-                                .filter(SearchFilters::default()
-                                    .custom_song(song_id))))
+        match cache.lookup_partial_levels(&req) {
+            Ok(cached) => {
+                if cache.is_expired(&cached) {
+                    GdcfFuture::outdated(cached.extract(), clone.levels_future(req))
+                } else {
+                    GdcfFuture::up_to_date(cached.extract())
+                }
+            }
+
+            Err(CacheError::CacheMiss) => GdcfFuture::absent(clone.levels_future(req)),
+
+            Err(err) => panic!("Error accessing cache! {:?}", err)
+        }
+    }
+
+    fn level_future(self, req: LevelRequest) -> impl Future<Item=Level, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
+        let cache = self.cache.clone();
+        let future = lock!(self.client).level(&req);
+
+        future.map_err(GdcfError::Api)
+            .and_then(move |response| self.integrity(response))
+            .and_then(move |response| {
+                let mut level = None;
+                let cache = lock!(cache);
+
+                for obj in response {
+                    cache.store_object(&obj)?;
+
+                    if let GDObject::Level(lvl) = obj {
+                        level = Some(lvl);
+                    }
+                }
+
+                Ok(level.unwrap())
+            })
+    }
+
+    fn levels_future(self, req: LevelsRequest) -> impl Future<Item=Vec<PartialLevel>, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
+        let cache = self.cache.clone();
+        let future = lock!(self.client).levels(&req);
+
+        future.map_err(GdcfError::Api)
+            .and_then(move |response| self.integrity(response))
+            .and_then(move |response| {
+                let mut levels = Vec::new();
+                let cache = lock!(cache);
+
+                for obj in response {
+                    match obj {
+                        GDObject::PartialLevel(level) => levels.push(level),
+                        _ => cache.store_object(&obj)?
+                    }
+                }
+
+                cache.store_partial_levels(&req, &levels)?;
+                Ok(levels)
+            })
+    }
+
+    fn integrity(self, response: ProcessedResponse) -> impl Future<Item=ProcessedResponse, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
+        let mut reqs = Vec::new();
+
+        for obj in &response {
+            match obj {
+                GDObject::Level(level) => {
+                    if let Some(song_id) = level.base.custom_song_id {
+                        match lock!(self.cache).lookup_song(song_id) {
+                            Err(CacheError::CacheMiss) => {
+                                reqs.push(self.levels(LevelsRequest::default()
+                                    .with_id(level.base.level_id)
+                                    .filter(SearchFilters::default()
+                                        .custom_song(song_id)))
+                                    .map(|_| ()))
+                            }
+
+                            Err(err) => {
+                                return Either::B(result(Err(GdcfError::Cache(err))));
+                            }
+
+                            _ => continue
                         }
                     }
-                } else {
-                    Ok(None)
                 }
+                _ => ()
             }
-            _ => Ok(None)
+        }
+
+        if reqs.is_empty() {
+            Either::B(result(Ok(response)))
+        } else {
+            Either::A(join_all(reqs)
+                .map(move |_| response))
+        }
+    }
+}
+
+#[allow(missing_debug_implementations)]
+pub struct GdcfFuture<T, AE: Error + Send + 'static, CE: Error + Send + 'static> {
+    // invariant: at least one of the fields is not `None`
+    cached: Option<T>,
+    refresher: Option<Box<dyn Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static>>,
+}
+
+impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE, CE> {
+    fn up_to_date(object: T) -> GdcfFuture<T, AE, CE> {
+        GdcfFuture {
+            cached: Some(object),
+            refresher: None,
         }
     }
 
-    fn with_integrity<R>(request: R, client_mutex: Arc<Mutex<A>>, cache_mutex: Arc<Mutex<C>>) -> impl Future<Item=(), Error=()> + 'static
+    fn outdated<F>(object: T, f: F) -> GdcfFuture<T, AE, CE>
         where
-            R: Request + 'static,
+            F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
     {
-        let request_future = lock!(client_mutex).make(&request);
+        GdcfFuture {
+            cached: Some(object),
+            refresher: Some(Box::new(f)),
+        }
+    }
 
-        request_future.and_then(move |response| {
-            let mut integrity_futures = Vec::new();
+    fn absent<F>(f: F) -> GdcfFuture<T, AE, CE>
+        where
+            F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
+    {
+        GdcfFuture {
+            cached: None,
+            refresher: Some(Box::new(f)),
+        }
+    }
 
-            for raw_object in &response {
-                match Self::ensure_integrity(lock!(@cache_mutex), raw_object) {
-                    Ok(Some(integrity_request)) => {
-                        warn!("Integrity for result of {} is not given, making integrity request {}", request, integrity_request);
+    pub fn cached(&self) -> &Option<T> {
+        &self.cached
+    }
 
-                        let future = Self::with_integrity(integrity_request, client_mutex.clone(), cache_mutex.clone());
-
-                        integrity_futures.push(future);
-                    }
-
-                    Err(err) => {
-                        return Err(error!("Error while constructing integrity request for {}: {:?}", request, err));
-                    }
-
-                    _ => ()
-                }
-            }
-
-            if !integrity_futures.is_empty() {
-                let req_str = request.to_string();
-                let integrity_future = join_all(integrity_futures)
-                    .map(move |_| {
-                        debug!("Successfully stored all data relevant for integrity!");
-                        R::ResponseCacher::store_response(lock!(!cache_mutex), &request, response)
-                            .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
-                    })
-                    .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", req_str));
-
-                // TODO: this
-                //lock!(client_mutex).spawn(integrity_future);
-            } else {
-                debug!("Result of {} does not compromise cache integrity, proceeding!", request);
-                R::ResponseCacher::store_response(lock!(!cache_mutex), &request, response)
-                    .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
-            }
-
-            Ok(())
-        })
+    pub fn take(&mut self) -> Option<T> {
+        mem::replace(&mut self.cached, None)
     }
 }
 
-impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, C> {
-    fn cache(&self) -> MutexGuard<C> {
-        lock!(self.cache)
-    }
+impl<T, AE: Error + Send + 'static, CE: Error + Send + 'static> Future for GdcfFuture<T, AE, CE> {
+    type Item = T;
+    type Error = GdcfError<AE, CE>;
 
-    fn refresh<R: Request + 'static>(&self, request: R) {
-        info!("Cache entry for {} is either expired or non existant, refreshing!", request);
-
-        let client = lock!(self.client);
-        let cache = self.cache.clone();
-
-        let future = client.make(&request)
-            .map(move |response| {
-                R::ResponseCacher::store_response(lock!(!cache), &request, response)
-                    .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
-            });
-
-        // TODO: this
-        //client.spawn(future);
+    fn poll(&mut self) -> Result<Async<T>, GdcfError<AE, CE>> {
+        match self.refresher {
+            Some(ref mut fut) => fut.poll(),
+            None => Ok(Async::Ready(self.take().unwrap()))
+        }
     }
 }
-
-impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheManager<A, C> {
-    fn cache(&self) -> MutexGuard<C> {
-        lock!(self.cache)
-    }
-
-    fn refresh<R: Request + 'static>(&self, request: R) {
-        info!("Cache entry for {} is either expired or non existant, refreshing with integrity check!", request);
-
-        let future = Self::with_integrity(request, self.client.clone(), self.cache.clone());
-
-        // TODO: this
-        //lock!(self.client).spawn(future);
-    }
-}*/
