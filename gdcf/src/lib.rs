@@ -63,6 +63,8 @@ pub mod cache;
 pub mod model;
 pub mod error;
 pub mod convert;
+mod gcdf2;
+//mod selfless;
 
 pub trait Gdcf<A: ApiClient + 'static, C: Cache + 'static> {
     fn cache(&self) -> MutexGuard<C>;
@@ -165,7 +167,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> ConsistentCacheManager<A, C> {
                     })
                     .map_err(move |_| error!("Failed to ensure integrity of {}'s result, not caching response!", req_str));
 
-                lock!(client_mutex).spawn(integrity_future);
+                // TODO: this
+                //lock!(client_mutex).spawn(integrity_future);
             } else {
                 debug!("Result of {} does not compromise cache integrity, proceeding!", request);
                 R::ResponseCacher::store_response(lock!(!cache_mutex), &request, response)
@@ -194,7 +197,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for CacheManager<A, 
                     .map_err(|err| error!("Failed to store response to request {}: {:?}", request, err));
             });
 
-        client.spawn(future);
+        // TODO: this
+        //client.spawn(future);
     }
 }
 
@@ -208,6 +212,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> for ConsistentCacheM
 
         let future = Self::with_integrity(request, self.client.clone(), self.cache.clone());
 
-        lock!(self.client).spawn(future);
+        // TODO: this
+        //lock!(self.client).spawn(future);
     }
 }

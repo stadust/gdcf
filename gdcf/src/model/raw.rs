@@ -1,7 +1,7 @@
-use std::str::FromStr;
+use error::ValueError;
 use std::error::Error;
 use std::iter;
-use error::ValueError;
+use std::str::FromStr;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Value {
@@ -24,14 +24,14 @@ impl RawObject {
     pub fn get<T>(&self, idx: usize) -> Result<T, ValueError>
         where
             T: FromStr + 'static,
-            <T as FromStr>::Err: Error,
+            <T as FromStr>::Err: Error + Send + 'static,
     {
         match self.values.get(idx) {
             None => Err(ValueError::IndexOutOfBounds(idx)),
             Some(value) => match *value {
                 Value::Value(ref string) => match string.parse() {
                     Ok(parsed) => Ok(parsed),
-                    Err(err) => Err(ValueError::Parse(idx, string.clone(), box err)),
+                    Err(err) => Err(ValueError::Parse(idx, string.clone(), Box::new(err))),
                 },
                 Value::NotProvided => Err(ValueError::NoValue(idx)),
             },
@@ -40,14 +40,14 @@ impl RawObject {
 
     pub fn get_with<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
         where
-            E: Error + 'static,
+            E: Error + Send + 'static,
             F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Err(ValueError::IndexOutOfBounds(idx)),
             Some(value) => match *value {
                 Value::Value(ref string) => {
-                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err))
+                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), Box::new(err)))
                 }
                 Value::NotProvided => Err(ValueError::NoValue(idx)),
             },
@@ -56,14 +56,14 @@ impl RawObject {
 
     pub fn get_with_or<T, E, F>(&self, idx: usize, f: F, default: T) -> Result<T, ValueError>
         where
-            E: Error + 'static,
+            E: Error + Send + 'static,
             F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(default),
             Some(value) => match *value {
                 Value::Value(ref string) => {
-                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err))
+                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), Box::new(err)))
                 }
                 Value::NotProvided => Ok(default),
             },
@@ -73,14 +73,14 @@ impl RawObject {
     pub fn get_with_or_default<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
         where
             T: Default,
-            E: Error + 'static,
+            E: Error + Send + 'static,
             F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
             None => Ok(Default::default()),
             Some(value) => match *value {
                 Value::Value(ref string) => {
-                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), box err))
+                    f(string).map_err(|err| ValueError::Parse(idx, string.clone(), Box::new(err)))
                 }
                 Value::NotProvided => Ok(Default::default()),
             },
@@ -90,14 +90,14 @@ impl RawObject {
     pub fn get_or<T>(&self, idx: usize, default: T) -> Result<T, ValueError>
         where
             T: FromStr + 'static,
-            <T as FromStr>::Err: Error,
+            <T as FromStr>::Err: Error + Send + 'static,
     {
         match self.values.get(idx) {
             None => Ok(default),
             Some(value) => match *value {
                 Value::Value(ref string) => match string.parse() {
                     Ok(parsed) => Ok(parsed),
-                    Err(err) => Err(ValueError::Parse(idx, string.clone(), box err)),
+                    Err(err) => Err(ValueError::Parse(idx, string.clone(), Box::new(err))),
                 },
                 Value::NotProvided => Ok(default),
             },
@@ -107,7 +107,7 @@ impl RawObject {
     pub fn get_or_default<T>(&self, idx: usize) -> Result<T, ValueError>
         where
             T: FromStr + Default + 'static,
-            <T as FromStr>::Err: Error,
+            <T as FromStr>::Err: Error + Send + 'static,
     {
         self.get_or(idx, Default::default())
     }

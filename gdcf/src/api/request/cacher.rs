@@ -20,7 +20,7 @@ impl<R: Request> Cacher<R> for DefaultCacher {
             C: Cache
     {
         for object in response {
-            cache.store_object(object)?
+            cache.store_object(&object)?
         }
 
         Ok(())
@@ -40,10 +40,10 @@ impl Cacher<LevelsRequest> for LevelsRequestCacher {
         for object in response {
             match object {
                 GDObject::PartialLevel(lvl) => levels.push(lvl),
-                other => cache.store_object(other)?
+                other => cache.store_object(&other)?
             }
         }
 
-        cache.store_partial_levels(request, levels)
+        cache.store_partial_levels(request, &levels)
     }
 }

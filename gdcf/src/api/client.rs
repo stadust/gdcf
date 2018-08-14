@@ -6,15 +6,11 @@ use api::response::ProcessedResponse;
 use std::error::Error;
 use error::ApiError;
 
-pub type ApiFuture<E> = Box<dyn Future<Item=ProcessedResponse, Error=ApiError<E>> + 'static>;
+pub type ApiFuture<E> = Box<dyn Future<Item=ProcessedResponse, Error=ApiError<E>> + Send + 'static>;
 
-pub trait ApiClient: Sized {
-    type Err: Error + 'static;
+pub trait ApiClient: Sized + Send + 'static {
+    type Err: Error + Send + 'static;
 
     fn level(&self, req: &LevelRequest) -> ApiFuture<Self::Err>;
     fn levels(&self, req: &LevelsRequest) -> ApiFuture<Self::Err>;
-
-    fn spawn<F>(&self, f: F)
-        where
-            F: Future<Item=(), Error=()> + 'static;
 }
