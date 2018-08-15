@@ -47,7 +47,7 @@ impl<DB: Database, T> QueryPart<DB> for T
         self.as_sql_string()
     }
 
-    fn to_sql<'a>(&'a self) -> Preparation<'a, DB> {
+    fn to_sql(&self) -> Preparation<DB> {
         (PreparedStatement::placeholder(), vec!(self))
     }
 }
@@ -60,7 +60,7 @@ impl<'a, DB: Database> QueryPart<DB> for dyn AsSql<DB> + 'a {
         self.as_sql_string()
     }
 
-    fn to_sql<'b>(&'b self) -> Preparation<'b, DB> {
+    fn to_sql(&self) -> Preparation<DB> {
         (PreparedStatement::placeholder(), vec!(self))
     }
 }

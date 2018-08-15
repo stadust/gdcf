@@ -94,7 +94,7 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
 }
 
 pub trait Constraint<DB: Database>: QueryPart<DB> {
-    fn name<'a>(&'a self) -> Option<&'a str> {
+    fn name(&self) -> Option<&str> {
         None
     }
 }

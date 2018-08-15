@@ -44,7 +44,7 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn eq<'f, DB: Database, S: AsSql<DB> + 'static>(&'f self, value: S) -> EqValue<'f, DB> {
+    pub fn eq<DB: Database, S: AsSql<DB> + 'static>(&self, value: S) -> EqValue<DB> {
         EqValue::new(&self, value)
     }
 

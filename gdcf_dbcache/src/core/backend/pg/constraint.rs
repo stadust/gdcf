@@ -32,7 +32,7 @@ impl<'a, D: SqlExpr<Pg>> QueryPart<Pg> for DefaultConstraint<'a, Pg, D> {
         }
     }
 
-    fn to_sql<'b>(&'b self) -> Preparation<'b, Pg> {
+    fn to_sql(&self) -> Preparation<Pg> {
         match self.name {
             None => Preparation::<Pg>::default()
                 .with_static("DEFAULT ")

@@ -51,7 +51,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         format!("INSERT INTO {} ({}) VALUES ({}) {}", self.table().name, fields.join_with(","), values.join_with(","), self.on_conflict())
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("INSERT INTO ")
             .with_static(self.table().name)
@@ -85,7 +85,7 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
         format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join_with(" "))
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static(self.name)
             .with_static(" ")
@@ -112,7 +112,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
         )
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("CREATE TABLE ");
 
@@ -176,7 +176,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
         format!("SELECT {} FROM {} {} {} {} {}", self.fields(), self.table.name, join_clause, where_clause, self.bounds(), order_clause)
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("SELECT ")
             .with_static(self.fields())
@@ -199,7 +199,7 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
         format!("JOIN {} ON {}", self.other.name, self.join_condition.to_sql_unprepared())
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
             .with_static("JOIN ")
             .with_static(self.other.name)
@@ -216,7 +216,7 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
         }
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         unimplemented!()
     }
 }
@@ -229,7 +229,7 @@ impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
         }
     }
 
-    fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("DELETE FROM ")
             .with_static(self.table.name);

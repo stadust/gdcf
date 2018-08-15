@@ -28,7 +28,7 @@ impl Database for Sqlite {
     }
 }
 
-impl<'a> QueryPart<'a, Sqlite> for And<'a, Sqlite> {
+impl QueryPart<Sqlite> for And<Sqlite> {
     fn to_sql_unprepared(&self) -> String {
         format!("({} AND {})", self.cond_1.to_sql_unprepared(), self.cond_2.to_sql_unprepared())
     }

@@ -13,7 +13,7 @@ pub mod delete;
 pub trait QueryPart<DB: Database>: Debug {
     fn to_sql_unprepared(&self) -> String;
 
-    fn to_sql<'a>(&'a self) -> Preparation<'a, DB> {
+    fn to_sql(&self) -> Preparation<DB> {
         (self.to_sql_unprepared().into(), Vec::new())
     }
 }
