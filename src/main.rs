@@ -1,22 +1,20 @@
-extern crate chrono;
+#![deny(
+bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+)]
+
 extern crate env_logger;
 extern crate futures;
 extern crate gdcf;
 extern crate gdcf_dbcache;
 extern crate gdrs;
-#[macro_use]
-extern crate log;
 extern crate tokio;
 
-use chrono::Duration;
-use futures::{Async, Future, lazy};
-use gdcf::api::request::{LevelRequest, LevelsRequest, Request};
+use futures::{Future, lazy};
+use gdcf::api::request::{LevelRequest, LevelsRequest};
 use gdcf::api::request::LevelRequestType;
-use gdcf::cache::Cache;
 use gdcf::Gdcf;
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
-use tokio::executor::current_thread;
 
 fn main() {
     env_logger::init();
@@ -31,11 +29,11 @@ fn main() {
 
     tokio::run(lazy(move || {
         let request = LevelsRequest::default()
-            .request_type(LevelRequestType::Featured)
+            .request_type(LevelRequestType::MostLiked)
             .page(5);
 
         gdcf.levels(request)
-            .map_err(|error| eprintln!("Error retrieving 5th page of featured levels!"))
+            .map_err(|_| eprintln!("Error retrieving 6th page of featured levels!"))
             .map(move |levels| {
                 for level in levels {
                     let future = gdcf.level(LevelRequest::new(level.level_id))

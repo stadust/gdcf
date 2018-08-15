@@ -39,11 +39,14 @@ pub mod to {
     pub fn level_password(encrypted: &str) -> Result<Password, DecodeError> {
         match encrypted.as_ref() {
             "0" => Ok(Password::NoCopy),
-            "1" => Ok(Password::FreeCopy),
             pass => xor_decrypted(pass, "26364")
                 .map(|mut decrypted| {
                     decrypted.remove(0);
-                    Password::PasswordCopy(decrypted)
+                    if decrypted.is_empty() {
+                        Password::FreeCopy
+                    } else {
+                        Password::PasswordCopy(decrypted)
+                    }
                 })
         }
     }

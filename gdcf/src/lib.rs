@@ -22,9 +22,8 @@ bare_trait_objects, missing_debug_implementations, unused_extern_crates, pattern
 //! to information such as level description that can be used easily even in environments where
 //! the slow response times and unreliable availability of RobTop's server would be unacceptable otherwise
 //!
-//! It further has the ability to ensure the integrity of its cached data, which means it can
-//! automatically generate more requests if it notices that, i.e., a level you just retrieved
-//! doesn't have its newgrounds song cached.
+//! It further ensures the integrity of its cached data, which means it automatically generates
+//! more requests if it notices that, i.e., a level you just retrieved doesn't have its newgrounds song cached.
 //!
 extern crate base64;
 extern crate chrono;
@@ -98,87 +97,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
         }
     }
 
-    pub fn level(&self, req: LevelRequest) -> GdcfFuture<Level, A::Err, C::Err> {
-        let cache = lock!(self.cache);
-        let clone = self.clone();
-
-        match cache.lookup_level(&req) {
-            Ok(cached) => {
-                if cache.is_expired(&cached) {
-                    GdcfFuture::outdated(cached.extract(), clone.level_future(req))
-                } else {
-                    GdcfFuture::up_to_date(cached.extract())
-                }
-            }
-
-            Err(CacheError::CacheMiss) => GdcfFuture::absent(clone.level_future(req)),
-
-            Err(err) => panic!("Error accessing cache! {:?}", err)
-        }
-    }
-
-    pub fn levels(&self, req: LevelsRequest) -> GdcfFuture<Vec<PartialLevel>, A::Err, C::Err> {
-        let cache = lock!(self.cache);
-        let clone = self.clone();
-
-        match cache.lookup_partial_levels(&req) {
-            Ok(cached) => {
-                if cache.is_expired(&cached) {
-                    GdcfFuture::outdated(cached.extract(), clone.levels_future(req))
-                } else {
-                    GdcfFuture::up_to_date(cached.extract())
-                }
-            }
-
-            Err(CacheError::CacheMiss) => GdcfFuture::absent(clone.levels_future(req)),
-
-            Err(err) => panic!("Error accessing cache! {:?}", err)
-        }
-    }
-
-    fn level_future(self, req: LevelRequest) -> impl Future<Item=Level, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
-        let cache = self.cache.clone();
-        let future = lock!(self.client).level(&req);
-
-        future.map_err(GdcfError::Api)
-            .and_then(move |response| self.integrity(response))
-            .and_then(move |response| {
-                let mut level = None;
-                let cache = lock!(cache);
-
-                for obj in response {
-                    cache.store_object(&obj)?;
-
-                    if let GDObject::Level(lvl) = obj {
-                        level = Some(lvl);
-                    }
-                }
-
-                Ok(level.unwrap())
-            })
-    }
-
-    fn levels_future(self, req: LevelsRequest) -> impl Future<Item=Vec<PartialLevel>, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
-        let cache = self.cache.clone();
-        let future = lock!(self.client).levels(&req);
-
-        future.map_err(GdcfError::Api)
-            .and_then(move |response| self.integrity(response))
-            .and_then(move |response| {
-                let mut levels = Vec::new();
-                let cache = lock!(cache);
-
-                for obj in response {
-                    match obj {
-                        GDObject::PartialLevel(level) => levels.push(level),
-                        _ => cache.store_object(&obj)?
-                    }
-                }
-
-                cache.store_partial_levels(&req, &levels)?;
-                Ok(levels)
-            })
-    }
+    gdcf_one!(level, LevelRequest, Level, lookup_level, level_future);
+    gdcf_many!(levels, LevelsRequest, PartialLevel, lookup_partial_levels, store_partial_levels, levels_future);
 
     fn integrity(self, response: ProcessedResponse) -> impl Future<Item=ProcessedResponse, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
         let mut reqs = Vec::new();
@@ -228,8 +148,6 @@ pub struct GdcfFuture<T, AE: Error + Send + 'static, CE: Error + Send + 'static>
 
 impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE, CE> {
     fn up_to_date(object: T) -> GdcfFuture<T, AE, CE> {
-        debug!("Creating new up-to-date GdcfFuture!");
-
         GdcfFuture {
             cached: Some(object),
             refresher: None,
@@ -240,8 +158,6 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
         where
             F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
     {
-        debug!("Creating new outdated GdcfFuture!");
-
         GdcfFuture {
             cached: Some(object),
             refresher: Some(Box::new(f)),
@@ -252,8 +168,6 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
         where
             F: Future<Item=T, Error=GdcfError<AE, CE>> + Send + 'static
     {
-        debug!("Creating new absent GdcfFuture!");
-
         GdcfFuture {
             cached: None,
             refresher: Some(Box::new(f)),
