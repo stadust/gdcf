@@ -276,7 +276,7 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `9` in requests
     Awarded,
 
-    /// Unknown how this works
+    /// Unknown how this works (MapPack according to GDPS source)
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `10` in requests
@@ -288,13 +288,13 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `11` in requests
     Friend,
 
-    /// Unknown what this is
+    /// Unknown what this is (Followed according to GDPS source)
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `12` in requests
     Unknown12,
 
-    /// Unknown what this is
+    /// Unknown what this is (Friends according to GDPS source)
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `13` in requests

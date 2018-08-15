@@ -323,8 +323,12 @@ pub struct PartialLevel {
     #[raw_data(index = 37)]
     pub coin_amount: u8,
 
-    #[raw_data(index = 38)]
-    pub index_38: String,
+    /// Value indicating whether the user coins (if present) in this `PartialLevel` are verified
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `38
+    #[raw_data(index = 38, deserialize_with = "de::int_to_bool")]
+    pub coins_verified: bool,
 
     /// The amount of stars the level creator has requested when uploading this `PartialLevel`,
     /// or `None` if no stars were requested.
@@ -341,6 +345,12 @@ pub struct PartialLevel {
     #[raw_data(index = 42, deserialize_with = "de::int_to_bool")]
     pub is_epic: bool,
 
+    // TODO: figure this value out
+    /// According to the GDPS source its a value called `starDemonDiff`. It seems to correlate to
+    /// the level's difficulty.
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `43` and seems to be an integer
     #[raw_data(index = 43)]
     pub index_43: String,
 
@@ -352,9 +362,17 @@ pub struct PartialLevel {
     #[raw_data(index = 45)]
     pub object_amount: u32,
 
+    /// According to the GDPS source this is always `1`, although that is evidently wrong
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `46` and seems to be an integer
     #[raw_data(index = 46, default)]
     pub index_46: String,
 
+    /// According to the GDPS source, this is always `2`, although that is evidently wrong
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `47` and seems to be an integer
     #[raw_data(index = 47, default)]
     pub index_47: String,
 }
@@ -399,6 +417,7 @@ pub struct Level {
     #[raw_data(index = 29)]
     pub time_since_update: String,
 
+    /// According to the GDPS source, this is a value called `extraString`
     #[raw_data(index = 36, default)]
     pub index_36: String,
 }
