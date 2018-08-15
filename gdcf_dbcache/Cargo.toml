@@ -6,6 +6,7 @@ version = "0.1.0"
 chrono = "^0.4.0"
 log = "^0.4.0"
 seahash = "^3.0.5"
+joinery = "1.0.0"
 
 [dependencies.rusqlite]
 version = "^0.13.0"

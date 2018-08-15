@@ -1,6 +1,6 @@
 use core::AsSql;
 use core::backend::Database;
-use gdcf::ext::Join;
+use joinery::Joinable;
 
 #[derive(Debug)]
 pub enum StatementPart {
@@ -25,17 +25,14 @@ impl PreparedStatement {
     }
 
     pub fn to_statement(&self, placeholder_fmt: fn(usize) -> String) -> String {
-        let mut idx = 0;
-
         self.parts.iter()
-            .map(|part| match part {
+            .enumerate()
+            .map(|(idx, part)| match part {
                 StatementPart::Static(string) => string.to_string(),
-                StatementPart::Placeholder => {
-                    idx += 1;
-                    placeholder_fmt(idx)
-                }
+                StatementPart::Placeholder => placeholder_fmt(idx)
             })
-            .join(" ")
+            .join_with(" ")
+            .to_string()
     }
 
     pub fn pop(&mut self) -> Option<StatementPart> {

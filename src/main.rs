@@ -25,8 +25,6 @@ fn main() {
     config.invalidate_after(Duration::minutes(30));
     let cache = DatabaseCache::new(config);
 
-    let d = Duration::minutes(30);
-
     cache.initialize().expect("Error initializing cache");
 
     let client = BoomlingsClient::new();

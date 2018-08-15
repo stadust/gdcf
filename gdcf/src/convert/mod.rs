@@ -68,7 +68,7 @@ pub mod to {
 /// These are conversations that couldn't be implemented as `Into` or `From` impls, either
 /// because its impossible (e.g. decoding a string), or because of Rust's orphan rules.
 pub mod from {
-    use ext::Join;
+    use joinery::Joinable;
 
     pub fn vec<T: Into<i32> + Copy>(list: &Vec<T>) -> String {
         if list.is_empty() {
@@ -76,7 +76,8 @@ pub mod from {
         } else {
             list.into_iter()
                 .map(|v| T::into(*v))
-                .join(",")
+                .join_with(",")
+                .to_string()
         }
     }
 

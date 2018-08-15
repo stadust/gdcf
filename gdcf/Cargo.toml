@@ -12,6 +12,7 @@ chrono = "^0.4.0"
 log = "^0.4.0"
 percent-encoding = "^1.0.1"
 base64 = "^0.6.0"
+joinery = "^1.0.0"
 
 [features]
 deser = [

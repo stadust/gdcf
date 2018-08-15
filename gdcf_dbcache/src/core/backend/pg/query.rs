@@ -3,6 +3,7 @@ use core::backend::Database;
 use core::backend::pg::Pg;
 use core::query::{Insert, QueryPart};
 use core::query::create::{Column, Create};
+use core::query::delete::Delete;
 use core::query::insert::OnConflict;
 use core::query::Select;
 use core::query::select::Join;
@@ -10,9 +11,7 @@ use core::query::select::OrderBy;
 use core::query::select::Ordering;
 use core::statement::{Preparation, Prepare, PreparedStatement};
 use core::table::FieldValue;
-use gdcf::ext::Join as __;
-use core::query::delete::Delete;
-// one underscore is unstable, but 2 are ok, kden
+use joinery::Joinable;
 
 impl<'a> Insert<'a, Pg> {
     fn on_conflict(&self) -> String {
@@ -21,10 +20,13 @@ impl<'a> Insert<'a, Pg> {
             OnConflict::Update(ref target) => {
                 format!(
                     "ON CONFLICT ({}) DO UPDATE SET {}",
-                    target.iter().map(|f| f.name()).join(","),
+                    target
+                        .iter()
+                        .map(|f| f.name())
+                        .join_with(","),
                     self.values()
                         .into_iter()
-                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name())).join(",")
+                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name())).join_with(",")
                 )
             }
             _ => String::new()
@@ -46,7 +48,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
             })
         }
 
-        format!("INSERT INTO {} ({}) VALUES ({}) {}", self.table().name, fields.join(","), values.join(","), self.on_conflict())
+        format!("INSERT INTO {} ({}) VALUES ({}) {}", self.table().name, fields.join_with(","), values.join_with(","), self.on_conflict())
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
@@ -80,7 +82,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
 
 impl<'a> QueryPart<Pg> for Column<'a, Pg> {
     fn to_sql_unprepared(&self) -> String {
-        format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join(" "))
+        format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join_with(" "))
     }
 
     fn to_sql<'b>(&'b self) -> (PreparedStatement, Vec<&'b dyn AsSql<Pg>>) {
@@ -106,7 +108,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
             self.name,
             self.columns.iter()
                 .map(|c| c.to_sql_unprepared())
-                .join(",")
+                .join_with(",")
         )
     }
 
@@ -134,11 +136,13 @@ impl<'a> Select<'a, Pg> {
         if self.qualify() {
             self.fields.iter()
                 .map(|f| f.qualified_name())
-                .join(",")
+                .join_with(",")
+                .to_string()
         } else {
             self.fields.iter()
                 .map(|f| f.name())
-                .join(",")
+                .join_with(",")
+                .to_string()
         }
     }
 
@@ -159,12 +163,12 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
 
         let join_clause = self.joins.iter()
             .map(|j| j.to_sql_unprepared())
-            .join(" ");
+            .join_with(" ");
 
         let order_clause = if !self.order.is_empty() {
             format!("ORDER BY {}", self.order.iter()
                 .map(|o| o.to_sql_unprepared())
-                .join(","))
+                .join_with(","))
         } else {
             String::new()
         };

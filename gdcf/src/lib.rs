@@ -40,6 +40,7 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
+extern crate joinery;
 
 use api::ApiClient;
 use api::request::level::SearchFilters;
@@ -65,7 +66,6 @@ use std::sync::Mutex;
 #[macro_use]
 mod macros;
 
-pub mod ext;
 pub mod api;
 pub mod cache;
 pub mod model;
