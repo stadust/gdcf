@@ -48,7 +48,7 @@ impl FromPgSql for PgTypes {
         }
     }
 
-    fn from_sql_null(ty: &Type) -> Result<Self, Box<dyn StdError + Send + Sync>> {
+    fn from_sql_null(_: &Type) -> Result<Self, Box<dyn StdError + Send + Sync>> {
         Ok(PgTypes::Null)
     }
 

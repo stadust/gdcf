@@ -25,11 +25,15 @@ impl PreparedStatement {
     }
 
     pub fn to_statement(&self, placeholder_fmt: fn(usize) -> String) -> String {
+        let mut idx = 0;
+
         self.parts.iter()
-            .enumerate()
-            .map(|(idx, part)| match part {
+            .map(move |part| match part {
                 StatementPart::Static(string) => string.to_string(),
-                StatementPart::Placeholder => placeholder_fmt(idx)
+                StatementPart::Placeholder => {
+                    idx += 1;
+                    placeholder_fmt(idx)
+                }
             })
             .join_with(" ")
             .to_string()

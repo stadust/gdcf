@@ -33,7 +33,7 @@ impl Database for Pg {
     }
 
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Pg>> {
-        //debug!("Executing {}", statement);
+        trace!("Executing {}", statement);
 
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
@@ -46,7 +46,7 @@ impl Database for Pg {
         where
             Self: Sized
     {
-        //debug!("Executing {}", statement);
+        trace!("Executing {}", statement);
 
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
