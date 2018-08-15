@@ -32,7 +32,7 @@ macro_rules! gdcf_one {
                 .and_then(move |response| self.integrity(response))
                 .and_then(move |response| {
                     let mut chosen = None;
-                    let cache = lock!(cache);
+                    let mut cache = lock!(cache);
 
                     for obj in response {
                         cache.store_object(&obj)?;
@@ -61,7 +61,7 @@ macro_rules! gdcf_many {
                 .and_then(move |response| self.integrity(response))
                 .and_then(move |response| {
                     let mut chosen = Vec::new();
-                    let cache = lock!(cache);
+                    let mut cache = lock!(cache);
 
                     for obj in response {
                         match obj {

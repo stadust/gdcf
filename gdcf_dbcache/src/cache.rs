@@ -178,7 +178,7 @@ impl Cache for DatabaseCache<Pg>
         Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
     }
 
-    fn store_partial_levels(&self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
+    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
         let h = util::hash(req);
         let ts = Utc::now().naive_utc();
 
@@ -222,7 +222,7 @@ impl Cache for DatabaseCache<Pg>
             .map_err(convert_error)  // for some reason I can use the question mark operator?????
     }
 
-    fn store_object(&self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
+    fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
         match obj {
             GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
             GDObject::NewgroundsSong(song) => self.store_song(song),

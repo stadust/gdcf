@@ -87,8 +87,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf<A, C> {
     }
 }
 
-// TODO: figure out the race conditions later
-
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
         Gdcf {
