@@ -2,6 +2,7 @@
 bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
 )]
 
+extern crate chrono;
 extern crate env_logger;
 extern crate futures;
 extern crate gdcf;
@@ -9,6 +10,7 @@ extern crate gdcf_dbcache;
 extern crate gdrs;
 extern crate tokio;
 
+use chrono::Duration;
 use futures::{Future, lazy};
 use gdcf::api::request::{LevelRequest, LevelsRequest};
 use gdcf::api::request::LevelRequestType;
@@ -19,8 +21,11 @@ use gdrs::BoomlingsClient;
 fn main() {
     env_logger::init();
 
-    let config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    config.invalidate_after(Duration::minutes(30));
     let cache = DatabaseCache::new(config);
+
+    let d = Duration::minutes(30);
 
     cache.initialize().expect("Error initializing cache");
 

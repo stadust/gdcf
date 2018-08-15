@@ -107,6 +107,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
                     if let Some(song_id) = level.base.custom_song_id {
                         match lock!(self.cache).lookup_song(song_id) {
                             Err(CacheError::CacheMiss) => {
+                                warn!("Integrity request required to gather newgrounds song with ID {}", song_id);
+
                                 reqs.push(self.levels(LevelsRequest::default()
                                     .with_id(level.base.level_id)
                                     .filter(SearchFilters::default()
@@ -127,8 +129,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
         }
 
         if reqs.is_empty() {
-            debug!("No integrity requests required");
-
             Either::B(result(Ok(response)))
         } else {
             Either::A(join_all(reqs)

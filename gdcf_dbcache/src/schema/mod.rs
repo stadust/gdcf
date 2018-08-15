@@ -19,8 +19,8 @@ impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
 {
     fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>> {
         let t = T::from_row(row, offset)?;
-        let first_cached = row.get(-1).unwrap()?;
-        let lasted_cached = row.get(-2).unwrap()?;
+        let first_cached = row.get(-2).unwrap()?;
+        let lasted_cached = row.get(-1).unwrap()?;
 
         Ok(CachedObject::new(t, first_cached, lasted_cached))
     }

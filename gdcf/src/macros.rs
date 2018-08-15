@@ -6,13 +6,21 @@ macro_rules! __gdcf_inner__ {
             match cache.$lookup(&req) {
                 Ok(cached) => {
                     if cache.is_expired(&cached) {
+                        info!("Cache entry for request {} is expired!", req);
+
                         GdcfFuture::outdated(cached.extract(), self.clone().$fut(req))
                     } else {
+                        info!("Cache entry for request {} is up-to-date, making no request", req);
+
                         GdcfFuture::up_to_date(cached.extract())
                     }
                 }
 
-                Err(CacheError::CacheMiss) => GdcfFuture::absent(self.clone().$fut(req)),
+                Err(CacheError::CacheMiss) => {
+                    info!("No cache entry for request {}", req);
+
+                    GdcfFuture::absent(self.clone().$fut(req))
+                }
 
                 Err(err) => panic!("Error accessing cache! {:?}", err)
             }

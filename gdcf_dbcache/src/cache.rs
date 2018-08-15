@@ -53,7 +53,6 @@ impl DatabaseCacheConfig<Pg> {
 }
 
 impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
-    // TODO: figure out a way to specify this
     fn invalidate_after(&self) -> Duration {
         self.invalidate_after
     }
@@ -75,6 +74,7 @@ impl<DB: Database> DatabaseCache<DB> {
 #[cfg(feature = "pg")]
 impl DatabaseCache<Pg> {
     pub fn initialize(&self) -> Result<(), Error<Pg>> {
+        info!("Intializing Postgres-backed database cache!");
         song::newgrounds_song::create()
             .ignore_if_exists()
             .execute(&self.config.backend)?;
@@ -98,6 +98,8 @@ impl DatabaseCache<Pg> {
 #[cfg(feature = "pg")]
 impl DatabaseCache<Pg> {
     fn store_partial_level(&self, level: &PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        debug!("Storing partial level {}", level);
+
         let ts = Utc::now().naive_utc();
 
         level.insert()
@@ -108,6 +110,8 @@ impl DatabaseCache<Pg> {
     }
 
     fn store_song(&self, song: &NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        debug!("Storing song {}", song);
+
         let ts = Utc::now().naive_utc();
 
         song.insert()
@@ -118,6 +122,8 @@ impl DatabaseCache<Pg> {
     }
 
     fn store_level(&self, level: &Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
+        debug!("Storing level {}", level);
+
         let ts = Utc::now().naive_utc();
 
         self.store_partial_level(&level.base)?;
@@ -151,6 +157,8 @@ impl Cache for DatabaseCache<Pg>
     }
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
+        debug!("Performing cache lookup for request {}", req);
+
         let h = util::hash(req);
 
         let select = Select::new(
@@ -169,8 +177,10 @@ impl Cache for DatabaseCache<Pg>
             .unwrap()
             .map_err(convert_error)?;
 
-        let select = partial_level::table.select()
-            .join(&partial_levels::table, partial_level::level_id.same_as(&partial_levels::level_id));
+        let select = Select::new(&partial_levels::table, Vec::new())
+            .select(partial_level::table.fields())
+            .filter(partial_levels::request_hash.eq(h))
+            .join(&partial_level::table, partial_levels::level_id.same_as(&partial_level::level_id));
 
         let levels: Vec<PartialLevel> = self.config.backend.query(&select)
             .map_err(convert_error)?;
