@@ -8,11 +8,11 @@ use core::query::insert::OnConflict;
 use core::query::Select;
 use core::query::select::Join;
 use core::query::select::OrderBy;
+use core::query::select::Ordering;
 use core::QueryPart;
 use core::statement::{Preparation, Prepare, PreparedStatement};
 use core::table::FieldValue;
 use joinery::Joinable;
-use core::query::select::Ordering;
 
 impl<'a> Insert<'a, Pg> {
     fn on_conflict(&self) -> String {
@@ -90,7 +90,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
 
         p.with_static(self.name)
             .with_static("(")
-            .with(join_statements(&self.columns, ","))
+            .with(join_statements(&self.columns, Some(",")))
             .with_static(")")
     }
 }
@@ -131,7 +131,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
             .with_static(self.fields())
             .with_static("FROM")
             .with_static(self.table.name)
-            .with(join_statements(&self.joins, ""));
+            .with(join_statements(&self.joins, None));
 
         if let Some(ref cond) = self.filter {
             p = p.with_static("WHERE")
@@ -139,7 +139,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
         }
 
         p.with_static(self.bounds())
-            .with(join_statements(&self.order, ","))
+            .with(join_statements(&self.order, Some(",")))
     }
 }
 
@@ -180,18 +180,21 @@ impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
     }
 }
 
-pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: &str) -> Preparation<'a, DB>
+pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: Option<&str>) -> Preparation<'a, DB>
     where
         DB: Database,
         QP: QueryPart<DB>,
         I: IntoIterator<Item=&'a QP>
 {
     let mut p = Preparation::<DB>::default();
-    let mut sep = "";
+    let mut sep = None;
 
     for t in stmts {
-        p = p.with_static(sep)
-            .with(t.to_sql());
+        if let Some(seperator) = sep {
+            p = p.with_static(seperator);
+        }
+
+        p = p.with(t.to_sql());
 
         sep = seperator;
     }
