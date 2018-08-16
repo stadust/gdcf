@@ -38,12 +38,12 @@ impl<'a> Insert<'a, Pg> {
 impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
-            .with_static("INSERT INTO ")
+            .with_static("INSERT INTO")
             .with_static(self.table().name)
             .with_static("(");
 
         let mut pv = Preparation::<Pg>::default()
-            .with_static(" VALUES (");
+            .with_static("VALUES (");
 
         for set_field in self.values() {
             p = p.with_static(set_field.field.name())
@@ -69,12 +69,10 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static(self.name)
-            .with_static(" ")
             .with_static(self.sql_type.to_raw_sql());
 
         for con in &self.constraints {
             p = p.with(con.to_sql())
-                .with_static(" ")
         }
 
         p
@@ -84,10 +82,10 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
 impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
-            .with_static("CREATE TABLE ");
+            .with_static("CREATE TABLE");
 
         if self.ignore_if_exists {
-            p = p.with_static("IF NOT EXISTS ");
+            p = p.with_static("IF NOT EXISTS");
         }
 
         p.with_static(self.name)
@@ -127,17 +125,16 @@ impl<'a> Select<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
-
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
-            .with_static("SELECT ")
+            .with_static("SELECT")
             .with_static(self.fields())
-            .with_static(" FROM ")
+            .with_static("FROM")
             .with_static(self.table.name)
-            .with(join_statements(&self.joins, " "));
+            .with(join_statements(&self.joins, ""));
 
         if let Some(ref cond) = self.filter {
-            p = p.with_static(" WHERE ")
+            p = p.with_static("WHERE")
                 .with(cond.to_sql());
         }
 
@@ -149,9 +146,9 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
 impl<'a> QueryPart<Pg> for Join<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
-            .with_static("JOIN ")
+            .with_static("JOIN")
             .with_static(self.other.name)
-            .with_static(" ON ")
+            .with_static("ON")
             .with(self.join_condition.to_sql())
     }
 }
@@ -171,11 +168,11 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
 impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
-            .with_static("DELETE FROM ")
+            .with_static("DELETE FROM")
             .with_static(self.table.name);
 
         if let Some(ref filter) = self.filter {
-            p = p.with_static(" WHERE ")
+            p = p.with_static("WHERE")
                 .with(filter.to_sql());
         }
 

@@ -30,7 +30,7 @@ impl<'a> QueryPart<Pg> for DefaultConstraint<'a, Pg> {
     fn to_sql(&self) -> Preparation<Pg> {
         match self.name {
             None => Preparation::<Pg>::default()
-                .with_static("DEFAULT ")
+                .with_static("DEFAULT")
                 .with_static(self.default.to_raw_sql()),
             Some(_) => unimplemented!()
         }

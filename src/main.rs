@@ -33,7 +33,7 @@ fn main() {
     tokio::run(lazy(move || {
         let request = LevelsRequest::default()
             .request_type(LevelRequestType::Featured)
-            .page(2);
+            .page(3);
 
         gdcf.levels(request)
             .map_err(|_| eprintln!("Error retrieving 6th page of featured levels!"))
