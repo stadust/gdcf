@@ -47,7 +47,7 @@ pub(crate) mod partial_level {
         partial_level => {
             level_id: Unsigned<BigInteger> NotNull Unique Primary,
             level_name: Text NotNull,
-            description: Text Default<String>(String::from("test")),
+            description: Text,
             level_version: Unsigned<Integer> NotNull,
             creator_id: Unsigned<BigInteger> NotNull,
 

@@ -16,6 +16,8 @@ extern crate log;
 extern crate pm_gdcf_dbcache;
 #[cfg(feature = "pg")]
 extern crate postgres;
+#[cfg(feature = "sqlite")]
+extern crate rusqlite;
 extern crate seahash;
 extern crate joinery;
 

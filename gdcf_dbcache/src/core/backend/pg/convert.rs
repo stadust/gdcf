@@ -2,6 +2,7 @@ use chrono::NaiveDateTime;
 use core::AsSql;
 use core::backend::Error;
 use core::backend::pg::Pg;
+use core::backend::pg::PgTypes;
 use core::FromSql;
 use postgres::types::FromSql as FromPgSql;
 use postgres::types::IsNull;
@@ -9,20 +10,6 @@ use postgres::types::ToSql as ToPgSql;
 use postgres::types::Type;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
-
-#[derive(Debug, Clone)]
-pub enum PgTypes {
-    SmallInteger(i16),
-    Integer(i32),
-    BigInteger(i64),
-    Text(String),
-    Float(f32),
-    Double(f64),
-    Boolean(bool),
-    Timestamp(NaiveDateTime),
-    Bytes(Vec<u8>),
-    Null,
-}
 
 impl FromPgSql for PgTypes {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn StdError + Send + Sync>> {

@@ -2,8 +2,8 @@ use core::{AsSql, backend::Database};
 use core::query::select::Row;
 use postgres::{Connection, Error as PgError, types::ToSql as ToPgSql};
 use postgres::TlsMode;
-use self::convert::PgTypes;
 use super::Error;
+use chrono::NaiveDateTime;
 
 mod condition;
 mod convert;
@@ -14,6 +14,20 @@ mod constraint;
 #[derive(Debug)]
 pub struct Pg {
     conn: Connection
+}
+
+#[derive(Debug, Clone)]
+pub enum PgTypes {
+    SmallInteger(i16),
+    Integer(i32),
+    BigInteger(i64),
+    Text(String),
+    Float(f32),
+    Double(f64),
+    Boolean(bool),
+    Timestamp(NaiveDateTime),
+    Bytes(Vec<u8>),
+    Null,
 }
 
 impl Pg {
