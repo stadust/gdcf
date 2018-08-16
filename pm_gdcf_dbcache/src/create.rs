@@ -94,7 +94,7 @@ impl Create {
 
                         column.constraints.push(constraint);
                     }
-                    Some(crap) => panic!("Expected ident or ',', forgot {:?}", crap),
+                    Some(crap) => panic!("Expected ident or ',', got {:?}", crap),
                     None => break 'outer columns.push(column)
                 }
 
@@ -214,12 +214,17 @@ impl Constraint {
             Constraint::NotNull => "NotNullConstraint<'a>: Constraint<DB> + 'static".parse().unwrap(),
             Constraint::Primary => "PrimaryKeyConstraint<'a>: Constraint<DB> + 'static".parse().unwrap(),
             Constraint::Default { ty, .. } => stream! {
+                "DefaultConstraint<'a, DB>: Constraint<DB> + 'static,".parse().unwrap(),
+                ty.clone(),
+                ": SqlExpr<DB>".parse().unwrap()
+            }
+            /*"DefaultConstraint<'a, DB>: Constraint<DB> + 'static".parse().unwrap()*//*stream! {
                 "DefaultConstraint<'a, DB, ".parse().unwrap(),
                 ty.clone(),
                 ">: Constraint<DB> + 'static,".parse().unwrap(),
                 ty.clone(),
                 ": SqlExpr<DB> + 'static".parse().unwrap()
-            }
+            }*/
         }
     }
 

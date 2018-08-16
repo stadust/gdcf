@@ -1,7 +1,7 @@
 use core::AsSql;
 use core::backend::Database;
 use core::query::condition::And;
-use core::query::QueryPart;
+use core::QueryPart;
 use core::query::select::Row;
 use core::statement::{PreparedStatement, StatementPart};
 use core::query::condition::EqValue;

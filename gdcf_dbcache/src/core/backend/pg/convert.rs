@@ -8,8 +8,9 @@ use postgres::types::IsNull;
 use postgres::types::ToSql as ToPgSql;
 use postgres::types::Type;
 use std::error::Error as StdError;
+use std::fmt::{self, Display};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PgTypes {
     SmallInteger(i16),
     Integer(i32),
@@ -107,13 +108,62 @@ impl ToPgSql for PgTypes {
     }
 }
 
+impl Display for PgTypes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            PgTypes::SmallInteger(i) => write!(f, "{}", i),
+            PgTypes::Integer(i) => write!(f, "{}", i),
+            PgTypes::BigInteger(i) => write!(f, "{}", i),
+            PgTypes::Text(t) => write!(f, "'{}'", t),
+            PgTypes::Float(fl) => write!(f, "{}", fl),
+            PgTypes::Double(d) => write!(f, "{}", d),
+            PgTypes::Boolean(b) => {
+                if *b {
+                    write!(f, "TRUE")
+                } else {
+                    write!(f, "FALSE")
+                }
+            }
+            PgTypes::Timestamp(ts) => write!(f, "{}", ts.format("TIMESTAMP '%Y-%m-%d %H:%M:%S'")),
+            PgTypes::Bytes(bytes) => write!(f, "<binary data>"), // TODO: figure this out
+            PgTypes::Null => write!(f, "NULL")
+        }
+    }
+}
+
+mod _dummy {
+    use core::QueryPart;
+    use core::SqlExpr;
+    use core::statement::Preparation;
+    use core::statement::PreparedStatement;
+    use super::*;
+
+    impl<T: AsSql<Pg>> QueryPart<Pg> for T {
+        fn to_sql(&self) -> Preparation<Pg> {
+            (PreparedStatement::placeholder(), vec![self])
+        }
+
+        fn to_raw_sql(&self) -> String {
+            self.as_sql().to_string()
+        }
+    }
+
+    impl<'a> QueryPart<Pg> for dyn AsSql<Pg> + 'a {
+        fn to_sql(&self) -> Preparation<Pg> {
+            (PreparedStatement::placeholder(), vec![self])
+        }
+
+        fn to_raw_sql(&self) -> String {
+            self.as_sql().to_string()
+        }
+    }
+
+    impl<T: AsSql<Pg>> SqlExpr<Pg> for T {}
+}
+
 impl AsSql<Pg> for i8 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::SmallInteger(*self as i16)
-    }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
     }
 }
 
@@ -121,19 +171,11 @@ impl AsSql<Pg> for u8 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::SmallInteger(*self as i16)
     }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 impl AsSql<Pg> for i16 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::SmallInteger(*self)
-    }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
     }
 }
 
@@ -141,19 +183,11 @@ impl AsSql<Pg> for u16 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::SmallInteger(*self as i16)
     }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 impl AsSql<Pg> for i32 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Integer(*self)
-    }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
     }
 }
 
@@ -161,19 +195,11 @@ impl AsSql<Pg> for u32 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Integer(*self as i32)
     }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 impl AsSql<Pg> for i64 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::BigInteger(*self)
-    }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
     }
 }
 
@@ -181,19 +207,11 @@ impl AsSql<Pg> for u64 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::BigInteger(*self as i64)
     }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 impl AsSql<Pg> for f64 {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Double(*self)
-    }
-
-    fn as_sql_string(&self) -> String {
-        format!("{}", self)
     }
 }
 
@@ -201,23 +219,11 @@ impl AsSql<Pg> for bool {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Boolean(*self)
     }
-
-    fn as_sql_string(&self) -> String {
-        if *self {
-            String::from("TRUE")
-        } else {
-            String::from("FALSE")
-        }
-    }
 }
 
 impl AsSql<Pg> for String {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Text(self.clone())
-    }
-
-    fn as_sql_string(&self) -> String {
-        self.clone()
     }
 }
 
@@ -225,19 +231,11 @@ impl<'a> AsSql<Pg> for &'a str {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Text(self.to_string())
     }
-
-    fn as_sql_string(&self) -> String {
-        format!("'{}'", self)
-    }
 }
 
 impl AsSql<Pg> for NaiveDateTime {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Timestamp(*self)
-    }
-
-    fn as_sql_string(&self) -> String {
-        self.format("TIMESTAMP '%Y-%m-%d %H:%M:%S'").to_string()
     }
 }
 
@@ -251,22 +249,11 @@ impl<T> AsSql<Pg> for Option<T>
             None => PgTypes::Null
         }
     }
-
-    fn as_sql_string(&self) -> String {
-        match self {
-            Some(value) => value.as_sql_string(),
-            None => "NULL".to_string()
-        }
-    }
 }
 
 impl AsSql<Pg> for Vec<u8> {
     fn as_sql(&self) -> PgTypes {
         PgTypes::Bytes(self.clone())
-    }
-
-    fn as_sql_string(&self) -> String {
-        unimplemented!()
     }
 }
 

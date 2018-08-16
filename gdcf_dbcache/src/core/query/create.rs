@@ -1,10 +1,9 @@
 use core::backend::Database;
 use core::query::Query;
-use core::query::QueryPart;
+use core::QueryPart;
 use core::SqlExpr;
 use core::table::Field;
 use core::types::Type;
-use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct Create<'a, DB: Database + 'a> {
@@ -70,9 +69,9 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         self.constraint(NotNullConstraint::default())
     }
 
-    pub fn default<D: SqlExpr<DB>>(self, default: D) -> Self
+    pub fn default<D: SqlExpr<DB> + 'static>(self, default: D) -> Self
         where
-            DefaultConstraint<'a, DB, D>: Constraint<DB> + 'static
+            DefaultConstraint<'a, DB>: Constraint<DB> + 'static
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
@@ -115,18 +114,16 @@ pub struct ForeignKeyConstraint<'a> {
 }
 
 #[derive(Debug)]
-pub struct DefaultConstraint<'a, DB: Database + 'a, D: SqlExpr<DB>> {
+pub struct DefaultConstraint<'a, DB: Database + 'a> {
     pub name: Option<&'a str>,
-    pub default: D,
-    _ghost: PhantomData<DB>
+    pub default: Box<dyn SqlExpr<DB>>
 }
 
-impl<'a, DB: Database + 'a, D: SqlExpr<DB>> DefaultConstraint<'a, DB, D> {
-    pub fn new(name: Option<&'a str>, default: D) -> DefaultConstraint<'a, DB, D> {
+impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
+    pub fn new<D: SqlExpr<DB> + 'static>(name: Option<&'a str>, default: D) -> DefaultConstraint<'a, DB> {
         DefaultConstraint {
             name,
-            default,
-            _ghost: PhantomData
+            default: Box::new(default)
         }
     }
 }
@@ -145,13 +142,18 @@ if_query_part!(NotNullConstraint<'a>, Constraint<DB>);
 if_query_part!(UniqueConstraint<'a>, Constraint<DB>);
 if_query_part!(PrimaryKeyConstraint<'a>, Constraint<DB>);
 if_query_part!(ForeignKeyConstraint<'a>, Constraint<DB>);
+if_query_part!(DefaultConstraint<'a, DB>, Constraint<DB>);
 
-impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
+if_query_part!(Create<'a, DB>, Query<DB>);
+//if_sql_expr!(Create<'a, DB>, Query<DB>);
+
+
+/*impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
     where
-        Create<'a, DB>: QueryPart<DB> {}
+        Create<'a, DB>: QueryPart<DB> {}*/
 
-impl<'a, DB: Database + 'a, D: SqlExpr<DB>> Constraint<DB> for DefaultConstraint<'a, DB, D>
+/*impl<'a, DB: Database + 'a, D: SqlExpr<DB>> Constraint<DB> for DefaultConstraint<'a, DB, D>
     where
         D: SqlExpr<DB>,
         Self: QueryPart<DB>
-{}
+{}*/

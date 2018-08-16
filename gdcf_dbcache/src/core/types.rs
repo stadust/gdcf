@@ -1,5 +1,5 @@
 use core::backend::Database;
-use core::query::QueryPart;
+use core::QueryPart;
 
 pub trait Type<DB: Database>: QueryPart<DB> {}
 

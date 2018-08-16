@@ -1,5 +1,7 @@
 use core::backend::pg::Pg;
-use core::query::QueryPart;
+use core::QueryPart;
+use core::statement::Preparation;
+use core::statement::Prepare;
 use core::types::{BigInteger, Boolean, Bytes, Double, Float, Integer, SmallInteger, Text, Unsigned, UtcTimestamp};
 
 simple_query_part!(Pg, Text, "TEXT");

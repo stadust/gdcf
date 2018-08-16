@@ -1,17 +1,19 @@
 use core::AsSql;
+use core::QueryPart;
 use core::backend::Database;
 use core::backend::pg::Pg;
-use core::query::{Insert, QueryPart};
+use core::query::Insert;
 use core::query::create::{Column, Create};
 use core::query::delete::Delete;
 use core::query::insert::OnConflict;
 use core::query::Select;
 use core::query::select::Join;
 use core::query::select::OrderBy;
-use core::query::select::Ordering;
+//use core::query::select::Ordering;
 use core::statement::{Preparation, Prepare, PreparedStatement};
 use core::table::FieldValue;
 use joinery::Joinable;
+//use core::AsRawSql;
 
 impl<'a> Insert<'a, Pg> {
     fn on_conflict(&self) -> String {
@@ -35,7 +37,7 @@ impl<'a> Insert<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         let mut fields = Vec::new();
         let mut values = Vec::new();
 
@@ -49,7 +51,7 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         }
 
         format!("INSERT INTO {} ({}) VALUES ({}) {}", self.table().name, fields.join_with(","), values.join_with(","), self.on_conflict())
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
@@ -81,15 +83,15 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Column<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         format!("{} {} {}", self.name, self.sql_type.to_sql_unprepared(), self.constraints.iter().map(|c| c.to_sql_unprepared()).join_with(" "))
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static(self.name)
             .with_static(" ")
-            .with_static(self.sql_type.to_sql_unprepared());
+            .with_static(self.sql_type.to_raw_sql());
 
         for con in &self.constraints {
             p = p.with(con.to_sql())
@@ -101,7 +103,7 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Create<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         format!(
             "CREATE TABLE {} {} ({})",
             if self.ignore_if_exists { "IF NOT EXISTS" } else { "" },
@@ -110,7 +112,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
                 .map(|c| c.to_sql_unprepared())
                 .join_with(",")
         )
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
@@ -157,7 +159,7 @@ impl<'a> Select<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Select<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         let where_clause = self.filter.as_ref()
             .map_or(String::new(), |c| format!(" WHERE {}", c.to_sql_unprepared()));
 
@@ -174,7 +176,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
         };
 
         format!("SELECT {} FROM {} {} {} {} {}", self.fields(), self.table.name, join_clause, where_clause, self.bounds(), order_clause)
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
@@ -195,9 +197,9 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for Join<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         format!("JOIN {} ON {}", self.other.name, self.join_condition.to_sql_unprepared())
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
@@ -209,12 +211,12 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
 }
 
 impl<'a> QueryPart<Pg> for OrderBy<'a> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         match self.ordering {
             Ordering::Asc => format!("{} ASC", self.field.name),
             Ordering::Desc => format!("{} DESC", self.field.name)
         }
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         unimplemented!()
@@ -222,12 +224,12 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
 }
 
 impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
-    fn to_sql_unprepared(&self) -> String {
+    /*fn to_sql_unprepared(&self) -> String {
         match self.filter {
             Some(ref filter) => format!("DELETE FROM {} WHERE {}", self.table.name, filter.to_sql_unprepared()),
             None => format!("DELETE FROM {}", self.table.name)
         }
-    }
+    }*/
 
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()

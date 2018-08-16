@@ -1,6 +1,6 @@
 use core::backend::Database;
 use core::query::Query;
-use core::query::QueryPart;
+use core::QueryPart;
 use core::table::Field;
 use core::table::SetField;
 use core::table::Table;
@@ -66,6 +66,9 @@ pub trait Insertable<DB: Database> {
     }
 }
 
+if_query_part!(Insert<'a, DB>, Query<DB>);
+
+/*
 impl<'a, DB: Database + 'a> Query<DB> for Insert<'a, DB>
     where
-        Insert<'a, DB>: QueryPart<DB> {}
+        Insert<'a, DB>: QueryPart<DB> {}*/

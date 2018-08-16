@@ -24,7 +24,7 @@ pub enum Error<DB: Database> {
     /// Conversion from a row item the expected Rust datatype failed
     Conversion(String, &'static str),
 
-    /// The query passed to `query_one` didn't yield and rows
+    /// The query passed to `query_one` didn't yield any rows
     NoResult,
 
     /// The query passed to `query_one` yielded more than one row
@@ -32,7 +32,7 @@ pub enum Error<DB: Database> {
 }
 
 pub trait Database: Debug + Sized {
-    type Types: Debug;
+    type Types: Display;
     type Error: StdError + Send + 'static;
 
     fn prepare(idx: usize) -> String;
@@ -41,6 +41,8 @@ pub trait Database: Debug + Sized {
         where
             Self: Sized
     {
+        trace!("Executing query {}", query.to_raw_sql());
+
         let (stmt, params) = query.to_sql();
         self.execute_raw(stmt.to_statement(Self::prepare), &params)
     }
@@ -49,7 +51,7 @@ pub trait Database: Debug + Sized {
         where
             Self: Sized
     {
-        self.execute_raw(query.to_sql_unprepared(), &[])
+        self.execute_raw(query.to_raw_sql(), &[])
     }
 
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Self>>;
@@ -100,6 +102,8 @@ pub trait Database: Debug + Sized {
         where
             T: Queryable<Self>
     {
+        trace!("Executing query {}", query.to_raw_sql());
+
         let (stmt, params) = query.to_sql();
         let mut ts = Vec::new();
 
@@ -122,7 +126,7 @@ pub trait Database: Debug + Sized {
     {
         let mut ts = Vec::new();
 
-        for row in self.query_raw(query.to_sql_unprepared(), &[])? {
+        for row in self.query_raw(query.to_raw_sql(), &[])? {
             ts.push(T::from_row(&row, 0)?)
         }
 

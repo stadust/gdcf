@@ -5,7 +5,7 @@ use core::query::condition::And;
 use core::query::condition::Condition;
 use core::query::condition::Or;
 use core::query::Query;
-use core::query::QueryPart;
+use core::QueryPart;
 use core::table::Field;
 use core::table::Table;
 
@@ -155,6 +155,9 @@ pub trait Queryable<DB: Database>: Sized {
     fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>>;
 }
 
+if_query_part!(Select<'a, DB>, Query<DB>);
+
+/*
 impl<'a, DB: Database + 'a> Query<DB> for Select<'a, DB>
     where
-        Select<'a, DB>: QueryPart<DB> {}
+        Select<'a, DB>: QueryPart<DB> {}*/

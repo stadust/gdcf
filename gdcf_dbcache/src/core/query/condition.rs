@@ -1,6 +1,6 @@
 use core::{AsSql, backend::Database, table::Field};
 use std::fmt::Debug;
-use super::QueryPart;
+use core::QueryPart;
 
 pub trait Condition<DB: Database>: QueryPart<DB> + Debug {
     fn and<Cond>(self, other: Cond) -> And<DB>
