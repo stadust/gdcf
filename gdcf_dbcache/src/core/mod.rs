@@ -40,7 +40,7 @@ pub trait QueryPart<DB: Database>: Debug {
 //  impl<DB, T> QueryPart<DB> for T where T: AsSql<DB>
 //  impl<DB, T> SqlExpr<DB> for T where T: AsSql<DB>
 // but due to the "downstream crate may implement QueryPart<DB> for _" bullshit
-// we cannot do that. Which is why SqlExpr<DB> is a duplicate of
+// we cannot do that. So every backend needs to do the above two impl specialized to itself.
 pub trait SqlExpr<DB: Database>: QueryPart<DB> {}
 
 #[derive(Debug)]

@@ -6,7 +6,6 @@ use serde::ser::SerializeMap;
 use serde::Serializer;
 
 mod request;
-mod util;
 
 pub use self::request::level::LevelRequestRem;
 pub use self::request::level::LevelsRequestRem;
