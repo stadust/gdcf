@@ -13,7 +13,7 @@ pub struct Sqlite;
 pub enum SqliteTypes {
     Integer(i64),
     Real(f64),
-    Test(String),
+    Text(String),
     Blob(Vec<u8>),
     Null,
 }

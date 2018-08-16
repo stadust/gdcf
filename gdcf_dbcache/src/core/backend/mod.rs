@@ -17,6 +17,8 @@ pub mod sqlite;
 #[cfg(feature = "mysql")]
 pub mod mysql;
 
+// TODO: during FromSql<DB> and AsSql<DB> we are excessively copying things. We probably either wanna work with references more, or take ownership more
+
 #[derive(Debug)]
 pub enum Error<DB: Database> {
     Database(DB::Error),
