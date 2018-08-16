@@ -98,7 +98,7 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
     gdcf_one!(level, LevelRequest, Level, lookup_level, level_future);
     gdcf_many!(levels, LevelsRequest, PartialLevel, lookup_partial_levels, store_partial_levels, levels_future);
 
-    fn integrity(self, response: ProcessedResponse) -> impl Future<Item=ProcessedResponse, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
+    fn integrity(&self, response: ProcessedResponse) -> impl Future<Item=ProcessedResponse, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
         let mut reqs = Vec::new();
 
         for obj in &response {
