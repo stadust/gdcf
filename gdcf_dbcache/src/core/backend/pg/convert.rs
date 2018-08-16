@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use core::AsSql;
+use core::backend::Database;
 use core::backend::Error;
 use core::backend::pg::Pg;
 use core::backend::pg::PgTypes;
@@ -10,6 +11,7 @@ use postgres::types::ToSql as ToPgSql;
 use postgres::types::Type;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
+
 
 impl FromPgSql for PgTypes {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn StdError + Send + Sync>> {
@@ -150,65 +152,19 @@ mod _dummy {
     impl<T: AsSql<Pg>> SqlExpr<Pg> for T {}
 }
 
-impl AsSql<Pg> for i8 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::SmallInteger(*self as i16)
-    }
-}
+as_sql_cast!(Pg, i8, i16, PgTypes::SmallInteger);
+as_sql_cast!(Pg, u8, i16, PgTypes::SmallInteger);
+as_sql_cast!(Pg, i16, i16, PgTypes::SmallInteger);
+as_sql_cast!(Pg, u16, i16, PgTypes::SmallInteger);
+as_sql_cast!(Pg, i32, i32, PgTypes::Integer);
+as_sql_cast!(Pg, u32, i32, PgTypes::Integer);
+as_sql_cast!(Pg, i64, i64, PgTypes::BigInteger);
+as_sql_cast!(Pg, u64, i64, PgTypes::BigInteger);
 
-impl AsSql<Pg> for u8 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::SmallInteger(*self as i16)
-    }
-}
+as_sql_cast!(Pg, bool, bool, PgTypes::Boolean);
 
-impl AsSql<Pg> for i16 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::SmallInteger(*self)
-    }
-}
-
-impl AsSql<Pg> for u16 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::SmallInteger(*self as i16)
-    }
-}
-
-impl AsSql<Pg> for i32 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::Integer(*self)
-    }
-}
-
-impl AsSql<Pg> for u32 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::Integer(*self as i32)
-    }
-}
-
-impl AsSql<Pg> for i64 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::BigInteger(*self)
-    }
-}
-
-impl AsSql<Pg> for u64 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::BigInteger(*self as i64)
-    }
-}
-
-impl AsSql<Pg> for f64 {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::Double(*self)
-    }
-}
-
-impl AsSql<Pg> for bool {
-    fn as_sql(&self) -> PgTypes {
-        PgTypes::Boolean(*self)
-    }
-}
+as_sql_cast!(Pg, f32, f32, PgTypes::Float);
+as_sql_cast!(Pg, f64, f64, PgTypes::Double);
 
 impl AsSql<Pg> for String {
     fn as_sql(&self) -> PgTypes {
@@ -246,30 +202,17 @@ impl AsSql<Pg> for Vec<u8> {
     }
 }
 
-impl FromSql<Pg> for u8 {
-    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
-        where
-            Self: Sized
-    {
-        match sql {
-            PgTypes::SmallInteger(value) => Ok(*value as u8),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "u8"))
-        }
-    }
-}
+from_sql_cast!(Pg, u8, PgTypes::SmallInteger);
+from_sql_cast!(Pg, i8, PgTypes::SmallInteger);
+from_sql_cast!(Pg, i16, PgTypes::SmallInteger);
+from_sql_cast!(Pg, u16, PgTypes::SmallInteger);
+from_sql_cast!(Pg, i32, PgTypes::Integer);
+from_sql_cast!(Pg, u32, PgTypes::Integer);
+from_sql_cast!(Pg, i64, PgTypes::BigInteger);
+from_sql_cast!(Pg, u64, PgTypes::BigInteger);
 
-impl FromSql<Pg> for u64 {
-    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
-        where
-            Self: Sized
-    {
-        match sql {
-            PgTypes::BigInteger(value) => Ok(*value as u64),
-            PgTypes::Integer(value) => Ok(*value as u64),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "u64"))
-        }
-    }
-}
+from_sql_cast!(Pg, f32, PgTypes::Float);
+from_sql_cast!(Pg, f64, PgTypes::Double);
 
 impl FromSql<Pg> for String {
     fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
@@ -279,45 +222,6 @@ impl FromSql<Pg> for String {
         match sql {
             PgTypes::Text(value) => Ok(value.clone()),
             _ => Err(Error::Conversion(format!("{:?}", sql), "String"))
-        }
-    }
-}
-
-impl FromSql<Pg> for i32 {
-    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
-        where
-            Self: Sized
-    {
-        match sql {
-            PgTypes::SmallInteger(value) => Ok((*value).into()),
-            PgTypes::Integer(value) => Ok(*value),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "i32"))
-        }
-    }
-}
-
-impl FromSql<Pg> for u32 {
-    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
-        where
-            Self: Sized
-    {
-        match sql {
-            PgTypes::SmallInteger(value) => Ok(*value as u32), // do not sign extend here, it will fuck things up
-            PgTypes::Integer(value) => Ok(*value as u32),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "u32"))
-        }
-    }
-}
-
-impl FromSql<Pg> for f64 {
-    fn from_sql(sql: &PgTypes) -> Result<Self, Error<Pg>>
-        where
-            Self: Sized
-    {
-        match sql {
-            PgTypes::Double(value) => Ok(*value),
-            PgTypes::Float(value) => Ok(*value as f64),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "f64"))
         }
     }
 }

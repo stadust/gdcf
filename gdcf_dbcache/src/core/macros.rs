@@ -20,7 +20,7 @@ macro_rules! simple_query_part {
 
 macro_rules! as_sql_cast {
     ($back: ty, $src: ty, $dest: ty, $variant: path) => {
-        impl AsSql<Sqlite> for $src {
+        impl AsSql<$back> for $src {
             fn as_sql(&self) -> <$back as Database>::Types {
                 $variant(*self as $dest)
             }

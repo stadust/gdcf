@@ -17,6 +17,5 @@ path = "gdrs"
 
 [dependencies.gdcf_dbcache]
 path = "gdcf_dbcache"
-features = ["pg", "sqlite"]
 
 [workspace]
