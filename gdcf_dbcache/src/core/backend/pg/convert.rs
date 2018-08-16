@@ -125,12 +125,14 @@ impl Display for PgTypes {
                 }
             }
             PgTypes::Timestamp(ts) => write!(f, "{}", ts.format("TIMESTAMP '%Y-%m-%d %H:%M:%S'")),
-            PgTypes::Bytes(bytes) => write!(f, "<binary data>"), // TODO: figure this out
+            PgTypes::Bytes(_) => write!(f, "<binary data>"), // TODO: figure this out
             PgTypes::Null => write!(f, "NULL")
         }
     }
 }
 
+// Here we have impls that ensure that every AsSql<Pg> is also a SqlExpr<Pg>
+// Maybe one day we'll find a better way to do this
 mod _dummy {
     use core::QueryPart;
     use core::SqlExpr;

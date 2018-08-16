@@ -115,6 +115,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn query_rows(&self, query: &dyn Query<Self>) -> Result<Vec<Row<Self>>, Error<Self>> {
+        trace!("Executing query {}", query.to_raw_sql());
+
         let (stmt, params) = query.to_sql();
 
         self.query_raw(stmt.to_statement(Self::prepare), &params)

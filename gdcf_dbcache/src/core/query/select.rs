@@ -156,8 +156,3 @@ pub trait Queryable<DB: Database>: Sized {
 }
 
 if_query_part!(Select<'a, DB>, Query<DB>);
-
-/*
-impl<'a, DB: Database + 'a> Query<DB> for Select<'a, DB>
-    where
-        Select<'a, DB>: QueryPart<DB> {}*/

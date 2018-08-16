@@ -67,8 +67,3 @@ pub trait Insertable<DB: Database> {
 }
 
 if_query_part!(Insert<'a, DB>, Query<DB>);
-
-/*
-impl<'a, DB: Database + 'a> Query<DB> for Insert<'a, DB>
-    where
-        Insert<'a, DB>: QueryPart<DB> {}*/

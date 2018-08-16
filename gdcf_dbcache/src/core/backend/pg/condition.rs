@@ -13,10 +13,6 @@ impl<'a> QueryPart<Pg> for EqField<'a> {
 }
 
 impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
-    /*fn to_sql_unprepared(&self) -> String {
-        format!("({} = {})", self.field.qualified_name(), self.value.as_sql_string())
-    }
-*/
     fn to_sql(&self) -> Preparation<Pg> {
         Preparation::<Pg>::default()
             .with_static(format!("({} = ", self.field.qualified_name()))
@@ -26,10 +22,6 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
 }
 
 impl QueryPart<Pg> for And<Pg> {
-    /*fn to_sql_unprepared(&self) -> String {
-        format!("({} AND {})", self.cond_1.to_sql_unprepared(), self.cond_2.to_sql_unprepared())
-    }*/
-
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
             .with_static("(")
@@ -42,10 +34,6 @@ impl QueryPart<Pg> for And<Pg> {
 
 
 impl QueryPart<Pg> for Or<Pg> {
-    /*fn to_sql_unprepared(&self) -> String {
-        format!("({} OR {})", self.cond_1.to_sql_unprepared(), self.cond_2.to_sql_unprepared())
-    }*/
-
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
             .with_static("(")

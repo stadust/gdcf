@@ -39,9 +39,3 @@ impl<'a, DB: Database + 'a> Delete<'a, DB> {
 
 
 if_query_part!(Delete<'a, DB>, Query<DB>);
-//if_sql_expr!(Delete<'a, DB>, Query<DB>);
-
-/*
-impl<'a, DB: Database + 'a> Query<DB> for Delete<'a, DB>
-    where
-        Delete<'a, DB>: QueryPart<DB> {}*/

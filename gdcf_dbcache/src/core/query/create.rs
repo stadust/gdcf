@@ -145,15 +145,3 @@ if_query_part!(ForeignKeyConstraint<'a>, Constraint<DB>);
 if_query_part!(DefaultConstraint<'a, DB>, Constraint<DB>);
 
 if_query_part!(Create<'a, DB>, Query<DB>);
-//if_sql_expr!(Create<'a, DB>, Query<DB>);
-
-
-/*impl<'a, DB: Database + 'a> Query<DB> for Create<'a, DB>
-    where
-        Create<'a, DB>: QueryPart<DB> {}*/
-
-/*impl<'a, DB: Database + 'a, D: SqlExpr<DB>> Constraint<DB> for DefaultConstraint<'a, DB, D>
-    where
-        D: SqlExpr<DB>,
-        Self: QueryPart<DB>
-{}*/

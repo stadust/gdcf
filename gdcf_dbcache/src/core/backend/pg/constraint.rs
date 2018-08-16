@@ -9,12 +9,6 @@ use core::statement::Prepare;
 macro_rules! constraint_query_part {
     ($back: ty, $t: ty, $val: expr) => {
         impl<'a> QueryPart<$back> for $t {
-            /*fn to_sql_unprepared(&self) -> String {
-                match self.0 {
-                    None => String::from($val),
-                    Some(name) => format!("CONSTRAINT {} {}", name, $val)
-                }
-            }*/
             fn to_sql(&self) -> Preparation<$back> {
                 match self.0 {
                     None => Preparation::<$back>::default().with_static($val),
@@ -33,13 +27,6 @@ constraint_query_part!(Pg, UniqueConstraint<'a>, "UNIQUE");
 constraint_query_part!(Pg, NotNullConstraint<'a>, "NOT NULL");
 
 impl<'a> QueryPart<Pg> for DefaultConstraint<'a, Pg> {
-    /*fn to_sql_unprepared(&self) -> String {
-        match self.name {
-            None => format!("DEFAULT {}", self.default.to_sql_unprepared()),
-            Some(_) => unimplemented!()
-        }
-    }*/
-
     fn to_sql(&self) -> Preparation<Pg> {
         match self.name {
             None => Preparation::<Pg>::default()
