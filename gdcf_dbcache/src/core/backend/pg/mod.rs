@@ -16,7 +16,7 @@ pub struct Pg {
     conn: Connection
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum PgTypes {
     SmallInteger(i16),
     Integer(i32),
