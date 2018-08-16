@@ -1,4 +1,12 @@
-pub use self::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
+//! Module containing all the GDCF models
+//!
+//! The GDCF models do not attempt to exactly represent the responses received with the [`ApiClient`](`::api::client::ApiClient`)
+//! but rather provide a level of abstraction that makes it easy to work with the provided data.
+//!
+//! Note that the purpose of some values sent by the servers is unknown. These values of provided as
+//! [`String`]s and named after the index they appeared in the server data.
+
+pub use self::level::{DemonRating, Featured, Level, LevelLength, LevelRating, PartialLevel, Password};
 pub use self::song::{MainSong, NewgroundsSong};
 use std::fmt::{self, Display, Formatter};
 

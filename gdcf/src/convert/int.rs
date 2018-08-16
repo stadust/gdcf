@@ -1,3 +1,5 @@
+//! Module containing various conversion to and from integral type for GDCF models
+
 use model::DemonRating;
 use model::GameVersion;
 use model::level::Featured;
