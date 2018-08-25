@@ -147,21 +147,67 @@ impl Hash for LevelsRequest {
     }
 }
 
-/// Struct containing the various search filters provided by the Geometry Dash client.
-#[derive(Debug, Default, Copy, Clone, Hash)]
-pub struct SearchFilters {
-    /// Only retrieve uncompleted levels
-    ///
-    /// ## GD Internals:
-    /// This value needs to be converted to an integer for the boomlings API
-    pub uncompleted: bool,
 
-    /// Only retrieve completed levels
+/// Enum representing the various filter states that can be achieved using the `completed` and `uncompleted`
+/// options in the Geometry Dash client
+#[derive(Debug, Clone, Hash)]
+pub enum CompletionFilter {
+    /// No filtering based upon completion
+    None,
+
+    /// Filtering based upon a given list of level ids
+    List {
+        /// The list of level ids to filter
+        ids: Vec<u64>,
+
+        /// if `true`, only the levels matching the ids in [`ids`] will be searched, if `false`,
+        /// the levels in [`ids`] will be excluded.
+        include: bool,
+    },
+}
+
+impl Default for CompletionFilter {
+    fn default() -> Self {
+        CompletionFilter::None
+    }
+}
+
+impl CompletionFilter {
+    /// Constructs a [`CompletionFilter`] that'll restrict the search to the list of provided ids
+    pub fn completed(completed: Vec<u64>) -> CompletionFilter {
+        CompletionFilter::List {
+            ids: completed,
+            include: true,
+        }
+    }
+
+    /// Constructs a [`CompletionFilter`] that'll exclude the list of given ids from the search
+    pub fn uncompleted(completed: Vec<u64>) -> CompletionFilter {
+        CompletionFilter::List {
+            ids: completed,
+            include: false,
+        }
+    }
+}
+
+/// Struct containing the various search filters provided by the Geometry Dash client.
+#[derive(Debug, Default, Clone, Hash)]
+pub struct SearchFilters {
+    /// In- or excluding levels that have already been beaten. Since the GDCF client doesn't really
+    /// have a notion of "completing" a level, this can be used to restrict the result a subset of
+    /// an arbitrary set of levels, or exclude an arbitrary set of levels the result.
     ///
     /// ## GD Internals:
-    /// This field is called `onlyCompleted` in the boomlings API and needs to be converted to
-    /// an integer
-    pub completed: bool,
+    /// This field abstracts away the `uncompleted`, `onlyCompleted` and `completedLevels` fields.
+    ///
+    /// + `uncompleted` is to be set to `1` if we wish to exclude completed levels from the results
+    /// (and to `0` otherwise).
+    /// + `onlyCompleted` is to be set to `1` if we wish to only search through completed levels
+    /// (and to `0` otherwise)
+    /// + `completedLevels` is a list of levels ids that have been completed. If needs to be provided
+    /// if, and only if, either `uncompleted` or `onlyCompleted` are set to `1`. The ids are comma
+    /// seperated and enclosed by parenthesis.
+    pub completion: CompletionFilter,
 
     /// Only retrieve featured levels
     ///
@@ -212,6 +258,11 @@ pub struct SearchFilters {
 }
 
 /// Enum containing the various types of [LevelsRequest](struct.LevelsRequest.html) possible
+///
+/// ## GD Internals:
+/// + Unused values: `8`, `9`, `14`
+/// + The values `15` and `17` are only used in Geometry Dash World and are the same as `0` ([`Search`](enum.LevelRequestType.html#variant.Search))
+/// and `6` ([`Featured`](enum.LevelRequestType.html#variant.Featured)) respectively
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Hash)]
 pub enum LevelRequestType {
     /// A search request.
@@ -264,53 +315,30 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `7` in requests
     Magic,
 
-    /// Unknown what this is
+    /// Map pack levels. The search string is set to a comma seperated list of levels, which are the
+    /// levels contained in the map pack
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `8` in requests
-    Unknown8,
+    /// This variant is represented by the value `10` in requests
+    MapPack,
 
     /// Request to retrieve the list of levels most recently awarded a rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `9` in requests
+    /// This variant is represented by the value `11` in requests
     Awarded,
-
-    /// Unknown how this works (MapPack according to GDPS source)
-    ///
-    /// ## GD Internals:
-    /// This variant is represented by the value `10` in requests
-    Followed,
 
     /// Unknown how this works
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `11` in requests
-    Friend,
-
-    /// Unknown what this is (Followed according to GDPS source)
-    ///
-    /// ## GD Internals:
     /// This variant is represented by the value `12` in requests
-    Unknown12,
+    Followed,
 
-    /// Unknown what this is (Friends according to GDPS source)
+    /// Unknown what this is
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `13` in requests
-    Unknown13,
-
-    /// Unknown what this is
-    ///
-    /// ## GD Internals:
-    /// This variant is represented by the value `14` in requests
-    Unknown14,
-
-    /// Unknown what this is
-    ///
-    /// ## GD Internals:
-    /// This variant is represented by the value `15` in requests
-    Unknown15,
+    Friends,
 
     /// Request to retrieve the levels in the hall of fame
     ///
@@ -335,13 +363,13 @@ impl SearchFilters {
         self
     }
 
-    pub fn uncompleted(mut self) -> SearchFilters {
-        self.uncompleted = true;
+    pub fn only_search(mut self, ids: Vec<u64>) -> SearchFilters {
+        self.completion = CompletionFilter::List { ids, include: true };
         self
     }
 
-    pub fn completed(mut self) -> SearchFilters {
-        self.completed = true;
+    pub fn exclude(mut self, ids: Vec<u64>) -> SearchFilters {
+        self.completion = CompletionFilter::List { ids, include: false };
         self
     }
 
@@ -468,14 +496,10 @@ impl From<LevelRequestType> for i32 {
             LevelRequestType::User => 5,
             LevelRequestType::Featured => 6,
             LevelRequestType::Magic => 7,
-            LevelRequestType::Unknown8 => 8,
-            LevelRequestType::Awarded => 9,
-            LevelRequestType::Followed => 10,
-            LevelRequestType::Friend => 11,
-            LevelRequestType::Unknown12 => 12,
-            LevelRequestType::Unknown13 => 13,
-            LevelRequestType::Unknown14 => 14,
-            LevelRequestType::Unknown15 => 15,
+            LevelRequestType::MapPack => 10,
+            LevelRequestType::Awarded => 11,
+            LevelRequestType::Followed => 12,
+            LevelRequestType::Friends => 13,
             LevelRequestType::HallOfFame => 16,
         }
     }

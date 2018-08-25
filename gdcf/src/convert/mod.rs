@@ -118,4 +118,11 @@ pub mod from {
     pub fn bool(value: bool) -> u8 {
         value as u8
     }
+
+    pub fn level_list(ids: &Vec<u64>) -> String {
+        let mut ids = ids.iter().join_with(",").to_string();
+        ids.push(')');
+        ids.insert(0, '(');
+        ids
+    }
 }
