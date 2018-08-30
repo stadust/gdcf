@@ -73,7 +73,7 @@ pub struct NewgroundsSong {
     pub index_7: Option<String>,
 
     #[raw_data(index = 8)]
-    pub index_8: i32,
+    pub index_8: String,
 
     /// The direct `audio.ngfiles.com` download link for this [`NewgroundsSong`]
     ///
