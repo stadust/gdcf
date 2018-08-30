@@ -1,5 +1,4 @@
 #![feature(box_syntax)]
-#![feature(attr_literals)]
 #![feature(never_type)]
 #![feature(try_from)]
 

@@ -69,7 +69,7 @@ pub(super) fn search_filters<S>(filters: &SearchFilters, serializer: S) -> Resul
             map.serialize_entry("onlyCompleted", &0)?;
         }
         CompletionFilter::List { ref ids, include } => {
-            map.serialize_entry("completedLevels", &convert::from::level_list(ids));
+            map.serialize_entry("completedLevels", &convert::from::level_list(ids))?;
             if include {
                 map.serialize_entry("uncompleted", &0)?;
                 map.serialize_entry("onlyCompleted", &1)?;

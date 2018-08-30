@@ -1,6 +1,5 @@
 #![feature(trace_macros)]
 #![feature(macro_at_most_once_rep)]
-#![feature(use_extern_macros)]
 #![feature(proc_macro_gen)]
 
 #![deny(

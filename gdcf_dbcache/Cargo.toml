@@ -25,7 +25,7 @@ path = "../gdcf"
 path = "../pm_gdcf_dbcache"
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "pg"]
 
 pg = ["postgres"]
 mysql = []
