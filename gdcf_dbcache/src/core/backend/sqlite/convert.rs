@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use core::AsSql;
 use core::backend::Database;
 use core::backend::Error;
@@ -49,6 +50,38 @@ impl SqliteToSql for SqliteTypes {
     }
 }
 
+// Here we have impls that ensure that every AsSql<Sqlite> is also a SqlExpr<Sqlite>
+// Maybe one day we'll find a better way to do this
+mod _dummy {
+    use core::QueryPart;
+    use core::SqlExpr;
+    use core::statement::Preparation;
+    use core::statement::PreparedStatement;
+    use super::*;
+
+    impl<T: AsSql<Sqlite>> QueryPart<Sqlite> for T {
+        fn to_sql(&self) -> Preparation<Sqlite> {
+            (PreparedStatement::placeholder(), vec![self])
+        }
+
+        fn to_raw_sql(&self) -> String {
+            self.as_sql().to_string()
+        }
+    }
+
+    impl<'a> QueryPart<Sqlite> for dyn AsSql<Sqlite> + 'a {
+        fn to_sql(&self) -> Preparation<Sqlite> {
+            (PreparedStatement::placeholder(), vec![self])
+        }
+
+        fn to_raw_sql(&self) -> String {
+            self.as_sql().to_string()
+        }
+    }
+
+    impl<T: AsSql<Sqlite>> SqlExpr<Sqlite> for T {}
+}
+
 as_sql_cast!(Sqlite, i8, i64, SqliteTypes::Integer);
 as_sql_cast!(Sqlite, u8, i64, SqliteTypes::Integer);
 as_sql_cast!(Sqlite, i16, i64, SqliteTypes::Integer);
@@ -90,6 +123,12 @@ impl<T> AsSql<Sqlite> for Option<T>
             None => SqliteTypes::Null,
             Some(t) => t.as_sql()
         }
+    }
+}
+
+impl AsSql<Sqlite> for NaiveDateTime {
+    fn as_sql(&self) -> SqliteTypes {
+        SqliteTypes::Text(self.format("%Y-%m-%dT%H:%M:%S%.f").to_string())
     }
 }
 
@@ -140,6 +179,31 @@ impl FromSql<Sqlite> for String {
         match sql {
             SqliteTypes::Text(t) => Ok(t.clone()),
             _ => Err(Error::Conversion(format!("{:?}", sql), "String"))
+        }
+    }
+}
+
+impl FromSql<Sqlite> for NaiveDateTime {
+    fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
+        where
+            Self: Sized
+    {
+        match sql {
+            SqliteTypes::Text(ts) => ts.parse()
+                .map_err(|err| Error::Conversion(format!("{}", err), "NaiveDateTime")),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime"))
+        }
+    }
+}
+
+impl FromSql<Sqlite> for Vec<u8> {
+    fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
+        where
+            Self: Sized
+    {
+        match sql {
+            SqliteTypes::Blob(yes) => Ok(yes.clone()),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "Vec<u8>"))
         }
     }
 }

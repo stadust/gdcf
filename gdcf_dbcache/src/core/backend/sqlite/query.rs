@@ -1,13 +1,12 @@
 use core::AsSql;
-use core::backend::pg::Pg;
+use core::backend::sqlite::Sqlite;
 use core::backend::util::join_statements;
 use core::query::condition::And;
 use core::query::condition::EqField;
 use core::query::condition::EqValue;
 use core::query::condition::Or;
 use core::query::create::{Column, Create};
-use core::query::create::{NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint};
-use core::query::create::DefaultConstraint;
+use core::query::create::{DefaultConstraint, NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint};
 use core::query::delete::Delete;
 use core::query::Insert;
 use core::query::insert::OnConflict;
@@ -38,14 +37,14 @@ macro_rules! constraint_query_part {
     };
 }
 
-constraint_query_part!(Pg, PrimaryKeyConstraint<'a>, "PRIMARY KEY");
-constraint_query_part!(Pg, UniqueConstraint<'a>, "UNIQUE");
-constraint_query_part!(Pg, NotNullConstraint<'a>, "NOT NULL");
+constraint_query_part!(Sqlite, PrimaryKeyConstraint<'a>, "PRIMARY KEY");
+constraint_query_part!(Sqlite, UniqueConstraint<'a>, "UNIQUE");
+constraint_query_part!(Sqlite, NotNullConstraint<'a>, "NOT NULL");
 
-impl<'a> QueryPart<Pg> for DefaultConstraint<'a, Pg> {
-    fn to_sql(&self) -> Preparation<Pg> {
+impl<'a> QueryPart<Sqlite> for DefaultConstraint<'a, Sqlite> {
+    fn to_sql(&self) -> Preparation<Sqlite> {
         match self.name {
-            None => Preparation::<Pg>::default()
+            None => Preparation::<Sqlite>::default()
                 .with_static("DEFAULT")
                 .with_static(self.default.to_raw_sql()),
             Some(_) => unimplemented!()
@@ -53,22 +52,23 @@ impl<'a> QueryPart<Pg> for DefaultConstraint<'a, Pg> {
     }
 }
 
-simple_query_part!(Pg, Text, "TEXT");
-simple_query_part!(Pg, SmallInteger, "SMALLINT");
-simple_query_part!(Pg, Integer, "INT");
-simple_query_part!(Pg, BigInteger, "BIGINT");
-simple_query_part!(Pg, Boolean, "BOOL");
-simple_query_part!(Pg, Float, "FLOAT(4)");
-simple_query_part!(Pg, Double, "DOUBLE PRECISION");
-simple_query_part!(Pg, Unsigned<SmallInteger>, "SMALLINT");
-simple_query_part!(Pg, Unsigned<Integer>, "INTEGER");
-simple_query_part!(Pg, Unsigned<BigInteger>, "BIGINT");
-simple_query_part!(Pg, UtcTimestamp, "TIMESTAMP WITHOUT TIME ZONE");
-simple_query_part!(Pg, Bytes, "BYTEA");
 
-impl<'a> QueryPart<Pg> for EqField<'a> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        Preparation::<Pg>::default()
+simple_query_part!(Sqlite, Text, "TEXT");
+simple_query_part!(Sqlite, SmallInteger, "INTEGER");
+simple_query_part!(Sqlite, Integer, "INTEGER");
+simple_query_part!(Sqlite, BigInteger, "INTEGER");
+simple_query_part!(Sqlite, Boolean, "INTEGER");
+simple_query_part!(Sqlite, Float, "REAL");
+simple_query_part!(Sqlite, Double, "REAL");
+simple_query_part!(Sqlite, Unsigned<SmallInteger>, "INTEGER");
+simple_query_part!(Sqlite, Unsigned<Integer>, "INTEGER");
+simple_query_part!(Sqlite, Unsigned<BigInteger>, "INTEGER");
+simple_query_part!(Sqlite, UtcTimestamp, "STRING");
+simple_query_part!(Sqlite, Bytes, "BLOB");
+
+impl<'a> QueryPart<Sqlite> for EqField<'a> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        Preparation::<Sqlite>::default()
             .with_static("(")
             .with_static(self.field_1.qualified_name())
             .with_static("=")
@@ -77,9 +77,9 @@ impl<'a> QueryPart<Pg> for EqField<'a> {
     }
 }
 
-impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
-    fn to_sql(&self) -> Preparation<Pg> {
-        Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for EqValue<'a, Sqlite> {
+    fn to_sql(&self) -> Preparation<Sqlite> {
+        Preparation::<Sqlite>::default()
             .with_static("(")
             .with_static(self.field.qualified_name())
             .with_static("=")
@@ -88,9 +88,9 @@ impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
     }
 }
 
-impl QueryPart<Pg> for And<Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        Preparation::<Pg>::default()
+impl QueryPart<Sqlite> for And<Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        Preparation::<Sqlite>::default()
             .with_static("(")
             .with(self.cond_1.to_sql())
             .with_static("AND")
@@ -99,9 +99,9 @@ impl QueryPart<Pg> for And<Pg> {
     }
 }
 
-impl QueryPart<Pg> for Or<Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        Preparation::<Pg>::default()
+impl QueryPart<Sqlite> for Or<Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        Preparation::<Sqlite>::default()
             .with_static("(")
             .with(self.cond_1.to_sql())
             .with_static("OR")
@@ -110,35 +110,22 @@ impl QueryPart<Pg> for Or<Pg> {
     }
 }
 
-impl<'a> Insert<'a, Pg> {
-    fn on_conflict(&self) -> String {
-        match self.conflict {
-            OnConflict::Ignore => "ON CONFLICT DO NOTHING".into(),
-            OnConflict::Update(ref target) => {
-                format!(
-                    "ON CONFLICT ({}) DO UPDATE SET {}",
-                    target
-                        .iter()
-                        .map(|f| f.name())
-                        .join_with(","),
-                    self.values()
-                        .into_iter()
-                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name())).join_with(",")
-                )
-            }
-            _ => String::new()
-        }
-    }
-}
+impl<'a> QueryPart<Sqlite> for Insert<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let p = match self.conflict {
+            OnConflict::Ignore => Preparation::<Sqlite>::default()
+                .with_static("INSERT OR IGNORE"),
+            OnConflict::Update(_) => Preparation::<Sqlite>::default()
+                .with_static("INSERT OR REPLACE"),  // TODO: maybe use actual UPSERT here
+            OnConflict::Fail => Preparation::<Sqlite>::default()
+                .with_static("INSERT OR FAIL")
+        };
 
-impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
-            .with_static("INSERT INTO")
+        let mut p = p.with_static("INTO")
             .with_static(self.table().name)
             .with_static("(");
 
-        let mut pv = Preparation::<Pg>::default()
+        let mut pv = Preparation::<Sqlite>::default()
             .with_static("VALUES (");
 
         for set_field in self.values() {
@@ -157,13 +144,12 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
         p.with_static(")")
             .with(pv)
             .with_static(")")
-            .with_static(self.on_conflict())
     }
 }
 
-impl<'a> QueryPart<Pg> for Column<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for Column<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let mut p = Preparation::<Sqlite>::default()
             .with_static(self.name)
             .with_static(self.sql_type.to_raw_sql());
 
@@ -175,9 +161,9 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Create<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for Create<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let mut p = Preparation::<Sqlite>::default()
             .with_static("CREATE TABLE");
 
         if self.ignore_if_exists {
@@ -191,7 +177,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     }
 }
 
-impl<'a> Select<'a, Pg> {
+impl<'a> Select<'a, Sqlite> {
     fn qualify(&self) -> bool {
         !self.joins.is_empty()
     }
@@ -220,9 +206,9 @@ impl<'a> Select<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Select<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for Select<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let mut p = Preparation::<Sqlite>::default()
             .with_static("SELECT")
             .with_static(self.fields())
             .with_static("FROM")
@@ -239,9 +225,9 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Join<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for Join<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        Preparation::<Sqlite>::default()
             .with_static("JOIN")
             .with_static(self.other.name)
             .with_static("ON")
@@ -249,9 +235,9 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for OrderBy<'a> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let p = Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for OrderBy<'a> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let p = Preparation::<Sqlite>::default()
             .with_static(self.field.name);
 
         match self.ordering {
@@ -261,9 +247,9 @@ impl<'a> QueryPart<Pg> for OrderBy<'a> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
-    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
+impl<'a> QueryPart<Sqlite> for Delete<'a, Sqlite> {
+    fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
+        let mut p = Preparation::<Sqlite>::default()
             .with_static("DELETE FROM")
             .with_static(self.table.name);
 

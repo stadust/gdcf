@@ -120,7 +120,7 @@ impl Display for PgTypes {
     }
 }
 
-// Here we have impls that ensure that every AsSql<Pg> is also a SqlExpr<Pg>
+// Here we have impls that ensure that every AsSql<Sqlite> is also a SqlExpr<Sqlite>
 // Maybe one day we'll find a better way to do this
 mod _dummy {
     use core::QueryPart;

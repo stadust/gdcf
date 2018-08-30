@@ -1,19 +1,16 @@
+use chrono::NaiveDateTime;
 use core::{AsSql, backend::Database};
 use core::query::select::Row;
 use postgres::{Connection, Error as PgError, types::ToSql as ToPgSql};
 use postgres::TlsMode;
 use super::Error;
-use chrono::NaiveDateTime;
 
-mod condition;
 mod convert;
 mod query;
-mod types;
-mod constraint;
 
 #[derive(Debug)]
 pub struct Pg {
-    conn: Connection
+    connection: Connection
 }
 
 #[derive(Debug)]
@@ -33,7 +30,7 @@ pub enum PgTypes {
 impl Pg {
     pub fn new(url: &str, tls: TlsMode) -> Pg {
         Pg {
-            conn: Connection::connect(url, tls).unwrap()
+            connection: Connection::connect(url, tls).unwrap()
         }
     }
 }
@@ -50,7 +47,7 @@ impl Database for Pg {
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
-        self.conn.execute(&statement, &values[..])?;
+        self.connection.execute(&statement, &values[..])?;
         Ok(())
     }
 
@@ -63,7 +60,7 @@ impl Database for Pg {
 
         let mut rows = Vec::new();
 
-        for row in self.conn.query(&statement, &values)?.iter() {
+        for row in self.connection.query(&statement, &values)?.iter() {
             let mut values = Vec::new();
 
             for i in 0..row.len() {

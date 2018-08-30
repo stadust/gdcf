@@ -166,6 +166,7 @@ pub(crate) mod full_level {
     }
 
     // TODO: the other backends
+    // TODO: better way of doing this
     #[cfg(feature = "pg")]
     use core::backend::pg::Pg;
     #[cfg(feature = "pg")]
@@ -179,6 +180,31 @@ pub(crate) mod full_level {
         }
 
         fn from_row(row: &Row<Pg>, offset: isize) -> Result<Self, Error<Pg>> {
+            let base = PartialLevel::from_row(row, offset)?;
+
+            Ok(Level {
+                base,
+                level_data: row.get(offset + 24).unwrap()?,
+                password: row.get(offset + 25).unwrap()?,
+                time_since_upload: row.get(offset + 26).unwrap()?,
+                time_since_update: row.get(offset + 27).unwrap()?,
+                index_36: row.get(offset + 28).unwrap()?,
+            })
+        }
+    }
+    #[cfg(feature = "sqlite")]
+    use core::backend::sqlite::Sqlite;
+    #[cfg(feature = "sqlite")]
+    impl Queryable<Sqlite> for Level
+    {
+        fn select_from(from: &Table) -> Select<Sqlite> {
+            Select::new(from, Vec::new())
+                .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
+                .select(&super::partial_level::table.fields()[..24])
+                .select(&from.fields()[1..])
+        }
+
+        fn from_row(row: &Row<Sqlite>, offset: isize) -> Result<Self, Error<Sqlite>> {
             let base = PartialLevel::from_row(row, offset)?;
 
             Ok(Level {

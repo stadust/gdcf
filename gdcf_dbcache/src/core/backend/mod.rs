@@ -17,11 +17,18 @@ pub mod sqlite;
 #[cfg(feature = "mysql")]
 pub mod mysql;
 
+mod util;
+
 // TODO: during FromSql<DB> and AsSql<DB> we are excessively copying things. We probably either wanna work with references more, or take ownership more
+// TODO: error handling when creating connections
 
 #[derive(Debug)]
 pub enum Error<DB: Database> {
+    /// Database specific error
     Database(DB::Error),
+
+    /// Many database specific errros
+    MultipleDatabase(Vec<DB::Error>),
 
     /// Conversion from a row item the expected Rust datatype failed
     Conversion(String, &'static str),
@@ -142,23 +149,20 @@ pub trait Database: Debug + Sized {
             Self: Sized;
 }
 
-impl<DB: Database> StdError for Error<DB> {
-    fn description(&self) -> &str {
-        match self {
-            Error::Database(err) => err.description(),
-            Error::Conversion(..) => "error while converting data from sql",
-            Error::NoResult => "query yielded no result",
-            Error::TooManyRows => "query yielded too many rows"
-        }
-    }
-}
+impl<DB: Database> StdError for Error<DB> {}
 
 impl<DB: Database> Display for Error<DB> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         match self {
             Error::Database(err) => write!(f, "{}", err),
             Error::Conversion(value, target) => write!(f, "Failed to convert {:?} to {}", value, target),
-            e => write!(f, "{}", e.description())
+            e => write!(f, "{}", e)
         }
+    }
+}
+
+impl<DB: Database> From<Vec<DB::Error>> for Error<DB> {
+    fn from(errs: Vec<DB::Error>) -> Self {
+        Error::MultipleDatabase(errs)
     }
 }

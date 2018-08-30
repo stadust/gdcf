@@ -3,6 +3,8 @@ use core::backend::Database;
 use core::backend::Error;
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
+#[cfg(feature = "sqlite")]
+use core::backend::sqlite::Sqlite;
 use core::query::delete::Delete;
 use core::query::Insert;
 use core::query::insert::Insertable;
@@ -20,8 +22,9 @@ use gdcf::model::GDObject;
 use gdcf::model::Level;
 use gdcf::model::NewgroundsSong;
 use gdcf::model::PartialLevel;
-use schema::level::{self, partial_level, partial_levels, full_level};
+use schema::level::{self, full_level, partial_level, partial_levels};
 use schema::song::{self, newgrounds_song};
+use std::path::Path;
 use util;
 
 #[derive(Debug)]
@@ -52,6 +55,17 @@ impl DatabaseCacheConfig<Pg> {
     }
 }
 
+#[cfg(feature = "sqlite")]
+impl DatabaseCacheConfig<Sqlite> {
+    pub fn sqlite_memory_config() -> DatabaseCacheConfig<Sqlite> {
+        DatabaseCacheConfig::new(Sqlite::memory())
+    }
+
+    pub fn sqlte_config<P: AsRef<Path>>(path: P) -> DatabaseCacheConfig<Sqlite> {
+        DatabaseCacheConfig::new(Sqlite::path(path))
+    }
+}
+
 impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
     fn invalidate_after(&self) -> Duration {
         self.invalidate_after
@@ -71,175 +85,182 @@ impl<DB: Database> DatabaseCache<DB> {
     }
 }
 
-#[cfg(feature = "pg")]
-impl DatabaseCache<Pg> {
-    pub fn initialize(&self) -> Result<(), Error<Pg>> {
-        info!("Intializing Postgres-backed database cache!");
-        song::newgrounds_song::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
-        level::partial_level::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
-        level::partial_levels::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
-        level::partial_levels::cached_at::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
-        level::full_level::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
+macro_rules! cache {
+    ($feature: expr, $backend: ty) => {
+        #[cfg(feature = $feature)]
+        impl DatabaseCache<$backend> {
+            pub fn initialize(&self) -> Result<(), Error<$backend>> {
+                info!("Intializing Postgres-backed database cache!");
+                song::newgrounds_song::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
+                level::partial_level::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
+                level::partial_levels::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
+                level::partial_levels::cached_at::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
+                level::full_level::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
 
-        Ok(())
-    }
-}
+                Ok(())
+            }
+        }
 
-#[cfg(feature = "pg")]
-impl DatabaseCache<Pg> {
-    fn store_partial_level(&self, level: &PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        debug!("Storing partial level {}", level);
+        #[cfg(feature = $feature)]
+        impl DatabaseCache<$backend> {
+            fn store_partial_level(&self, level: &PartialLevel) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                debug!("Storing partial level {}", level);
 
-        let ts = Utc::now().naive_utc();
+                let ts = Utc::now().naive_utc();
 
-        level.insert()
-            .with(partial_level::last_cached_at.set(&ts))
-            .on_conflict_update(vec![&partial_level::level_id])
-            .execute(&self.config.backend)
-            .map_err(convert_error)
-    }
+                level.insert()
+                    .with(partial_level::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&partial_level::level_id])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)
+            }
 
-    fn store_song(&self, song: &NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        debug!("Storing song {}", song);
+            fn store_song(&self, song: &NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                debug!("Storing song {}", song);
 
-        let ts = Utc::now().naive_utc();
+                let ts = Utc::now().naive_utc();
 
-        song.insert()
-            .with(newgrounds_song::last_cached_at.set(&ts))
-            .on_conflict_update(vec![&newgrounds_song::song_id])
-            .execute(&self.config.backend)
-            .map_err(convert_error)
-    }
+                song.insert()
+                    .with(newgrounds_song::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&newgrounds_song::song_id])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)
+            }
 
-    fn store_level(&self, level: &Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        debug!("Storing level {}", level);
+            fn store_level(&self, level: &Level) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                debug!("Storing level {}", level);
 
-        let ts = Utc::now().naive_utc();
+                let ts = Utc::now().naive_utc();
 
-        self.store_partial_level(&level.base)?;
+                self.store_partial_level(&level.base)?;
 
-        level.insert()
-            .with(full_level::level_id.set(&level.base.level_id))
-            .with(full_level::last_cached_at.set(&ts))
-            .on_conflict_update(vec![&full_level::level_id])
-            .execute(&self.config.backend)
-            .map_err(convert_error)
+                level.insert()
+                    .with(full_level::level_id.set(&level.base.level_id))
+                    .with(full_level::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&full_level::level_id])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl Cache for DatabaseCache<$backend>
+        {
+            // we cannot turn this into an impl generic over DB: Database
+            // because it would require us to add explicit trait bounds for all the
+            // structs used for query building, which in turn would require us to add a
+            // lifetime to the impl. This would force all structs used internally to be bound to
+            // that lifetime, although they only live for the function they're used in.
+            // Since that obviously results in compiler errors, we cant do that.
+            // (and we also cant add the lifetimes directly to the functions, because trait)
+
+            type Config = DatabaseCacheConfig<$backend>;
+            type Err = Error<$backend>;
+
+            fn config(&self) -> &DatabaseCacheConfig<$backend> {
+                &self.config
+            }
+
+            fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
+                debug!("Performing cache lookup for request {}", req);
+
+                let h = util::hash(req);
+
+                let select = Select::new(
+                    &partial_levels::cached_at::table,
+                    vec![&partial_levels::cached_at::first_cached_at, &partial_levels::cached_at::last_cached_at],
+                ).filter(partial_levels::cached_at::request_hash.eq(h));
+
+                let row = self.config.backend.query_one_row(&select)
+                    .map_err(convert_error)?;
+
+                let first_cached_at = row.get(0)
+                    .unwrap()
+                    .map_err(convert_error)?;
+
+                let last_cached_at = row.get(1)
+                    .unwrap()
+                    .map_err(convert_error)?;
+
+                let select = Select::new(&partial_levels::table, Vec::new())
+                    .select(partial_level::table.fields())
+                    .filter(partial_levels::request_hash.eq(h))
+                    .join(&partial_level::table, partial_levels::level_id.same_as(&partial_level::level_id));
+
+                let levels: Vec<PartialLevel> = self.config.backend.query(&select)
+                    .map_err(convert_error)?;
+
+                Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
+            }
+
+            fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
+                let h = util::hash(req);
+                let ts = Utc::now().naive_utc();
+
+                // TODO: wrap this into a transaction if I can figure out how to implement them
+                Delete::new(&partial_levels::table)
+                    .if_met(partial_levels::request_hash.eq(h))
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)?;
+
+                Insert::new(&partial_levels::cached_at::table, Vec::new())
+                    .with(partial_levels::cached_at::last_cached_at.set(&ts))
+                    .with(partial_levels::cached_at::request_hash.set(&h))
+                    .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)?;
+
+                for level in levels {
+                    Insert::new(&partial_levels::table, Vec::new())
+                        .with(partial_levels::request_hash.set(&h))
+                        .with(partial_levels::level_id.set(&level.level_id))
+                        .execute(&self.config.backend)
+                        .map_err(convert_error)?;
+                }
+
+                Ok(())
+            }
+
+            fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
+                let select = Level::select_from(&full_level::table)
+                    .filter(full_level::level_id.eq(req.level_id));
+
+                self.config.backend.query_one(&select)
+                    .map_err(convert_error)
+            }
+
+            fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
+                let select = NewgroundsSong::select_from(&newgrounds_song::table)
+                    .filter(newgrounds_song::song_id.eq(newground_id));
+
+                self.config.backend.query_one(&select)
+                    .map_err(convert_error)  // for some reason I can use the question mark operator?????
+            }
+
+            fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                match obj {
+                    GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
+                    GDObject::NewgroundsSong(song) => self.store_song(song),
+                    GDObject::Level(lvl) => self.store_level(lvl)
+                }
+            }
+        }
     }
 }
 
 // TODO: turn cache impl into a macro
-#[cfg(feature = "pg")]
-impl Cache for DatabaseCache<Pg>
-{
-    // we cannot turn this into an impl generic over DB: Database
-    // because it would require us to add explicit trait bounds for all the
-    // structs used for query building, which in turn would require us to add a
-    // lifetime to the impl. This would force all structs used internally to be bound to
-    // that lifetime, although they only live for the function they're used in.
-    // Since that obviously results in compiler errors, we cant do that.
-    // (and we also cant add the lifetimes directly to the functions, because trait)
-
-    type Config = DatabaseCacheConfig<Pg>;
-    type Err = Error<Pg>;
-
-    fn config(&self) -> &DatabaseCacheConfig<Pg> {
-        &self.config
-    }
-
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err> {
-        debug!("Performing cache lookup for request {}", req);
-
-        let h = util::hash(req);
-
-        let select = Select::new(
-            &partial_levels::cached_at::table,
-            vec![&partial_levels::cached_at::first_cached_at, &partial_levels::cached_at::last_cached_at],
-        ).filter(partial_levels::cached_at::request_hash.eq(h));
-
-        let row = self.config.backend.query_one_row(&select)
-            .map_err(convert_error)?;
-
-        let first_cached_at = row.get(0)
-            .unwrap()
-            .map_err(convert_error)?;
-
-        let last_cached_at = row.get(1)
-            .unwrap()
-            .map_err(convert_error)?;
-
-        let select = Select::new(&partial_levels::table, Vec::new())
-            .select(partial_level::table.fields())
-            .filter(partial_levels::request_hash.eq(h))
-            .join(&partial_level::table, partial_levels::level_id.same_as(&partial_level::level_id));
-
-        let levels: Vec<PartialLevel> = self.config.backend.query(&select)
-            .map_err(convert_error)?;
-
-        Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
-    }
-
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>> {
-        let h = util::hash(req);
-        let ts = Utc::now().naive_utc();
-
-        // TODO: wrap this into a transaction if I can figure out how to implement them
-        Delete::new(&partial_levels::table)
-            .if_met(partial_levels::request_hash.eq(h))
-            .execute(&self.config.backend)
-            .map_err(convert_error)?;
-
-        Insert::new(&partial_levels::cached_at::table, Vec::new())
-            .with(partial_levels::cached_at::last_cached_at.set(&ts))
-            .with(partial_levels::cached_at::request_hash.set(&h))
-            .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
-            .execute(&self.config.backend)
-            .map_err(convert_error)?;
-
-        for level in levels {
-            Insert::new(&partial_levels::table, Vec::new())
-                .with(partial_levels::request_hash.set(&h))
-                .with(partial_levels::level_id.set(&level.level_id))
-                .execute(&self.config.backend)
-                .map_err(convert_error)?;
-        }
-
-        Ok(())
-    }
-
-    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
-        let select = Level::select_from(&full_level::table)
-            .filter(full_level::level_id.eq(req.level_id));
-
-        self.config.backend.query_one(&select)
-            .map_err(convert_error)
-    }
-
-    fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-        let select = NewgroundsSong::select_from(&newgrounds_song::table)
-            .filter(newgrounds_song::song_id.eq(newground_id));
-
-        self.config.backend.query_one(&select)
-            .map_err(convert_error)  // for some reason I can use the question mark operator?????
-    }
-
-    fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
-        match obj {
-            GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
-            GDObject::NewgroundsSong(song) => self.store_song(song),
-            GDObject::Level(lvl) => self.store_level(lvl)
-        }
-    }
-}
+cache!("pg", Pg);
+cache!("sqlite", Sqlite);
 
 fn convert_error<DB: Database>(db_error: Error<DB>) -> CacheError<Error<DB>> {
     match db_error {

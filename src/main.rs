@@ -1,6 +1,6 @@
-#![deny(
-bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
-)]
+//#![deny(
+//bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+//)]
 
 extern crate chrono;
 extern crate env_logger;
