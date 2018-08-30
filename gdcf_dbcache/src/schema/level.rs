@@ -2,7 +2,7 @@ pub(crate) mod partial_level {
     use core::backend::Error;
     use gdcf::model::PartialLevel;
 
-    use core::RawSql;
+    use schema::NowAtUtc;
 
     use pm_gdcf_dbcache::{iqtable, create};
 
@@ -78,7 +78,7 @@ pub(crate) mod partial_level {
             index_46: Text,
             index_47: Text,
 
-            first_cached_at: UtcTimestamp Default<RawSql>(RawSql("(now() AT TIME ZONE 'utc')")) NotNull,
+            first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
             last_cached_at: UtcTimestamp NotNull
         }
     }
@@ -104,7 +104,7 @@ pub(crate) mod partial_levels {
     }
 
     pub(crate) mod cached_at {
-        use core::RawSql;
+        use schema::NowAtUtc;
 
         use pm_gdcf_dbcache::{table, create};
 
@@ -120,7 +120,7 @@ pub(crate) mod partial_levels {
             partial_levels_request_cached_at => {
                 request_hash: Unsigned<BigInteger> Unique NotNull Primary,
 
-            first_cached_at: UtcTimestamp Default<RawSql>(RawSql("(now() AT TIME ZONE 'utc')")) NotNull,
+                first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
                 last_cached_at: UtcTimestamp NotNull
             }
         }
@@ -130,7 +130,7 @@ pub(crate) mod partial_levels {
 pub(crate) mod full_level {
     use pm_gdcf_dbcache::{itable, create};
 
-    use core::RawSql;
+    use schema::NowAtUtc;
     use gdcf::model::{Level, PartialLevel};
     use core::query::select::Queryable;
     use core::query::select::Row;
@@ -160,7 +160,7 @@ pub(crate) mod full_level {
             time_since_update: Text,
             index_36: Text,
 
-            first_cached_at: UtcTimestamp Default<RawSql>(RawSql("(now() AT TIME ZONE 'utc')")) NotNull,
+            first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
             last_cached_at: UtcTimestamp NotNull
         }
     }

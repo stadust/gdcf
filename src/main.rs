@@ -21,7 +21,8 @@ use gdrs::BoomlingsClient;
 fn main() {
     env_logger::init();
 
-    let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    //let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    let mut config = DatabaseCacheConfig::sqlite_memory_config();
     config.invalidate_after(Duration::minutes(30));
     let cache = DatabaseCache::new(config);
 

@@ -63,7 +63,7 @@ simple_query_part!(Sqlite, Double, "REAL");
 simple_query_part!(Sqlite, Unsigned<SmallInteger>, "INTEGER");
 simple_query_part!(Sqlite, Unsigned<Integer>, "INTEGER");
 simple_query_part!(Sqlite, Unsigned<BigInteger>, "INTEGER");
-simple_query_part!(Sqlite, UtcTimestamp, "STRING");
+simple_query_part!(Sqlite, UtcTimestamp, "TEXT");
 simple_query_part!(Sqlite, Bytes, "BLOB");
 
 impl<'a> QueryPart<Sqlite> for EqField<'a> {

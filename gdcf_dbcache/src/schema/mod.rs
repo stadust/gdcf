@@ -31,7 +31,7 @@ impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
 }
 
 #[derive(Debug)]
-struct NowAtUtc;
+pub struct NowAtUtc;
 
 #[cfg(feature = "pg")]
 impl QueryPart<Pg> for NowAtUtc {
@@ -48,7 +48,7 @@ impl SqlExpr<Pg> for NowAtUtc {}
 impl QueryPart<Sqlite> for NowAtUtc {
     fn to_sql(&self) -> Preparation<Sqlite> {
         Preparation::<Sqlite>::default()
-            .with_static("CURRENT_TIMESTAMP")
+            .with_static("(strftime('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP))")
     }
 }
 

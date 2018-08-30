@@ -190,7 +190,7 @@ impl FromSql<Sqlite> for NaiveDateTime {
     {
         match sql {
             SqliteTypes::Text(ts) => ts.parse()
-                .map_err(|err| Error::Conversion(format!("{}", err), "NaiveDateTime")),
+                .map_err(|err| Error::Conversion(format!("'{}': {}", ts, err), "NaiveDateTime")),
             _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime"))
         }
     }

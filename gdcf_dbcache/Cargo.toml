@@ -11,6 +11,7 @@ joinery = "1.0.0"
 [dependencies.rusqlite]
 version = "^0.13.0"
 optional = true
+features = ["bundled"]
 
 [dependencies.postgres]
 version = "^0.15.2"

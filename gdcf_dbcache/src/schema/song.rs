@@ -2,8 +2,7 @@ pub(crate) mod newgrounds_song {
     use gdcf::model::NewgroundsSong;
     use core::backend::Error;
 
-    //use schema::NowAtUtc;
-    use core::RawSql;
+    use schema::NowAtUtc;
 
     use pm_gdcf_dbcache::{iqtable, create};
 
@@ -34,7 +33,7 @@ pub(crate) mod newgrounds_song {
             index_7: Text,
             index_8: Text,
             song_link: Text NotNull,
-            first_cached_at: UtcTimestamp Default<RawSql>(RawSql("(now() AT TIME ZONE 'utc')")) NotNull,
+            first_cached_at: UtcTimestamp Default<NowAtUtc>(NowAtUtc) NotNull,
             last_cached_at: UtcTimestamp NotNull
         }
     }

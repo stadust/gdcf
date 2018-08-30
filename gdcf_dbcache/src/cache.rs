@@ -90,7 +90,8 @@ macro_rules! cache {
         #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
             pub fn initialize(&self) -> Result<(), Error<$backend>> {
-                info!("Intializing Postgres-backed database cache!");
+                info!("Intializing {}-backed database cache!", stringify!($backend));
+
                 song::newgrounds_song::create()
                     .ignore_if_exists()
                     .execute(&self.config.backend)?;
