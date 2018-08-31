@@ -4,7 +4,7 @@ pub(crate) mod partial_level {
 
     use schema::NowAtUtc;
 
-    use pm_gdcf_dbcache::{iqtable, create};
+    use pm_gdcf_dbcache::{create, iqtable};
 
     iqtable! {
         PartialLevel => partial_level {
@@ -85,7 +85,7 @@ pub(crate) mod partial_level {
 }
 
 pub(crate) mod partial_levels {
-    use pm_gdcf_dbcache::{table, create};
+    use pm_gdcf_dbcache::{create, table};
 
     table! {
         _ => partial_levels {
@@ -106,7 +106,7 @@ pub(crate) mod partial_levels {
     pub(crate) mod cached_at {
         use schema::NowAtUtc;
 
-        use pm_gdcf_dbcache::{table, create};
+        use pm_gdcf_dbcache::{create, table};
 
         table! {
             _ => partial_levels_request_cached_at {
@@ -128,14 +128,17 @@ pub(crate) mod partial_levels {
 }
 
 pub(crate) mod full_level {
-    use pm_gdcf_dbcache::{itable, create};
+    use pm_gdcf_dbcache::{create, itable};
 
-    use schema::NowAtUtc;
+    use core::{
+        backend::Error,
+        query::{
+            select::{Queryable, Row},
+            Select,
+        },
+    };
     use gdcf::model::{Level, PartialLevel};
-    use core::query::select::Queryable;
-    use core::query::select::Row;
-    use core::backend::Error;
-    use core::query::Select;
+    use schema::NowAtUtc;
 
     itable! {
         Level => level {
@@ -170,8 +173,7 @@ pub(crate) mod full_level {
     #[cfg(feature = "pg")]
     use core::backend::pg::Pg;
     #[cfg(feature = "pg")]
-    impl Queryable<Pg> for Level
-    {
+    impl Queryable<Pg> for Level {
         fn select_from(from: &Table) -> Select<Pg> {
             Select::new(from, Vec::new())
                 .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
@@ -195,8 +197,7 @@ pub(crate) mod full_level {
     #[cfg(feature = "sqlite")]
     use core::backend::sqlite::Sqlite;
     #[cfg(feature = "sqlite")]
-    impl Queryable<Sqlite> for Level
-    {
+    impl Queryable<Sqlite> for Level {
         fn select_from(from: &Table) -> Select<Sqlite> {
             Select::new(from, Vec::new())
                 .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))

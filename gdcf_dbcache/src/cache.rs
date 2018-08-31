@@ -1,29 +1,22 @@
 use chrono::{Duration, Utc};
-use core::backend::Database;
-use core::backend::Error;
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 #[cfg(feature = "sqlite")]
 use core::backend::sqlite::Sqlite;
-use core::query::delete::Delete;
-use core::query::Insert;
-use core::query::insert::Insertable;
-use core::query::Query;
-use core::query::Select;
-use core::query::select::Queryable;
-use gdcf::api::request::LevelRequest;
-use gdcf::api::request::LevelsRequest;
-use gdcf::cache::Cache;
-use gdcf::cache::CacheConfig;
-use gdcf::cache::CachedObject;
-use gdcf::cache::Lookup;
-use gdcf::error::CacheError;
-use gdcf::model::GDObject;
-use gdcf::model::Level;
-use gdcf::model::NewgroundsSong;
-use gdcf::model::PartialLevel;
-use schema::level::{self, full_level, partial_level, partial_levels};
-use schema::song::{self, newgrounds_song};
+use core::{
+    backend::{Database, Error},
+    query::{delete::Delete, insert::Insertable, select::Queryable, Insert, Query, Select},
+};
+use gdcf::{
+    api::request::{LevelRequest, LevelsRequest},
+    cache::{Cache, CacheConfig, CachedObject, Lookup},
+    error::CacheError,
+    model::{GDObject, Level, NewgroundsSong, PartialLevel},
+};
+use schema::{
+    level::{self, full_level, partial_level, partial_levels},
+    song::{self, newgrounds_song},
+};
 use std::path::Path;
 use util;
 
@@ -74,14 +67,12 @@ impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
 
 #[derive(Debug)]
 pub struct DatabaseCache<DB: Database> {
-    config: DatabaseCacheConfig<DB>
+    config: DatabaseCacheConfig<DB>,
 }
 
 impl<DB: Database> DatabaseCache<DB> {
     pub fn new(config: DatabaseCacheConfig<DB>) -> DatabaseCache<DB> {
-        DatabaseCache {
-            config
-        }
+        DatabaseCache { config }
     }
 }
 
@@ -104,9 +95,7 @@ macro_rules! cache {
                 level::partial_levels::cached_at::create()
                     .ignore_if_exists()
                     .execute(&self.config.backend)?;
-                level::full_level::create()
-                    .ignore_if_exists()
-                    .execute(&self.config.backend)?;
+                level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
 
                 Ok(())
             }
@@ -119,7 +108,8 @@ macro_rules! cache {
 
                 let ts = Utc::now().naive_utc();
 
-                level.insert()
+                level
+                    .insert()
                     .with(partial_level::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&partial_level::level_id])
                     .execute(&self.config.backend)
@@ -145,7 +135,8 @@ macro_rules! cache {
 
                 self.store_partial_level(&level.base)?;
 
-                level.insert()
+                level
+                    .insert()
                     .with(full_level::level_id.set(&level.base.level_id))
                     .with(full_level::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&full_level::level_id])
@@ -155,8 +146,7 @@ macro_rules! cache {
         }
 
         #[cfg(feature = $feature)]
-        impl Cache for DatabaseCache<$backend>
-        {
+        impl Cache for DatabaseCache<$backend> {
             // we cannot turn this into an impl generic over DB: Database
             // because it would require us to add explicit trait bounds for all the
             // structs used for query building, which in turn would require us to add a
@@ -179,27 +169,27 @@ macro_rules! cache {
 
                 let select = Select::new(
                     &partial_levels::cached_at::table,
-                    vec![&partial_levels::cached_at::first_cached_at, &partial_levels::cached_at::last_cached_at],
+                    vec![
+                        &partial_levels::cached_at::first_cached_at,
+                        &partial_levels::cached_at::last_cached_at,
+                    ],
                 ).filter(partial_levels::cached_at::request_hash.eq(h));
 
-                let row = self.config.backend.query_one_row(&select)
-                    .map_err(convert_error)?;
+                let row = self.config.backend.query_one_row(&select).map_err(convert_error)?;
 
-                let first_cached_at = row.get(0)
-                    .unwrap()
-                    .map_err(convert_error)?;
+                let first_cached_at = row.get(0).unwrap().map_err(convert_error)?;
 
-                let last_cached_at = row.get(1)
-                    .unwrap()
-                    .map_err(convert_error)?;
+                let last_cached_at = row.get(1).unwrap().map_err(convert_error)?;
 
                 let select = Select::new(&partial_levels::table, Vec::new())
                     .select(partial_level::table.fields())
                     .filter(partial_levels::request_hash.eq(h))
-                    .join(&partial_level::table, partial_levels::level_id.same_as(&partial_level::level_id));
+                    .join(
+                        &partial_level::table,
+                        partial_levels::level_id.same_as(&partial_level::level_id),
+                    );
 
-                let levels: Vec<PartialLevel> = self.config.backend.query(&select)
-                    .map_err(convert_error)?;
+                let levels: Vec<PartialLevel> = self.config.backend.query(&select).map_err(convert_error)?;
 
                 Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
             }
@@ -227,36 +217,34 @@ macro_rules! cache {
                         .with(partial_levels::level_id.set(&level.level_id))
                         .execute(&self.config.backend)
                         .map_err(convert_error)?;
+
+                    self.store_partial_level(level)?;
                 }
 
                 Ok(())
             }
 
             fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err> {
-                let select = Level::select_from(&full_level::table)
-                    .filter(full_level::level_id.eq(req.level_id));
+                let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
 
-                self.config.backend.query_one(&select)
-                    .map_err(convert_error)
+                self.config.backend.query_one(&select).map_err(convert_error)
             }
 
             fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-                let select = NewgroundsSong::select_from(&newgrounds_song::table)
-                    .filter(newgrounds_song::song_id.eq(newground_id));
+                let select = NewgroundsSong::select_from(&newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
 
-                self.config.backend.query_one(&select)
-                    .map_err(convert_error)  // for some reason I can use the question mark operator?????
+                self.config.backend.query_one(&select).map_err(convert_error) // for some reason I can use the question mark operator?????
             }
 
             fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
                 match obj {
                     GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
                     GDObject::NewgroundsSong(song) => self.store_song(song),
-                    GDObject::Level(lvl) => self.store_level(lvl)
+                    GDObject::Level(lvl) => self.store_level(lvl),
                 }
             }
         }
-    }
+    };
 }
 
 // TODO: turn cache impl into a macro
@@ -266,6 +254,6 @@ cache!("sqlite", Sqlite);
 fn convert_error<DB: Database>(db_error: Error<DB>) -> CacheError<Error<DB>> {
     match db_error {
         Error::NoResult => CacheError::CacheMiss,
-        _ => CacheError::Custom(db_error)
+        _ => CacheError::Custom(db_error),
     }
 }

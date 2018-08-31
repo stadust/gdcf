@@ -1,9 +1,9 @@
-use core::backend::Database;
-use core::query::Query;
-use core::QueryPart;
-use core::table::Field;
-use core::table::SetField;
-use core::table::Table;
+use core::{
+    backend::Database,
+    query::Query,
+    table::{Field, SetField, Table},
+    QueryPart,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum OnConflict {
