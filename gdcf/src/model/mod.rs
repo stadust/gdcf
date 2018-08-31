@@ -36,7 +36,7 @@ pub enum GameVersion {
     Version { minor: u8, major: u8 },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GDObject {
     NewgroundsSong(NewgroundsSong),
     PartialLevel(PartialLevel),

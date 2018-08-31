@@ -33,9 +33,7 @@ impl Table {
                     continue
                 },
                 Some(crap) => panic!("Expected ',' or '=', got {:?}", crap),
-                None => {
-                    break fields.push((None, model))
-                },
+                None => break fields.push((None, model)),
             };
 
             alone_punct!(iter, '>');

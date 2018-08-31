@@ -76,8 +76,16 @@ fn main() {
         let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
 
         gdcf.levels_stream(request)
-            .for_each(|levels| Ok(println!("We got the levels {:?}", levels)))
-            .map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
+            .take(5)
+            .for_each(|levels| {
+                print!("We got {} levels: ", levels.len());
+
+                for level in levels {
+                    print!("{} ", level)
+                }
+
+                Ok(println!())
+            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
     }));
 
     println!("Press return to continue...");

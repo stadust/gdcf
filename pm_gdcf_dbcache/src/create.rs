@@ -78,9 +78,7 @@ impl Create {
 
             loop {
                 match next {
-                    Some(TokenTree::Punct(ref punct)) if punct.as_char() == ',' => {
-                        break
-                    },
+                    Some(TokenTree::Punct(ref punct)) if punct.as_char() == ',' => break,
                     Some(TokenTree::Ident(ref ident)) => {
                         let cons = ident.to_string();
                         let constraint = match cons.as_ref() {

@@ -64,6 +64,8 @@ where
 {
     Cache(CacheError<C>),
     Api(ApiError<A>),
+
+    NoContent,
 }
 
 impl Display for ValueError {
@@ -78,11 +80,12 @@ impl Display for ValueError {
 
 impl<E> Display for CacheError<E>
 where
-    E: Error + Send + 'static,
+    E: Error + Send,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match *self {
-            CacheError::NoStore | CacheError::CacheMiss => write!(f, "{}", self.description()),
+            CacheError::CacheMiss => write!(f, "The requested item isn't cached"),
+            CacheError::NoStore => write!(f, "The cache refused to store the provided data"),
             CacheError::Custom(ref inner) => write!(f, "{}", inner),
         }
     }
@@ -90,11 +93,13 @@ where
 
 impl<E> Display for ApiError<E>
 where
-    E: Error + Send + 'static,
+    E: Error + Send,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match *self {
-            ApiError::NoData | ApiError::UnexpectedFormat | ApiError::InternalServerError => write!(f, "{}", self.description()),
+            ApiError::InternalServerError => write!(f, "Internal server error"),
+            ApiError::NoData => write!(f, "The response contained no data"),
+            ApiError::UnexpectedFormat => write!(f, "The response format was unexpected"),
             ApiError::MalformedData(ref inner) => write!(f, "Malformed response data: {}", inner),
             ApiError::Custom(ref inner) => write!(f, "{}", inner),
         }
@@ -103,66 +108,29 @@ where
 
 impl<A, C> Display for GdcfError<A, C>
 where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
+    A: Error + Send,
+    C: Error + Send,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match *self {
             GdcfError::Cache(ref inner) => write!(f, "{}", inner),
             GdcfError::Api(ref inner) => write!(f, "{}", inner),
+            GdcfError::NoContent => write!(f, "Request was successful, yet yielded no actual data"),
         }
     }
 }
 
-impl Error for ValueError {
-    fn description(&self) -> &str {
-        match *self {
-            ValueError::IndexOutOfBounds(_) => "Index out of bounds",
-            ValueError::NoValue(_) => "No value at specified index",
-            ValueError::Parse(..) => "Failure to parse data at specified index",
-        }
-    }
-}
+impl Error for ValueError {}
 
-impl<E> Error for CacheError<E>
-where
-    E: Error + Send + 'static,
-{
-    fn description(&self) -> &str {
-        match *self {
-            CacheError::CacheMiss => "The requested item isn't cached",
-            CacheError::NoStore => "The cache refused to store the provided data",
-            CacheError::Custom(ref inner) => inner.description(),
-        }
-    }
-}
+impl<E> Error for CacheError<E> where E: Error + Send {}
 
-impl<E> Error for ApiError<E>
-where
-    E: Error + Send + 'static,
-{
-    fn description(&self) -> &str {
-        match *self {
-            ApiError::InternalServerError => "Internal server error",
-            ApiError::NoData => "The response contained no data",
-            ApiError::UnexpectedFormat => "The response format was unexpected",
-            ApiError::MalformedData(ref inner) => inner.description(),
-            ApiError::Custom(ref inner) => inner.description(),
-        }
-    }
-}
+impl<E> Error for ApiError<E> where E: Error + Send {}
 
 impl<A, C> Error for GdcfError<A, C>
 where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
+    A: Error + Send,
+    C: Error + Send,
 {
-    fn description(&self) -> &str {
-        match *self {
-            GdcfError::Cache(ref inner) => inner.description(),
-            GdcfError::Api(ref inner) => inner.description(),
-        }
-    }
 }
 
 impl<E> From<ValueError> for ApiError<E>
@@ -176,8 +144,8 @@ where
 
 impl<A, C> From<ValueError> for GdcfError<A, C>
 where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
+    A: Error + Send,
+    C: Error + Send,
 {
     fn from(inner: ValueError) -> Self {
         GdcfError::Api(inner.into())
@@ -186,8 +154,8 @@ where
 
 impl<A, C> From<ApiError<A>> for GdcfError<A, C>
 where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
+    A: Error + Send,
+    C: Error + Send,
 {
     fn from(inner: ApiError<A>) -> Self {
         GdcfError::Api(inner)
@@ -196,8 +164,8 @@ where
 
 impl<A, C> From<CacheError<C>> for GdcfError<A, C>
 where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
+    A: Error + Send,
+    C: Error + Send,
 {
     fn from(inner: CacheError<C>) -> Self {
         GdcfError::Cache(inner)

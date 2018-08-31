@@ -50,8 +50,7 @@ macro_rules! gdcf_one {
                         }
                     }
 
-                    // TODO: a proper error variant would be nice here!
-                    Ok(chosen.unwrap())
+                    chosen.ok_or(GdcfError::NoContent)
                 })
         }
     }
@@ -78,8 +77,12 @@ macro_rules! gdcf_many {
                         }
                     }
 
-                    cache.$bulk_store(&req, &chosen)?;
-                    Ok(chosen)
+                    if chosen.is_empty() {
+                        Err(GdcfError::NoContent)
+                    } else {
+                        cache.$bulk_store(&req, &chosen)?;
+                        Ok(chosen)
+                    }
                 })
         }
     }

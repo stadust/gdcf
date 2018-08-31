@@ -273,6 +273,8 @@ where
                 Ok(Async::Ready(Some(result)))
             },
 
+            Err(GdcfError::NoContent) => Ok(Async::Ready(None)), // We're done here
+
             Err(err) => Err(err),
         }
     }

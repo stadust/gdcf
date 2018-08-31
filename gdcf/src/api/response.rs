@@ -6,7 +6,7 @@ use std::{
     vec::IntoIter,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ProcessedResponse {
     One(GDObject),
     Many(Vec<GDObject>),
