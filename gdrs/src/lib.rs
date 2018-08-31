@@ -21,12 +21,14 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_urlencoded;
+extern crate tokio_retry;
 
 use futures::{future::Executor, Future, Stream};
 use gdcf::{
     api::{
         client::ApiFuture,
         request::level::{LevelRequest, LevelsRequest},
+        response::ProcessedResponse,
         ApiClient,
     },
     error::ApiError,
@@ -38,6 +40,10 @@ use hyper::{
 };
 use ser::{LevelRequestRem, LevelsRequestRem};
 use std::str;
+use tokio_retry::{
+    strategy::{jitter, ExponentialBackoff},
+    Action, Condition, Error as RetryError, RetryIf,
+};
 
 #[macro_use]
 mod macros;
@@ -46,12 +52,12 @@ mod ser;
 
 #[derive(Serialize, Debug)]
 #[serde(untagged)]
-pub enum Req<'a> {
+pub enum Req {
     #[serde(with = "LevelRequestRem")]
-    DownloadLevel(&'a LevelRequest),
+    LevelRequest(LevelRequest),
 
     #[serde(with = "LevelsRequestRem")]
-    GetLevels(&'a LevelsRequest),
+    LevelsRequest(LevelsRequest),
 }
 
 #[derive(Debug)]
@@ -74,38 +80,87 @@ impl BoomlingsClient {
 
         BoomlingsClient { client }
     }
-
-    fn make_request(&self, endpoint: &str, req: Req) -> Request<Body> {
-        let body = serde_urlencoded::to_string(req).unwrap();
-        let len = body.len();
-
-        debug!("Preparing request {} to {}", body, endpoint);
-
-        let mut req = Request::new(Body::from(body));
-
-        *req.method_mut() = Method::POST;
-        *req.uri_mut() = endpoint!(endpoint);
-        req.headers_mut()
-            .insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
-        req.headers_mut()
-            .insert("Content-Length", HeaderValue::from_str(&len.to_string()).unwrap());
-
-        req
-    }
 }
 
 impl ApiClient for BoomlingsClient {
     type Err = Error;
 
-    fn level(&self, req: &LevelRequest) -> ApiFuture<Self::Err> {
-        let req = self.make_request("downloadGJLevel22", Req::DownloadLevel(req));
+    api_call!(level, LevelRequest, "downloadGJLevel22", parse::level);
+    api_call!(levels, LevelsRequest, "getGJLevels21", parse::levels);
+}
 
-        prepare_future!(self.client.request(req), parse::level)
+struct ApiRequestAction {
+    client: Client<HttpConnector>,
+    endpoint: &'static str,
+    request: Req,
+    parser: fn(&str) -> Result<ProcessedResponse, ApiError<Error>>,
+}
+
+struct ApiRetryCondition;
+
+impl Condition<ApiError<Error>> for ApiRetryCondition {
+    fn should_retry(&mut self, error: &ApiError<Error>) -> bool {
+        match error {
+            ApiError::Custom(_) => {
+                warn!("Encountered retryable error: {:?}", error);
+                true
+            },
+            _ => false,
+        }
     }
+}
 
-    fn levels(&self, req: &LevelsRequest) -> ApiFuture<Self::Err> {
-        let req = self.make_request("getGJLevels21", Req::GetLevels(req));
+impl Action for ApiRequestAction {
+    type Error = ApiError<Error>;
+    type Future = ApiFuture<Error>;
+    type Item = ProcessedResponse;
 
-        prepare_future!(self.client.request(req), parse::levels)
+    fn run(&mut self) -> ApiFuture<Error> {
+        let req = make_request(self.endpoint, &self.request);
+
+        let parser = self.parser.clone();
+        let future = self
+            .client
+            .request(req)
+            .map_err(|err| ApiError::Custom(err))
+            .and_then(|resp| {
+                debug!("Received {} response", resp.status());
+
+                match resp.status() {
+                    StatusCode::INTERNAL_SERVER_ERROR => Err(ApiError::InternalServerError),
+                    StatusCode::NOT_FOUND => Err(ApiError::NoData),
+                    _ => Ok(resp),
+                }
+            }).and_then(move |resp| {
+                resp.into_body()
+                    .concat2()
+                    .map_err(|err| ApiError::Custom(err))
+                    .and_then(move |body| {
+                        match str::from_utf8(&body) {
+                            Ok(body) => parser(body),
+                            Err(_) => Err(ApiError::UnexpectedFormat),
+                        }
+                    })
+            });
+
+        Box::new(future)
     }
+}
+
+fn make_request(endpoint: &str, req: &Req) -> Request<Body> {
+    let body = serde_urlencoded::to_string(req).unwrap();
+    let len = body.len();
+
+    debug!("Preparing request {} to {}", body, endpoint);
+
+    let mut req = Request::new(Body::from(body));
+
+    *req.method_mut() = Method::POST;
+    *req.uri_mut() = endpoint!(endpoint);
+    req.headers_mut()
+        .insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
+    req.headers_mut()
+        .insert("Content-Length", HeaderValue::from_str(&len.to_string()).unwrap());
+
+    req
 }

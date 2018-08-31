@@ -27,8 +27,8 @@ fn main() {
     env_logger::init();
 
     //let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
-    //let mut config = DatabaseCacheConfig::sqlite_memory_config();
-    let mut config = DatabaseCacheConfig::sqlite_config("/home/patrick/gd.sqlite");
+    let mut config = DatabaseCacheConfig::sqlite_memory_config();
+    //let mut config = DatabaseCacheConfig::sqlite_config("/home/patrick/gd.sqlite");
     config.invalidate_after(Duration::minutes(3000));
     let cache = DatabaseCache::new(config);
 
@@ -75,11 +75,18 @@ fn main() {
     }));*/
     tokio::run(lazy(move || {
         //let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
-        let request = LevelsRequest::default()
+        /*let request = LevelsRequest::default()
             .search("20".to_string())
-            .request_type(LevelRequestType::User);
+            .request_type(LevelRequestType::User);*/
+
+
+        let request = LevelsRequest::default()
+            .request_type(LevelRequestType::Recent)
+            .filter(SearchFilters::default())
+            .with_rating(LevelRating::Demon(DemonRating::Hard));
 
         gdcf.levels_stream(request)
+            .take(5)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
 

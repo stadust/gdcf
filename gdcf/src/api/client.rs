@@ -13,6 +13,6 @@ pub type ApiFuture<E> = Box<dyn Future<Item = ProcessedResponse, Error = ApiErro
 pub trait ApiClient: Sized + Send + 'static {
     type Err: Error + Send + 'static;
 
-    fn level(&self, req: &LevelRequest) -> ApiFuture<Self::Err>;
-    fn levels(&self, req: &LevelsRequest) -> ApiFuture<Self::Err>;
+    fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;
+    fn levels(&self, req: LevelsRequest) -> ApiFuture<Self::Err>;
 }

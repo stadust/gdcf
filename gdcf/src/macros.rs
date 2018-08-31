@@ -34,7 +34,7 @@ macro_rules! gdcf_one {
 
         fn $fut(self, req: $req) -> impl Future<Item=$result, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
             let cache = self.cache.clone();
-            let future = lock!(self.client).$func(&req);
+            let future = lock!(self.client).$func(req);
 
             future.map_err(GdcfError::Api)
                 .and_then(move |response| self.integrity(response))
@@ -62,7 +62,7 @@ macro_rules! gdcf_many {
 
         fn $fut(self, req: $req) -> impl Future<Item=Vec<$result>, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
             let cache = self.cache.clone();
-            let future = lock!(self.client).$func(&req);
+            let future = lock!(self.client).$func(req.clone());
 
             future.map_err(GdcfError::Api)
                 .and_then(move |response| self.integrity(response))

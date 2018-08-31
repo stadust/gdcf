@@ -6,11 +6,7 @@
 //! different from their default values. This way, the hashes of requests made
 //! before the update will stay the same
 
-use api::{
-    client::ApiFuture,
-    request::{BaseRequest, Request, StreamableRequest},
-    ApiClient,
-};
+use api::request::{BaseRequest, Request, StreamableRequest};
 use model::{DemonRating, LevelLength, LevelRating};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
@@ -24,7 +20,7 @@ use std::{
 /// In the Geometry Dash API, this endpoint is used to download a level from
 /// the servers and retrieve some additional information that isn't provided
 /// with the response to a [LevelsRequest](struct.LevelsRequest.html)
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct LevelRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -534,17 +530,9 @@ impl From<u64> for LevelRequest {
     }
 }
 
-impl Request for LevelRequest {
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
-        client.level(&self)
-    }
-}
+impl Request for LevelRequest {}
 
-impl Request for LevelsRequest {
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
-        client.levels(&self)
-    }
-}
+impl Request for LevelsRequest {}
 
 impl StreamableRequest for LevelsRequest {
     fn next(&self) -> Self {

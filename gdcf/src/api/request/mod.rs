@@ -18,7 +18,6 @@
 //! be used with an implementation of the [Gdcf](../../trait.Gdcf.html) trait.
 
 pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
-use api::client::{ApiClient, ApiFuture};
 use model::GameVersion;
 use std::{fmt::Display, hash::Hash};
 
@@ -96,19 +95,11 @@ impl Default for BaseRequest {
 /// they're built upon. If new fields are added in later version of GDCF, they
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
-pub trait Request: Display + Default + Hash {
+pub trait Request: Display + Default + Hash + Clone {
     /// Creates a default instance of this `Request`
     fn new() -> Self {
         Default::default()
     }
-
-    /// Makes this `Request` through the given `ApiClient`
-    ///
-    /// This method pretty much just exists so that GDCF can use static
-    /// dispatch for request types internally. You should never have to
-    /// call this manually and instead should use the methods provided by
-    /// your implementation of `ApiClient`
-    fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err>;
 }
 
 pub trait StreamableRequest: Request {

@@ -4,27 +4,26 @@ macro_rules! endpoint {
     };
 }
 
-macro_rules! prepare_future {
-    ($future:expr, $parser:expr) => {{
-        let future = $future
-            .map_err(|err| ApiError::Custom(err))
-            .and_then(|resp| {
-                match resp.status() {
-                    StatusCode::INTERNAL_SERVER_ERROR => Err(ApiError::InternalServerError),
-                    StatusCode::NOT_FOUND => Err(ApiError::NoData),
-                    _ => Ok(resp),
-                }
-            }).and_then(|resp| {
-                resp.into_body().concat2().map_err(|err| ApiError::Custom(err)).and_then(|body| {
-                    match str::from_utf8(&body) {
-                        Ok(body) => $parser(body),
-                        Err(_) => Err(ApiError::UnexpectedFormat),
-                    }
-                })
-            });
+macro_rules! api_call {
+    ($api: ident, $request_type: ident, $endpoint: expr, $parser: expr) => {
+        fn $api(&self, req: $request_type) -> ApiFuture<Self::Err> {
+            let action = ApiRequestAction {
+                client: self.client.clone(),
+                endpoint: $endpoint,
+                request: Req::$request_type(req),
+                parser: $parser
+            };
 
-        Box::new(future)
-    }};
+            let retry = ExponentialBackoff::from_millis(10).map(jitter).take(5);
+
+            Box::new(RetryIf::spawn(retry, action, ApiRetryCondition).map_err(|err| {
+                match err {
+                    RetryError::OperationError(e) => e,
+                    _ => unimplemented!(),
+                }
+            }))
+        }
+    }
 }
 
 macro_rules! check_resp {
