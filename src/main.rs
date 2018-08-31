@@ -29,7 +29,7 @@ fn main() {
     //let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
     //let mut config = DatabaseCacheConfig::sqlite_memory_config();
     let mut config = DatabaseCacheConfig::sqlite_config("/home/patrick/gd.sqlite");
-    config.invalidate_after(Duration::minutes(30));
+    config.invalidate_after(Duration::minutes(3000));
     let cache = DatabaseCache::new(config);
 
     cache.initialize().expect("Error initializing cache");
@@ -74,7 +74,10 @@ fn main() {
             })
     }));*/
     tokio::run(lazy(move || {
-        let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
+        //let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
+        let request = LevelsRequest::default()
+            .search("20".to_string())
+            .request_type(LevelRequestType::User);
 
         gdcf.levels_stream(request)
             .for_each(|levels| {

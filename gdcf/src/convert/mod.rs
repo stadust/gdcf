@@ -52,7 +52,7 @@ pub mod to {
     /// Panics if the decoded data isn't valid UTF8. Use [`b64_decoded_bytes`]
     /// if you aren't sure that the output is valid UTF8.
     pub fn b64_decoded_string(encoded: &str) -> Result<String, DecodeError> {
-        b64_decoded_bytes(encoded).map(|bytes| String::from_utf8(bytes).unwrap()) // lets just trust the b64 lib to produce valid shit
+        b64_decoded_bytes(encoded).map(|bytes| String::from_utf8_lossy(&bytes[..]).to_string())
     }
 
     /// Converts the given `u8` into a `bool` by returning `true` if `value !=

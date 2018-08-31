@@ -1,5 +1,5 @@
 combine_control_expr = false
-comment_width = 140
+comment_width = 100
 condense_wildcard_suffixes = true
 fn_args_density = "Compressed"
 force_multiline_blocks = true

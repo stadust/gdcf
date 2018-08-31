@@ -47,7 +47,7 @@ pub enum LevelLength {
     /// responses
     ExtraLong,
 
-    /// Enum variant that's used by the `From<i32>` impl for when an
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
     Unknown,
 }
@@ -56,9 +56,7 @@ pub enum LevelLength {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub enum LevelRating {
-    /// Auto rating. This variant is only used when making requests. Use the
-    /// [is_auto](struct.PartialLevel.html#structfield.is_auto)
-    /// field to check if a level is auto instead.
+    /// Auto rating
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `-3` in requests, and not
@@ -71,7 +69,7 @@ pub enum LevelRating {
     /// This variant is represented by the value `-2` in requests. In
     /// responses, you will have to first check the provided level is a
     /// demon and then interpret the provided
-    /// `rating` value as a [DemonRating](struct.DemonRating.html)
+    /// `rating` value as a [`DemonRating`]
     Demon(DemonRating),
 
     /// Not Available, sometimes referred to as `N/A` or `NA`
@@ -116,7 +114,7 @@ pub enum LevelRating {
     /// value `50` in responses
     Insane,
 
-    /// Enum variant that's used by the `From<i32>`impl for when an
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
     Unknown,
 }
@@ -160,7 +158,7 @@ pub enum DemonRating {
     /// value `50` in responses
     Extreme,
 
-    /// Enum variant that's used by the `From<i32>` impl for when an
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
     Unknown,
 }
@@ -188,7 +186,7 @@ pub enum Featured {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub enum Password {
-    /// The level isn't copyable (which I see the irony off, considering we
+    /// The level isn't copyable (which I see the irony of, considering we
     /// literally have a copy of it in the GDCF database. shush.)
     NoCopy,
 
@@ -200,7 +198,7 @@ pub enum Password {
 }
 
 /// Struct representing partial levels. These are returned to
-/// [LevelsRequest](../../api/request/level/struct.LevelsRequest.html)s and only
+/// [`LevelsRequest`](::api::request::level::LevelsRequest)s and only
 /// contain metadata
 /// on the level.
 ///
@@ -212,22 +210,19 @@ pub enum Password {
 /// ### Unmapped values:
 /// + Index `8`: Index 8 is a boolean value indicating whether the level has a
 /// difficulty rating that isn't N/A. This is equivalent to checking if
-/// [difficulty](struct.PartialLevel.
-/// html#structfield.difficulty) is unequal to
-/// [NotAvailable](enum.LevelRating.html#variant.
-/// NotAvailable) + Index `17`: Index 17 is a boolean value indicating whether
+/// [`PartialLevel::difficulty`] is unequal to
+/// [`LevelRating::NotAvailable`]
+/// + Index `17`: Index 17 is a boolean value indicating whether
 /// the level is a demon level. This is equivalent to checking if
-/// [difficulty](struct.PartialLevel.
-/// html#structfield.difficulty) if the [Demon](enum.LevelRating.html#variant.
-/// Demon) variant. + Index `25`: Index 25 is a boolean value indicating
+/// [`PartialLevel::difficulty`] is the [`LevelRating::Demon`] variant.
+/// + Index `25`: Index 25 is a boolean value indicating
 /// whether the level is an auto level. This is equivalent to checking if
-/// [difficulty](struct.PartialLevel.
-/// html#structfield.difficulty) is equal to
-/// [Demon](enum.LevelRating.html#variant.Auto).
+/// [`PartialLevel::difficulty`] is equal to
+/// [`LevelRating::Auto`].
 ///
 /// ### Unprovided values:
 /// These values are not provided for by the `getGJLevels` endpoint and are
-/// thus only modelled in the [Level](struct.Level.html) struct: `4`, `27`,
+/// thus only modelled in the [`Level`] struct: `4`, `27`,
 /// `28`, `29`, `36`
 ///
 /// ### Unused indices:
@@ -279,10 +274,8 @@ pub struct PartialLevel {
     /// ## GD Internals:
     /// This value is a construct from the value at the indices `9`, `17` and
     /// `25`, whereas index 9 is an integer representation of either the
-    /// [LevelRating](struct.LevelRating.html) or the [DemonRating](struct.
-    /// DemonRating.html)
-    /// struct, depending on
-    /// the value of index 17.
+    /// [`LevelRating`] or the [`DemonRating`]
+    /// struct, depending on the value of index 17.
     ///
     /// If index 25 is set to true, the level is an auto level and the value at
     /// index 9 is some nonsense, in which case it is ignored.
@@ -325,7 +318,7 @@ pub struct PartialLevel {
     ///
     /// ## GD Internals:
     /// This value is provided as an integer representation of the
-    /// [LevelLength](struct.LevelLength.html) struct at index `15`
+    /// [`LevelLength`] struct at index `15`
     #[raw_data(index = 15)]
     pub length: LevelLength,
 

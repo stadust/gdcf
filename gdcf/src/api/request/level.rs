@@ -62,8 +62,7 @@ impl Hash for LevelRequest {
 ///
 /// In the Geometry Dash API, this endpoint is used to retrieve a list of
 /// levels matching the specified criteria, along with their
-/// [NewgroundsSong](../../../model/song/struct.NewgroundsSong.
-/// html)s and some basic information on their creators.
+/// [`NewgroundwSong`](::model::song::NewgroundsSong)s and some basic information on their creators.
 #[derive(Debug, Default, Clone)]
 pub struct LevelsRequest {
     /// The base request data
@@ -78,9 +77,8 @@ pub struct LevelsRequest {
 
     /// A search string to filter the levels by
     ///
-    /// This value is ignored unless
-    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
-    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    /// This value is ignored unless [`LevelsRequest::request_type`] is set to
+    /// [`LevelRequestType::Search`] or [`LevelRequestType::User`]
     ///
     /// ## GD Internals:
     /// This field is called `str` in the boomlings API
@@ -88,9 +86,8 @@ pub struct LevelsRequest {
 
     /// A list of level lengths to filter by
     ///
-    /// This value is ignored unless
-    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
-    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    /// This value is ignored unless [`LevelsRequest::request_type`] is set to
+    /// [`LevelRequestType::Search`]
     ///
     /// ## GD Internals:
     /// This field is called `len` in the boomlings API and needs to be
@@ -100,19 +97,12 @@ pub struct LevelsRequest {
 
     /// A list of level ratings to filter by.
     ///
-    /// To filter by any demon, add
-    /// [LevelRating::Demon(_)](../../../model/level/enum.LevelRating.
-    /// html#variant.Demon) with any arbitrary
-    /// [DemonRating](../../../model/level/enum.
-    /// DemonRating.html) value.
+    /// To filter by any demon, add [`LevelRating::Demon`] with any arbitrary [`DemonRating`] value.
     ///
-    /// `ratings` and
-    /// [demon_rating](struct.LevelsRequest.html#structfield.demon_rating) are
-    /// mutually exlusive.
+    /// `ratings` and [`LevelsRequest::demon_rating`] are mutually exlusive.
     ///
-    /// This value is ignored unless
-    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
-    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    /// This value is ignored unless [`LevelsRequest::request_type`] is set to
+    /// [`LevelRequestType::Search`]
     ///
     /// ## GD Internals:
     /// This field is called `diff` in the boomlings API and needs to be
@@ -121,13 +111,12 @@ pub struct LevelsRequest {
     pub ratings: Vec<LevelRating>,
 
     /// Optionally, a single demon rating to filter by. To filter by any demon
-    /// rating, use [ratings](struct.LevelsRequest.html#structfield.ratings)
+    /// rating, use [`LevelsRequest::ratings`]
     ///
     /// `demon_rating` and `ratings` are mutually exlusive.
     ///
-    /// This value is ignored unless
-    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
-    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    /// This value is ignored unless [`LevelsRequest::request_type`] is set to
+    /// [`LevelRequestType::Search`]
     ///
     /// ## GD Internals:
     /// This field is called `demonFilter` in the boomlings API and needs to be
@@ -143,9 +132,8 @@ pub struct LevelsRequest {
 
     /// Search filters to apply.
     ///
-    /// These values is ignored unless
-    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
-    /// is set to [Search](enum.LevelRequestType.html#variant.Search)
+    /// This value is ignored unless [`LevelsRequest::request_type`] is set to
+    /// [`LevelRequestType::Search`]
     pub search_filters: SearchFilters,
 }
 
@@ -175,9 +163,9 @@ pub enum CompletionFilter {
         /// The list of level ids to filter
         ids: Vec<u64>,
 
-        /// if `true`, only the levels matching the ids in [`ids`] will be
-        /// searched, if `false`, the levels in [`ids`] will be
-        /// excluded.
+        /// if `true`, only the levels matching the ids in [`ids`](CompletionFilter::List.ids) will
+        /// be searched, if `false`, the levels in [`ids`](CompletionFilter::List.ids) will
+        /// be excluded.
         include: bool,
     },
 }
@@ -285,14 +273,12 @@ pub struct SearchFilters {
 }
 
 /// Enum containing the various types of
-/// [LevelsRequest](struct.LevelsRequest.html) possible
+/// [`LevelsRequest`] possible
 ///
 /// ## GD Internals:
 /// + Unused values: `8`, `9`, `14`
 /// + The values `15` and `17` are only used in Geometry Dash World and are the
-/// same as `0` ([`Search`](enum.LevelRequestType.html#variant.Search))
-/// and `6` ([`Featured`](enum.LevelRequestType.html#variant.Featured))
-/// respectively
+/// same as `0` ([`LevelRequestType::Search`]) and `6` ([`LevelRequestType::Featured`]) respectively
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Hash)]
 pub enum LevelRequestType {
     /// A search request.
@@ -327,14 +313,15 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `4` in requests
     Recent,
 
-    /// Unknown how this works
+    /// Retrieve levels by the user whose ID was specified in [`LevelsRequest::search_string`]
+    /// (Note that is has to be the user Id, not the account id)
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `5` in requests
     User,
 
     /// Request to retrieve the list of featured levels, ordered by their
-    /// [featured weight](../../../model/level/enum.Featured.html)
+    /// [featured weight](::model::level::Featured::Featured) weight
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `6` in requests
@@ -343,7 +330,8 @@ pub enum LevelRequestType {
     /// Request to retrieve a list of levels filtered by some magic criteria
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `7` in requests
+    /// This variant is represented by the value `7` in requests. According to the GDPS source,
+    /// this simply looks for levels that have more than 9999 objects.
     Magic,
 
     /// Map pack levels. The search string is set to a comma seperated list of
@@ -442,7 +430,7 @@ impl SearchFilters {
 
 impl LevelRequest {
     setter! {
-        /// Sets the `BaseRequest` to be used
+        /// Sets the [`BaseRequest`] to be used
         ///
         /// Allows builder-style creation of requests
         base[with_base]: BaseRequest
@@ -464,7 +452,7 @@ impl LevelRequest {
 
     /// Constructs a new `LevelRequest` to retrieve the level with the given id
     ///
-    /// Uses a default [BaseRequest](../struct.BaseRequest.html), and sets the
+    /// Uses a default [`BaseRequest`], and sets the
     /// `inc` field to `true` and `extra` to `false`, as are the default
     /// values set the by the Geometry Dash Client
     pub fn new(level_id: u64) -> LevelRequest {

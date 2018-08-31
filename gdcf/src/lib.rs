@@ -71,6 +71,7 @@ use std::{
     mem,
     sync::{Arc, Mutex},
 };
+use error::ApiError;
 
 #[macro_use]
 mod macros;
@@ -273,7 +274,7 @@ where
                 Ok(Async::Ready(Some(result)))
             },
 
-            Err(GdcfError::NoContent) => Ok(Async::Ready(None)), // We're done here
+            Err(GdcfError::NoContent) | Err(GdcfError::Api(ApiError::NoData)) => Ok(Async::Ready(None)), // We're done here
 
             Err(err) => Err(err),
         }
