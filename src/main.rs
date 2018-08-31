@@ -26,8 +26,9 @@ use std::io::{self, Read};
 fn main() {
     env_logger::init();
 
-    let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
+    //let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
     //let mut config = DatabaseCacheConfig::sqlite_memory_config();
+    let mut config = DatabaseCacheConfig::sqlite_config("/home/patrick/gd.sqlite");
     config.invalidate_after(Duration::minutes(30));
     let cache = DatabaseCache::new(config);
 
@@ -76,7 +77,6 @@ fn main() {
         let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
 
         gdcf.levels_stream(request)
-            .take(5)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
 

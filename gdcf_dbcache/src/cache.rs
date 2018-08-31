@@ -54,7 +54,7 @@ impl DatabaseCacheConfig<Sqlite> {
         DatabaseCacheConfig::new(Sqlite::memory())
     }
 
-    pub fn sqlte_config<P: AsRef<Path>>(path: P) -> DatabaseCacheConfig<Sqlite> {
+    pub fn sqlite_config<P: AsRef<Path>>(path: P) -> DatabaseCacheConfig<Sqlite> {
         DatabaseCacheConfig::new(Sqlite::path(path))
     }
 }
