@@ -1,5 +1,13 @@
 #![deny(
-bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+    bare_trait_objects,
+    missing_debug_implementations,
+    unused_extern_crates,
+    patterns_in_fns_without_body,
+    stable_features,
+    unknown_lints,
+    unused_features,
+    unused_imports,
+    unused_parens
 )]
 
 extern crate itertools;
@@ -11,8 +19,8 @@ use table::Table;
 
 #[macro_use]
 mod macros;
-mod table;
 mod create;
+mod table;
 
 #[proc_macro]
 pub fn table(ts: TokenStream) -> TokenStream {

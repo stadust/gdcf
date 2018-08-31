@@ -1,9 +1,12 @@
-use core::query::condition::And;
-use core::query::condition::Condition;
-use core::query::create::Create;
-use core::query::Select;
-use super::{AsSql, backend::Database};
-use super::query::condition::{EqField, EqValue};
+use core::{
+    backend::Database,
+    query::{
+        condition::{And, Condition, EqField, EqValue},
+        create::Create,
+        Select,
+    },
+    AsSql,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Table {
@@ -17,10 +20,10 @@ impl Table {
     }
 
     pub fn filter<DB, Cond>(&self, cond: Cond) -> Select<DB>
-        where
-            Cond: Condition<DB> + 'static,
-            DB: Database,
-            And<DB>: Condition<DB> + 'static,
+    where
+        Cond: Condition<DB> + 'static,
+        DB: Database,
+        And<DB>: Condition<DB> + 'static,
     {
         self.select().filter(cond)
     }
@@ -30,8 +33,8 @@ impl Table {
     }
 
     pub fn create<DB>(&self) -> Create<DB>
-        where
-            DB: Database
+    where
+        DB: Database,
     {
         Create::new(self.name)
     }
@@ -85,21 +88,21 @@ impl<'a, DB: Database> FieldValue<'a, DB> {
     pub fn is_default(&self) -> bool {
         match self {
             FieldValue::Default => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_value(&self) -> bool {
         match self {
             FieldValue::Value(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }
 
 impl<'a, DB: Database, T: 'a> From<&'a T> for FieldValue<'a, DB>
-    where
-        T: AsSql<DB>
+where
+    T: AsSql<DB>,
 {
     fn from(t: &'a T) -> Self {
         FieldValue::Value(t)

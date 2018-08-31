@@ -1,17 +1,15 @@
 use chrono::NaiveDateTime;
-use core::AsSql;
-use core::backend::Database;
-use core::backend::Error;
-use core::backend::sqlite::Sqlite;
-use core::backend::sqlite::SqliteTypes;
-use core::FromSql;
-use rusqlite::Error as SqliteError;
-use rusqlite::types::FromSql as SqliteFromSql;
-use rusqlite::types::FromSqlError;
-use rusqlite::types::ToSql as SqliteToSql;
-use rusqlite::types::ToSqlOutput;
-use rusqlite::types::Value;
-use rusqlite::types::ValueRef;
+use core::{
+    backend::{
+        sqlite::{Sqlite, SqliteTypes},
+        Database, Error,
+    },
+    AsSql, FromSql,
+};
+use rusqlite::{
+    types::{FromSql as SqliteFromSql, FromSqlError, ToSql as SqliteToSql, ToSqlOutput, Value, ValueRef},
+    Error as SqliteError,
+};
 use std::fmt::{Display, Error as FmtError, Formatter};
 
 impl Display for SqliteTypes {
@@ -21,7 +19,7 @@ impl Display for SqliteTypes {
             SqliteTypes::Real(d) => write!(f, "{}", d),
             SqliteTypes::Text(s) => write!(f, "\"{}\"", s),
             SqliteTypes::Null => write!(f, "NULL"),
-            SqliteTypes::Blob(_) => write!(f, "<binary data>")
+            SqliteTypes::Blob(_) => write!(f, "<binary data>"),
         }
     }
 }
@@ -33,7 +31,7 @@ impl SqliteFromSql for SqliteTypes {
             ValueRef::Real(r) => SqliteTypes::Real(r),
             ValueRef::Text(s) => SqliteTypes::Text(s.to_string()),
             ValueRef::Blob(blob) => SqliteTypes::Blob(blob.to_vec()),
-            ValueRef::Null => SqliteTypes::Null
+            ValueRef::Null => SqliteTypes::Null,
         })
     }
 }
@@ -45,19 +43,19 @@ impl SqliteToSql for SqliteTypes {
             SqliteTypes::Real(r) => ToSqlOutput::Owned(Value::Real(*r)),
             SqliteTypes::Text(s) => ToSqlOutput::Borrowed(ValueRef::Text(s)),
             SqliteTypes::Blob(b) => ToSqlOutput::Borrowed(ValueRef::Blob(b)),
-            SqliteTypes::Null => ToSqlOutput::Owned(Value::Null)
+            SqliteTypes::Null => ToSqlOutput::Owned(Value::Null),
         })
     }
 }
 
-// Here we have impls that ensure that every AsSql<Sqlite> is also a SqlExpr<Sqlite>
-// Maybe one day we'll find a better way to do this
+// Here we have impls that ensure that every AsSql<Sqlite> is also a
+// SqlExpr<Sqlite> Maybe one day we'll find a better way to do this
 mod _dummy {
-    use core::QueryPart;
-    use core::SqlExpr;
-    use core::statement::Preparation;
-    use core::statement::PreparedStatement;
     use super::*;
+    use core::{
+        statement::{Preparation, PreparedStatement},
+        QueryPart, SqlExpr,
+    };
 
     impl<T: AsSql<Sqlite>> QueryPart<Sqlite> for T {
         fn to_sql(&self) -> Preparation<Sqlite> {
@@ -115,13 +113,13 @@ impl AsSql<Sqlite> for Vec<u8> {
 }
 
 impl<T> AsSql<Sqlite> for Option<T>
-    where
-        T: AsSql<Sqlite>
+where
+    T: AsSql<Sqlite>,
 {
     fn as_sql(&self) -> SqliteTypes {
         match self {
             None => SqliteTypes::Null,
-            Some(t) => t.as_sql()
+            Some(t) => t.as_sql(),
         }
     }
 }
@@ -145,65 +143,66 @@ from_sql_cast!(Sqlite, f32, SqliteTypes::Real);
 from_sql_cast!(Sqlite, f64, SqliteTypes::Real);
 
 impl<T> FromSql<Sqlite> for Option<T>
-    where
-        T: FromSql<Sqlite>
+where
+    T: FromSql<Sqlite>,
 {
     fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         match sql {
             SqliteTypes::Null => Ok(None),
-            _ => Ok(Some(T::from_sql(sql)?))
+            _ => Ok(Some(T::from_sql(sql)?)),
         }
     }
 }
 
 impl FromSql<Sqlite> for bool {
     fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         match sql {
             SqliteTypes::Integer(i) => Ok(*i != 0),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "bool"))
+            _ => Err(Error::Conversion(format!("{:?}", sql), "bool")),
         }
     }
 }
 
 impl FromSql<Sqlite> for String {
     fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         match sql {
             SqliteTypes::Text(t) => Ok(t.clone()),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "String"))
+            _ => Err(Error::Conversion(format!("{:?}", sql), "String")),
         }
     }
 }
 
 impl FromSql<Sqlite> for NaiveDateTime {
     fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         match sql {
-            SqliteTypes::Text(ts) => ts.parse()
-                .map_err(|err| Error::Conversion(format!("'{}': {}", ts, err), "NaiveDateTime")),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime"))
+            SqliteTypes::Text(ts) =>
+                ts.parse()
+                    .map_err(|err| Error::Conversion(format!("'{}': {}", ts, err), "NaiveDateTime")),
+            _ => Err(Error::Conversion(format!("{:?}", sql), "NaiveDateTime")),
         }
     }
 }
 
 impl FromSql<Sqlite> for Vec<u8> {
     fn from_sql(sql: &SqliteTypes) -> Result<Self, Error<Sqlite>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         match sql {
             SqliteTypes::Blob(yes) => Ok(yes.clone()),
-            _ => Err(Error::Conversion(format!("{:?}", sql), "Vec<u8>"))
+            _ => Err(Error::Conversion(format!("{:?}", sql), "Vec<u8>")),
         }
     }
 }

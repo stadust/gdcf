@@ -20,33 +20,32 @@ pub(super) enum Constraint {
     NotNull,
     Unique,
     Primary,
-    Default {
-        ty: TokenStream,
-        val: TokenStream,
-    },
+    Default { ty: TokenStream, val: TokenStream },
 }
 
 impl PartialEq for Constraint {
     fn eq(&self, other: &Constraint) -> bool {
         match self {
-            Constraint::NotNull => match other {
-                Constraint::NotNull => true,
-                _ => false
-            }
-            Constraint::Unique => match other {
-                Constraint::Unique => true,
-                _ => false
-            }
-            Constraint::Primary => match other {
-                Constraint::Primary => true,
-                _ => false
-            }
-            Constraint::Default { ty, .. } => match other {
-                Constraint::Default { ty: ty2, .. } => {
-                    ty2.to_string() == ty.to_string()
-                }
-                _ => false
-            }
+            Constraint::NotNull =>
+                match other {
+                    Constraint::NotNull => true,
+                    _ => false,
+                },
+            Constraint::Unique =>
+                match other {
+                    Constraint::Unique => true,
+                    _ => false,
+                },
+            Constraint::Primary =>
+                match other {
+                    Constraint::Primary => true,
+                    _ => false,
+                },
+            Constraint::Default { ty, .. } =>
+                match other {
+                    Constraint::Default { ty: ty2, .. } => ty2.to_string() == ty.to_string(),
+                    _ => false,
+                },
         }
     }
 }
@@ -80,8 +79,8 @@ impl Create {
             loop {
                 match next {
                     Some(TokenTree::Punct(ref punct)) if punct.as_char() == ',' => {
-                        break;
-                    }
+                        break
+                    },
                     Some(TokenTree::Ident(ref ident)) => {
                         let cons = ident.to_string();
                         let constraint = match cons.as_ref() {
@@ -89,13 +88,13 @@ impl Create {
                             "Primary" => Constraint::Primary,
                             "Unique" => Constraint::Unique,
                             "Default" => parse_default(&mut iter),
-                            crap => panic!("Unexpected constraint: {}", crap)
+                            crap => panic!("Unexpected constraint: {}", crap),
                         };
 
                         column.constraints.push(constraint);
-                    }
+                    },
                     Some(crap) => panic!("Expected ident or ',', got {:?}", crap),
-                    None => break 'outer columns.push(column)
+                    None => break 'outer columns.push(column),
                 }
 
                 next = iter.next();
@@ -113,17 +112,17 @@ impl Create {
     pub(super) fn generate(&self) -> TokenStream {
         let mut streams = Vec::<TokenStream>::new();
 
-        streams.push(
-            stream! {
-                "use core::types::*;".parse().unwrap(),
-                "use core::query::create::*;".parse().unwrap(),
-                "use core::SqlExpr;".parse().unwrap(),
-                "use core::backend::Database;".parse().unwrap()
-            }
-        );
+        streams.push(stream! {
+            "use core::types::*;".parse().unwrap(),
+            "use core::query::create::*;".parse().unwrap(),
+            "use core::SqlExpr;".parse().unwrap(),
+            "use core::backend::Database;".parse().unwrap()
+        });
 
         streams.push(
-            format!("pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB> where").parse().unwrap()
+            format!("pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB> where")
+                .parse()
+                .unwrap(),
         );
 
         // Rust is awesome and we can actually keep a Vector of
@@ -132,76 +131,91 @@ impl Create {
         let mut constraints = Vec::new();
         let mut types = Vec::new();
 
-        streams.push(self.columns
-            .iter()
-            .flat_map(|c| c.constraints.iter())
-            .filter(|c| {
-                if constraints.contains(c) {
-                    false
-                } else {
-                    constraints.push(c);
-                    true
-                }
-            })
-            .map(Constraint::where_constraint)
-            .chain(
-                self.columns
-                    .iter()
-                    .map(|c| c.col_type.clone())
-                    .filter(|c| {
-                        if types.contains(&c.to_string()) {
-                            false
-                        } else {
-                            types.push(c.to_string());
-                            true
-                        }
-                    })
-                    .map(|c| stream! {
-                        c,
-                        ": Type<DB>".parse().unwrap()
-                    })
-            )
-            .intersperse(",".parse().unwrap())
-            .collect());
+        streams.push(
+            self.columns
+                .iter()
+                .flat_map(|c| c.constraints.iter())
+                .filter(|c| {
+                    if constraints.contains(c) {
+                        false
+                    } else {
+                        constraints.push(c);
+                        true
+                    }
+                }).map(Constraint::where_constraint)
+                .chain(
+                    self.columns
+                        .iter()
+                        .map(|c| c.col_type.clone())
+                        .filter(|c| {
+                            if types.contains(&c.to_string()) {
+                                false
+                            } else {
+                                types.push(c.to_string());
+                                true
+                            }
+                        }).map(|c| {
+                            stream! {
+                                c,
+                                ": Type<DB>".parse().unwrap()
+                            }
+                        }),
+                ).intersperse(",".parse().unwrap())
+                .collect(),
+        );
 
-        let body = self.columns
+        let body = self
+            .columns
             .iter()
             .map(|col| {
-                let constraints = col.constraints
+                let constraints = col
+                    .constraints
                     .iter()
                     .map(|cons| {
                         stream! {
                             ".constraint".parse().unwrap(),
                             TokenTree::Group(Group::new(Delimiter::Parenthesis, cons.generate())).into()
                         }
-                    })
-                    .collect();
-                let inner = Group::new(Delimiter::Brace, stream! {
-                    "let ty:".parse().unwrap(),
-                    col.col_type.clone(),
-                    " = Default::default(); ty".parse().unwrap()
-                });
-                let args = Group::new(Delimiter::Parenthesis, stream! {
-                    format!("{}.name(),", col.name).parse().unwrap(),
-                    TokenTree::Group(inner).into()
-                });
-                let args = Group::new(Delimiter::Parenthesis, stream! {
-                    "Column::new".parse().unwrap(),
-                    TokenTree::Group(args).into(),
-                    constraints
-                });
+                    }).collect();
+                let inner = Group::new(
+                    Delimiter::Brace,
+                    stream! {
+                        "let ty:".parse().unwrap(),
+                        col.col_type.clone(),
+                        " = Default::default(); ty".parse().unwrap()
+                    },
+                );
+                let args = Group::new(
+                    Delimiter::Parenthesis,
+                    stream! {
+                        format!("{}.name(),", col.name).parse().unwrap(),
+                        TokenTree::Group(inner).into()
+                    },
+                );
+                let args = Group::new(
+                    Delimiter::Parenthesis,
+                    stream! {
+                        "Column::new".parse().unwrap(),
+                        TokenTree::Group(args).into(),
+                        constraints
+                    },
+                );
 
                 stream! {
                     ".with_column".parse().unwrap(),
                     TokenTree::Group(args).into()
                 }
-            })
-            .collect();
+            }).collect();
 
-        streams.push(TokenTree::Group(Group::new(Delimiter::Brace, stream! {
-            format!("table.create()").parse().unwrap(),
-            body
-        })).into());
+        streams.push(
+            TokenTree::Group(Group::new(
+                Delimiter::Brace,
+                stream! {
+                    format!("table.create()").parse().unwrap(),
+                    body
+                },
+            )).into(),
+        );
 
         TokenStream::from_iter(streams)
     }
@@ -213,12 +227,12 @@ impl Constraint {
             Constraint::Unique => "UniqueConstraint<'a>: Constraint<DB> + 'static".parse().unwrap(),
             Constraint::NotNull => "NotNullConstraint<'a>: Constraint<DB> + 'static".parse().unwrap(),
             Constraint::Primary => "PrimaryKeyConstraint<'a>: Constraint<DB> + 'static".parse().unwrap(),
-            Constraint::Default { ty, .. } => stream! {
-                "DefaultConstraint<'a, DB>: Constraint<DB> + 'static,".parse().unwrap(),
-                ty.clone(),
-                ": SqlExpr<DB>".parse().unwrap()
-            }
-            /*"DefaultConstraint<'a, DB>: Constraint<DB> + 'static".parse().unwrap()*//*stream! {
+            Constraint::Default { ty, .. } =>
+                stream! {
+                    "DefaultConstraint<'a, DB>: Constraint<DB> + 'static,".parse().unwrap(),
+                    ty.clone(),
+                    ": SqlExpr<DB>".parse().unwrap()
+                }, /*"DefaultConstraint<'a, DB>: Constraint<DB> + 'static".parse().unwrap()*//*stream! {
                 "DefaultConstraint<'a, DB, ".parse().unwrap(),
                 ty.clone(),
                 ">: Constraint<DB> + 'static,".parse().unwrap(),
@@ -241,17 +255,17 @@ impl Constraint {
                         val.clone()
                     })).into()
                 }
-            }
+            },
         }
     }
 }
 
-fn parse_ty(iter: &mut impl Iterator<Item=TokenTree>) -> (TokenStream, Option<TokenTree>) {
+fn parse_ty(iter: &mut impl Iterator<Item = TokenTree>) -> (TokenStream, Option<TokenTree>) {
     let mut tts = vec![TokenTree::Ident(ident!(iter))];
     let next = iter.next();
 
     match next {
-        Some(TokenTree::Punct(p)) => {
+        Some(TokenTree::Punct(p)) =>
             if p.as_char() == '<' {
                 let (inner, end) = parse_ty(iter);
 
@@ -259,26 +273,24 @@ fn parse_ty(iter: &mut impl Iterator<Item=TokenTree>) -> (TokenStream, Option<To
                 tts.extend(inner);
 
                 match end {
-                    Some(TokenTree::Punct(p)) => {
+                    Some(TokenTree::Punct(p)) =>
                         if p.as_char() == '>' {
                             tts.push(TokenTree::Punct(p));
                             (TokenStream::from_iter(tts), iter.next())
                         } else {
                             panic!("Expected '>', got {:?}", TokenTree::Punct(p))
-                        }
-                    }
+                        },
                     Some(end) => panic!("Expected '>', got {:?}", end),
-                    None => panic!("Expected '>', got end-of-stream")
+                    None => panic!("Expected '>', got end-of-stream"),
                 }
             } else {
                 (TokenStream::from_iter(tts), Some(TokenTree::Punct(p)))
-            }
-        }
-        next => (TokenStream::from_iter(tts), next)
+            },
+        next => (TokenStream::from_iter(tts), next),
     }
 }
 
-fn parse_default(iter: &mut impl Iterator<Item=TokenTree>) -> Constraint {
+fn parse_default(iter: &mut impl Iterator<Item = TokenTree>) -> Constraint {
     alone_punct!(iter, '<');
     let (ty, next) = parse_ty(iter);
 
@@ -286,10 +298,7 @@ fn parse_default(iter: &mut impl Iterator<Item=TokenTree>) -> Constraint {
         if punct.as_char() == '>' {
             let grp = any_group!(iter);
 
-            return Constraint::Default {
-                ty,
-                val: grp.stream(),
-            };
+            return Constraint::Default { ty, val: grp.stream() }
         }
     }
 

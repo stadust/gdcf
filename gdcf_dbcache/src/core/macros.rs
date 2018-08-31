@@ -1,9 +1,6 @@
 macro_rules! if_query_part {
     ($t: ty, $tr: ty) => {
-        impl<'a, DB: Database> $tr for $t
-            where
-                $t: QueryPart<DB>
-        {}
+        impl<'a, DB: Database> $tr for $t where $t: QueryPart<DB> {}
     };
 }
 
@@ -11,8 +8,7 @@ macro_rules! simple_query_part {
     ($back: ty, $t: ty, $val: expr) => {
         impl QueryPart<$back> for $t {
             fn to_sql(&self) -> Preparation<$back> {
-                Preparation::<$back>::default()
-                    .with_static($val)
+                Preparation::<$back>::default().with_static($val)
             }
         }
     };
@@ -25,7 +21,7 @@ macro_rules! as_sql_cast {
                 $variant(*self as $dest)
             }
         }
-    }
+    };
 }
 
 macro_rules! from_sql_cast {
@@ -34,9 +30,9 @@ macro_rules! from_sql_cast {
             fn from_sql(sql: &<$back as Database>::Types) -> Result<Self, Error<$back>> {
                 match sql {
                     $variant(value) => Ok(*value as $dest),
-                    _ => Err(Error::Conversion(format!("{:?}", sql), stringify!($dest)))
+                    _ => Err(Error::Conversion(format!("{:?}", sql), stringify!($dest))),
                 }
             }
         }
-    }
+    };
 }

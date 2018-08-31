@@ -1,5 +1,4 @@
-use core::backend::Database;
-use core::QueryPart;
+use core::{backend::Database, QueryPart};
 
 pub trait Type<DB: Database>: QueryPart<DB> {}
 
@@ -44,7 +43,8 @@ if_query_part!(UtcTimestamp, Type<DB>);
 if_query_part!(Bytes, Type<DB>);
 
 impl<DB: Database, Signed> Type<DB> for Unsigned<Signed>
-    where
-        Unsigned<Signed>: QueryPart<DB>,
-        Signed: Type<DB>
-{}
+where
+    Unsigned<Signed>: QueryPart<DB>,
+    Signed: Type<DB>,
+{
+}

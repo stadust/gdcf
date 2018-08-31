@@ -1,16 +1,14 @@
-use chrono::NaiveDateTime;
-use core::{AsSql, backend::Database};
-use core::query::select::Row;
-use postgres::{Connection, Error as PgError, types::ToSql as ToPgSql};
-use postgres::TlsMode;
 use super::Error;
+use chrono::NaiveDateTime;
+use core::{backend::Database, query::select::Row, AsSql};
+use postgres::{types::ToSql as ToPgSql, Connection, Error as PgError, TlsMode};
 
 mod convert;
 mod query;
 
 #[derive(Debug)]
 pub struct Pg {
-    connection: Connection
+    connection: Connection,
 }
 
 #[derive(Debug)]
@@ -30,14 +28,14 @@ pub enum PgTypes {
 impl Pg {
     pub fn new(url: &str, tls: TlsMode) -> Pg {
         Pg {
-            connection: Connection::connect(url, tls).unwrap()
+            connection: Connection::connect(url, tls).unwrap(),
         }
     }
 }
 
 impl Database for Pg {
-    type Types = PgTypes;
     type Error = PgError;
+    type Types = PgTypes;
 
     fn prepare(idx: usize) -> String {
         format!("${}", idx)
@@ -52,8 +50,8 @@ impl Database for Pg {
     }
 
     fn query_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<Vec<Row<Pg>>, Error<Pg>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();

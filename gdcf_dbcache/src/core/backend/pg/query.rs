@@ -1,26 +1,19 @@
-use core::AsSql;
-use core::backend::pg::Pg;
-use core::backend::util::join_statements;
-use core::query::condition::And;
-use core::query::condition::EqField;
-use core::query::condition::EqValue;
-use core::query::condition::Or;
-use core::query::create::{Column, Create};
-use core::query::create::{NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint};
-use core::query::create::DefaultConstraint;
-use core::query::delete::Delete;
-use core::query::Insert;
-use core::query::insert::OnConflict;
-use core::query::Select;
-use core::query::select::Join;
-use core::query::select::OrderBy;
-use core::query::select::Ordering;
-use core::QueryPart;
-use core::statement::{Preparation, Prepare, PreparedStatement};
-use core::table::FieldValue;
-use core::types::{BigInteger, Boolean, Bytes, Double, Float, Integer, SmallInteger, Text, Unsigned, UtcTimestamp};
+use core::{
+    backend::{pg::Pg, util::join_statements},
+    query::{
+        condition::{And, EqField, EqValue, Or},
+        create::{Column, Create, DefaultConstraint, NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint},
+        delete::Delete,
+        insert::OnConflict,
+        select::{Join, OrderBy, Ordering},
+        Insert, Select,
+    },
+    statement::{Preparation, Prepare, PreparedStatement},
+    table::FieldValue,
+    types::{BigInteger, Boolean, Bytes, Double, Float, Integer, SmallInteger, Text, Unsigned, UtcTimestamp},
+    AsSql, QueryPart,
+};
 use joinery::Joinable;
-
 
 macro_rules! constraint_query_part {
     ($back: ty, $t: ty, $val: expr) => {
@@ -28,10 +21,11 @@ macro_rules! constraint_query_part {
             fn to_sql(&self) -> Preparation<$back> {
                 match self.0 {
                     None => Preparation::<$back>::default().with_static($val),
-                    Some(name) => Preparation::<$back>::default()
-                        .with_static("CONSTRAINT")
-                        .with_static(name)
-                        .with_static($val)
+                    Some(name) =>
+                        Preparation::<$back>::default()
+                            .with_static("CONSTRAINT")
+                            .with_static(name)
+                            .with_static($val),
                 }
             }
         }
@@ -45,10 +39,11 @@ constraint_query_part!(Pg, NotNullConstraint<'a>, "NOT NULL");
 impl<'a> QueryPart<Pg> for DefaultConstraint<'a, Pg> {
     fn to_sql(&self) -> Preparation<Pg> {
         match self.name {
-            None => Preparation::<Pg>::default()
-                .with_static("DEFAULT")
-                .with_static(self.default.to_raw_sql()),
-            Some(_) => unimplemented!()
+            None =>
+                Preparation::<Pg>::default()
+                    .with_static("DEFAULT")
+                    .with_static(self.default.to_raw_sql()),
+            Some(_) => unimplemented!(),
         }
     }
 }
@@ -114,19 +109,16 @@ impl<'a> Insert<'a, Pg> {
     fn on_conflict(&self) -> String {
         match self.conflict {
             OnConflict::Ignore => "ON CONFLICT DO NOTHING".into(),
-            OnConflict::Update(ref target) => {
+            OnConflict::Update(ref target) =>
                 format!(
                     "ON CONFLICT ({}) DO UPDATE SET {}",
-                    target
-                        .iter()
-                        .map(|f| f.name())
-                        .join_with(","),
+                    target.iter().map(|f| f.name()).join_with(","),
                     self.values()
                         .into_iter()
-                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name())).join_with(",")
-                )
-            }
-            _ => String::new()
+                        .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name()))
+                        .join_with(",")
+                ),
+            _ => String::new(),
         }
     }
 }
@@ -138,26 +130,21 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
             .with_static(self.table().name)
             .with_static("(");
 
-        let mut pv = Preparation::<Pg>::default()
-            .with_static("VALUES (");
+        let mut pv = Preparation::<Pg>::default().with_static("VALUES (");
 
         for set_field in self.values() {
-            p = p.with_static(set_field.field.name())
-                .with_static(",");
+            p = p.with_static(set_field.field.name()).with_static(",");
 
             pv = match set_field.value {
                 FieldValue::Default => pv.with_static("DEFAULT"),
-                FieldValue::Value(v) => pv.with(v.to_sql())
+                FieldValue::Value(v) => pv.with(v.to_sql()),
             }.with_static(",");
         }
 
         p.0.pop();
         pv.0.pop();
 
-        p.with_static(")")
-            .with(pv)
-            .with_static(")")
-            .with_static(self.on_conflict())
+        p.with_static(")").with(pv).with_static(")").with_static(self.on_conflict())
     }
 }
 
@@ -177,8 +164,7 @@ impl<'a> QueryPart<Pg> for Column<'a, Pg> {
 
 impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
-            .with_static("CREATE TABLE");
+        let mut p = Preparation::<Pg>::default().with_static("CREATE TABLE");
 
         if self.ignore_if_exists {
             p = p.with_static("IF NOT EXISTS");
@@ -198,15 +184,9 @@ impl<'a> Select<'a, Pg> {
 
     fn fields(&self) -> String {
         if self.qualify() {
-            self.fields.iter()
-                .map(|f| f.qualified_name())
-                .join_with(",")
-                .to_string()
+            self.fields.iter().map(|f| f.qualified_name()).join_with(",").to_string()
         } else {
-            self.fields.iter()
-                .map(|f| f.name())
-                .join_with(",")
-                .to_string()
+            self.fields.iter().map(|f| f.name()).join_with(",").to_string()
         }
     }
 
@@ -215,7 +195,7 @@ impl<'a> Select<'a, Pg> {
             (None, None) => String::new(),
             (Some(limit), None) => format!("LIMIT {}", limit),
             (None, Some(offset)) => format!("OFFSET {}", offset),
-            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset)
+            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset),
         }
     }
 }
@@ -230,12 +210,10 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
             .with(join_statements(&self.joins, None));
 
         if let Some(ref cond) = self.filter {
-            p = p.with_static("WHERE")
-                .with(cond.to_sql());
+            p = p.with_static("WHERE").with(cond.to_sql());
         }
 
-        p.with_static(self.bounds())
-            .with(join_statements(&self.order, Some(",")))
+        p.with_static(self.bounds()).with(join_statements(&self.order, Some(",")))
     }
 }
 
@@ -251,25 +229,21 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
 
 impl<'a> QueryPart<Pg> for OrderBy<'a> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let p = Preparation::<Pg>::default()
-            .with_static(self.field.name);
+        let p = Preparation::<Pg>::default().with_static(self.field.name);
 
         match self.ordering {
             Ordering::Asc => p.with_static("ASC"),
-            Ordering::Desc => p.with_static("DESC")
+            Ordering::Desc => p.with_static("DESC"),
         }
     }
 }
 
 impl<'a> QueryPart<Pg> for Delete<'a, Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
-        let mut p = Preparation::<Pg>::default()
-            .with_static("DELETE FROM")
-            .with_static(self.table.name);
+        let mut p = Preparation::<Pg>::default().with_static("DELETE FROM").with_static(self.table.name);
 
         if let Some(ref filter) = self.filter {
-            p = p.with_static("WHERE")
-                .with(filter.to_sql());
+            p = p.with_static("WHERE").with(filter.to_sql());
         }
 
         p

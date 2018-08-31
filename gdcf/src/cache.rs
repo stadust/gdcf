@@ -1,8 +1,7 @@
 use api::request::{LevelRequest, LevelsRequest};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
-use model::{Level, NewgroundsSong, PartialLevel};
-use model::GDObject;
+use model::{GDObject, Level, NewgroundsSong, PartialLevel};
 use std::error::Error;
 
 pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
@@ -62,5 +61,7 @@ impl<T> CachedObject<T> {
         self.obj
     }
 
-    pub fn cached(&self) -> &T { &self.obj }
+    pub fn cached(&self) -> &T {
+        &self.obj
+    }
 }

@@ -2,14 +2,16 @@
 
 use convert;
 use error::ValueError;
-use model::de;
-use model::raw::RawObject;
-use std::convert::TryFrom;
-use std::fmt::{Display, Error, Formatter};
+use model::{de, raw::RawObject};
+use std::{
+    convert::TryFrom,
+    fmt::{Display, Error, Formatter},
+};
 
 /// Struct representing Geometry Dash's main songs.
 ///
-/// This data is not provided by the API and needs to be manually kept up to date
+/// This data is not provided by the API and needs to be manually kept up to
+/// date
 #[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct MainSong {
@@ -26,8 +28,8 @@ pub struct MainSong {
 /// Struct representing a Newgrounds song.
 ///
 /// ## GD Internals
-/// The Geometry Dash servers provide a list of the newgrounds songs of the levels in a `getGJLevels`
-/// response.
+/// The Geometry Dash servers provide a list of the newgrounds songs of the
+/// levels in a `getGJLevels` response.
 ///
 /// ### Unused indices:
 /// The following indices aren't used by the Geometry Dash servers: `9`

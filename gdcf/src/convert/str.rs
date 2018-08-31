@@ -1,12 +1,7 @@
 //! Module containing various conversion to and from [`String`] for GDCF models
 
-use model::DemonRating;
-use model::GameVersion;
-use model::level::Featured;
-use model::LevelLength;
-use model::LevelRating;
-use std::num::ParseIntError;
-use std::str::FromStr;
+use model::{level::Featured, DemonRating, GameVersion, LevelLength, LevelRating};
+use std::{num::ParseIntError, str::FromStr};
 
 impl FromStr for GameVersion {
     type Err = ParseIntError;
@@ -39,7 +34,7 @@ impl ToString for LevelRating {
             LevelRating::Harder => "Harder".into(),
             LevelRating::Insane => "Insane".into(),
             LevelRating::Unknown => "__UNKNOWN_LEVEL_RATING__".into(),
-            LevelRating::Demon(demon) => demon.to_string()
+            LevelRating::Demon(demon) => demon.to_string(),
         }
     }
 }
@@ -55,7 +50,7 @@ impl From<String> for LevelRating {
             "Harder" => LevelRating::Harder,
             "Insane" => LevelRating::Harder,
             "__UNKNOWN_LEVEL_RATING__" => LevelRating::Unknown,
-            _ => LevelRating::Demon(DemonRating::from(s))
+            _ => LevelRating::Demon(DemonRating::from(s)),
         }
     }
 }
@@ -68,7 +63,7 @@ impl ToString for DemonRating {
             DemonRating::Hard => "HardDemon",
             DemonRating::Insane => "InsaneDemon",
             DemonRating::Extreme => "ExtremeDemon",
-            DemonRating::Unknown => "__UNKNOWN_DEMON_RATING__"
+            DemonRating::Unknown => "__UNKNOWN_DEMON_RATING__",
         }.to_string()
     }
 }
@@ -81,7 +76,7 @@ impl From<String> for DemonRating {
             "HardDemon" => DemonRating::Hard,
             "InsaneDemon" => DemonRating::Insane,
             "ExtremeDemon" => DemonRating::Extreme,
-            _ => DemonRating::Unknown
+            _ => DemonRating::Unknown,
         }
     }
 }
@@ -94,7 +89,7 @@ impl ToString for LevelLength {
             LevelLength::Short => "Short",
             LevelLength::Long => "Long",
             LevelLength::ExtraLong => "ExtraLong",
-            LevelLength::Unknown => "__UNKNOWN_LEVEL_LENGTH__"
+            LevelLength::Unknown => "__UNKNOWN_LEVEL_LENGTH__",
         }.to_string()
     }
 }
@@ -107,7 +102,7 @@ impl From<String> for LevelLength {
             "Short" => LevelLength::Short,
             "Long" => LevelLength::Long,
             "ExtraLong" => LevelLength::ExtraLong,
-            _ => LevelLength::Unknown
+            _ => LevelLength::Unknown,
         }
     }
 }

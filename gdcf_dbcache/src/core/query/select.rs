@@ -1,13 +1,12 @@
-use core::backend::Database;
-use core::backend::Error;
-use core::FromSql;
-use core::query::condition::And;
-use core::query::condition::Condition;
-use core::query::condition::Or;
-use core::query::Query;
-use core::QueryPart;
-use core::table::Field;
-use core::table::Table;
+use core::{
+    backend::{Database, Error},
+    query::{
+        condition::{And, Condition, Or},
+        Query,
+    },
+    table::{Field, Table},
+    FromSql, QueryPart,
+};
 
 #[derive(Debug)]
 pub struct Join<'a, DB: Database + 'a> {
@@ -50,11 +49,14 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
     }
 
     pub fn join<Cond>(mut self, other: &'a Table, condition: Cond) -> Select<'a, DB>
-        where
-            DB: 'static,
-            Cond: Condition<DB> + 'static
+    where
+        DB: 'static,
+        Cond: Condition<DB> + 'static,
     {
-        self.joins.push(Join { other, join_condition: Box::new(condition) });
+        self.joins.push(Join {
+            other,
+            join_condition: Box::new(condition),
+        });
         self
     }
 
@@ -79,34 +81,36 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
     }
 
     pub fn filter<Cond>(mut self, cond: Cond) -> Select<'a, DB>
-        where
-            DB: 'static,
-            Cond: Condition<DB> + 'static,
-            And<DB>: Condition<DB>
+    where
+        DB: 'static,
+        Cond: Condition<DB> + 'static,
+        And<DB>: Condition<DB>,
     {
         self.filter = match self.filter {
             None => Some(Box::new(cond)),
-            Some(old) => Some(Box::new(And {
-                cond_1: old,
-                cond_2: Box::new(cond),
-            }))
+            Some(old) =>
+                Some(Box::new(And {
+                    cond_1: old,
+                    cond_2: Box::new(cond),
+                })),
         };
 
         self
     }
 
     pub fn or<Cond>(mut self, cond: Cond) -> Select<'a, DB>
-        where
-            DB: 'static,
-            Cond: Condition<DB> + 'static,
-            Or<DB>: Condition<DB>
+    where
+        DB: 'static,
+        Cond: Condition<DB> + 'static,
+        Or<DB>: Condition<DB>,
     {
         self.filter = match self.filter {
             None => Some(Box::new(cond)),
-            Some(old) => Some(Box::new(Or {
-                cond_1: old,
-                cond_2: Box::new(cond),
-            }))
+            Some(old) =>
+                Some(Box::new(Or {
+                    cond_1: old,
+                    cond_2: Box::new(cond),
+                })),
         };
 
         self
@@ -120,9 +124,7 @@ pub struct Row<DB: Database> {
 
 impl<DB: Database> Row<DB> {
     pub fn new(values: Vec<DB::Types>) -> Row<DB> {
-        Row {
-            fields: values
-        }
+        Row { fields: values }
     }
 
     pub fn len(&self) -> usize {
@@ -134,8 +136,8 @@ impl<DB: Database> Row<DB> {
     }
 
     pub fn get<T>(&self, idx: isize) -> Option<Result<T, Error<DB>>>
-        where
-            T: FromSql<DB>
+    where
+        T: FromSql<DB>,
     {
         let idx: usize = if idx < 0 {
             (self.fields.len() as isize + idx) as usize

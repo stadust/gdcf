@@ -1,11 +1,12 @@
+use base64::DecodeError;
 use convert;
 use error::ValueError;
-use model::LevelRating;
-use model::raw::RawObject;
-use model::song::{MAIN_SONGS, MainSong, UNKNOWN};
-use std::num::ParseIntError;
-use std::str::FromStr;
-use base64::DecodeError;
+use model::{
+    raw::RawObject,
+    song::{MainSong, MAIN_SONGS, UNKNOWN},
+    LevelRating,
+};
+use std::{num::ParseIntError, str::FromStr};
 
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
@@ -23,24 +24,19 @@ pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueErro
 
 pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>, ValueError> {
     if raw_obj.get::<u64>(35)? == 0 {
-        Ok(Some(
-            MAIN_SONGS
-                .get(raw_obj.get::<usize>(12)?)
-                .unwrap_or(&UNKNOWN),
-        ))
+        Ok(Some(MAIN_SONGS.get(raw_obj.get::<usize>(12)?).unwrap_or(&UNKNOWN)))
     } else {
         Ok(None)
     }
 }
 
 pub(super) fn description(value: &str) -> Result<Option<String>, DecodeError> {
-    convert::to::b64_decoded_string(value)
-        .map(Option::Some)
+    convert::to::b64_decoded_string(value).map(Option::Some)
 }
 
 pub(super) fn default_to_none<T>(value: &str) -> Result<Option<T>, <T as FromStr>::Err>
-    where
-        T: FromStr + Default + PartialEq,
+where
+    T: FromStr + Default + PartialEq,
 {
     let value: T = value.parse()?;
 

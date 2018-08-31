@@ -2,11 +2,11 @@
 
 use convert;
 use error::ValueError;
-use model::{GameVersion, MainSong};
-use model::de;
-use model::raw::RawObject;
-use std::convert::TryFrom;
-use std::fmt::{Display, Error, Formatter};
+use model::{de, raw::RawObject, GameVersion, MainSong};
+use std::{
+    convert::TryFrom,
+    fmt::{Display, Error, Formatter},
+};
 
 /// Enum representing the possible level lengths known to GDCF
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -15,94 +15,109 @@ pub enum LevelLength {
     /// Tiny
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `0` in both requests and responses
+    /// This variant is represented by the value `0` in both requests and
+    /// responses
     Tiny,
 
     /// Short
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `1` in both requests and responses
+    /// This variant is represented by the value `1` in both requests and
+    /// responses
     Short,
 
     /// Medium
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `2` in both requests and responses
+    /// This variant is represented by the value `2` in both requests and
+    /// responses
     Medium,
 
     /// Long
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `3` in both requests and responses
+    /// This variant is represented by the value `3` in both requests and
+    /// responses
     Long,
 
     /// Extra Long, sometime referred to as `XL`
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `4` in both requests and responses
+    /// This variant is represented by the value `4` in both requests and
+    /// responses
     ExtraLong,
 
-    /// Enum variant that's used by the `From<i32>` impl for when an unrecognized value is passed
+    /// Enum variant that's used by the `From<i32>` impl for when an
+    /// unrecognized value is passed
     Unknown,
 }
-
 
 /// Enum representing the possible level ratings
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub enum LevelRating {
-    /// Auto rating. This variant is only used when making requests. Use the [is_auto](struct.PartialLevel.html#structfield.is_auto)
+    /// Auto rating. This variant is only used when making requests. Use the
+    /// [is_auto](struct.PartialLevel.html#structfield.is_auto)
     /// field to check if a level is auto instead.
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `-3` in requests, and not included in responses.
+    /// This variant is represented by the value `-3` in requests, and not
+    /// included in responses.
     Auto,
 
     /// Demon rating.
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `-2` in requests. In responses, you will have to
-    /// first check the provided level is a demon and then interpret the provided `rating` value as a
-    /// [DemonRating](struct.DemonRating.html)
+    /// This variant is represented by the value `-2` in requests. In
+    /// responses, you will have to first check the provided level is a
+    /// demon and then interpret the provided
+    /// `rating` value as a [DemonRating](struct.DemonRating.html)
     Demon(DemonRating),
 
     /// Not Available, sometimes referred to as `N/A` or `NA`
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `-1` in requests and by the value `0` in responses
+    /// This variant is represented by the value `-1` in requests and by the
+    /// value `0` in responses
     NotAvailable,
 
     /// Easy rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `1` in requests and by the value `10` in responses
+    /// This variant is represented by the value `1` in requests and by the
+    /// value `10` in responses
     Easy,
 
     /// Normal rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `2` in requests and by the value `20` in responses
+    /// This variant is represented by the value `2` in requests and by the
+    /// value `20` in responses
     Normal,
 
     /// Hard rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `3` in requests and by the value `30` in responses
+    /// This variant is represented by the value `3` in requests and by the
+    /// value `30` in responses
     Hard,
 
     /// Harder rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `4` in requests and by the value `40` in responses
+    /// This variant is represented by the value `4` in requests and by the
+    /// value `40` in responses
     Harder,
 
     /// Insane rating
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `5` in requests and by the value `50` in responses
+    /// This variant is represented by the value `5` in requests and by the
+    /// value `50` in responses
     Insane,
 
-    /// Enum variant that's used by the `From<i32>`impl for when an unrecognized value is passed
+    /// Enum variant that's used by the `From<i32>`impl for when an
+    /// unrecognized value is passed
     Unknown,
 }
 
@@ -113,34 +128,40 @@ pub enum DemonRating {
     /// Easy demon
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `1` in requests and by the value `10` in responses
+    /// This variant is represented by the value `1` in requests and by the
+    /// value `10` in responses
     Easy,
 
     /// Medium demon
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `2` in requests and by the value `20` in responses
+    /// This variant is represented by the value `2` in requests and by the
+    /// value `20` in responses
     Medium,
 
     /// Hard demon
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `3` in requests and by the value `30` in responses
+    /// This variant is represented by the value `3` in requests and by the
+    /// value `30` in responses
     Hard,
 
     /// Insane demon
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `4` in requests and by the value `40` in responses
+    /// This variant is represented by the value `4` in requests and by the
+    /// value `40` in responses
     Insane,
 
     /// Extreme demon
     ///
     /// ## GD Internals:
-    /// This variant is represented by the value `5` in requests and by the value `50` in responses
+    /// This variant is represented by the value `5` in requests and by the
+    /// value `50` in responses
     Extreme,
 
-    /// Enum variant that's used by the `From<i32>` impl for when an unrecognized value is passed
+    /// Enum variant that's used by the `From<i32>` impl for when an
+    /// unrecognized value is passed
     Unknown,
 }
 
@@ -151,13 +172,15 @@ pub enum Featured {
     /// The level isn't featured, and has never been featured before
     NotFeatured,
 
-    /// The level isn't featured, but used to be (it either got unrated, or unfeatured, like Sonic Wave)
+    /// The level isn't featured, but used to be (it either got unrated, or
+    /// unfeatured, like Sonic Wave)
     Unfeatured,
 
-    /// The level is featured, and has the contained value as its featured weight.
+    /// The level is featured, and has the contained value as its featured
+    /// weight.
     ///
-    /// The featured weight determines how high on the featured pages the level appear, where a
-    /// higher value means a higher position.
+    /// The featured weight determines how high on the featured pages the level
+    /// appear, where a higher value means a higher position.
     Featured(u32),
 }
 
@@ -165,8 +188,8 @@ pub enum Featured {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub enum Password {
-    /// The level isn't copyable (which I see the irony off, considering we literally have a copy
-    /// of it in the GDCF database. shush.)
+    /// The level isn't copyable (which I see the irony off, considering we
+    /// literally have a copy of it in the GDCF database. shush.)
     NoCopy,
 
     /// The level is free to copy
@@ -176,30 +199,41 @@ pub enum Password {
     PasswordCopy(String),
 }
 
-/// Struct representing partial levels. These are returned to [LevelsRequest](../../api/request/level/struct.LevelsRequest.html)s
-/// and only contain metadata on the level.
+/// Struct representing partial levels. These are returned to
+/// [LevelsRequest](../../api/request/level/struct.LevelsRequest.html)s and only
+/// contain metadata
+/// on the level.
+///
 ///
 /// ## GD Internals:
-/// The Geometry Dash servers provide lists of partial levels via the `getGJLevels` endpoint.
+/// The Geometry Dash servers provide lists of partial levels via the
+/// `getGJLevels` endpoint.
 ///
 /// ### Unmapped values:
-/// + Index `8`: Index 8 is a boolean value indicating whether the level has a difficulty rating that isn't N/A.
-/// This is equivalent to checking if [difficulty](struct.PartialLevel.html#structfield.difficulty)
-/// is unequal to [NotAvailable](enum.LevelRating.html#variant.NotAvailable)
-/// + Index `17`: Index 17 is a boolean value indicating whether the level is a demon level.
-/// This is equivalent to checking if [difficulty](struct.PartialLevel.html#structfield.difficulty)
-/// if the [Demon](enum.LevelRating.html#variant.Demon) variant.
-/// + Index `25`: Index 25 is a boolean value indicating whether the level is an auto level.
-/// This is equivalent to checking if [difficulty](struct.PartialLevel.html#structfield.difficulty)
-/// is equal to [Demon](enum.LevelRating.html#variant.Auto).
+/// + Index `8`: Index 8 is a boolean value indicating whether the level has a
+/// difficulty rating that isn't N/A. This is equivalent to checking if
+/// [difficulty](struct.PartialLevel.
+/// html#structfield.difficulty) is unequal to
+/// [NotAvailable](enum.LevelRating.html#variant.
+/// NotAvailable) + Index `17`: Index 17 is a boolean value indicating whether
+/// the level is a demon level. This is equivalent to checking if
+/// [difficulty](struct.PartialLevel.
+/// html#structfield.difficulty) if the [Demon](enum.LevelRating.html#variant.
+/// Demon) variant. + Index `25`: Index 25 is a boolean value indicating
+/// whether the level is an auto level. This is equivalent to checking if
+/// [difficulty](struct.PartialLevel.
+/// html#structfield.difficulty) is equal to
+/// [Demon](enum.LevelRating.html#variant.Auto).
 ///
 /// ### Unprovided values:
-/// These values are not provided for by the `getGJLevels` endpoint and are thus only modelled in the
-/// [Level](struct.Level.html) struct: `4`, `27`, `28`, `29`, `36`
+/// These values are not provided for by the `getGJLevels` endpoint and are
+/// thus only modelled in the [Level](struct.Level.html) struct: `4`, `27`,
+/// `28`, `29`, `36`
 ///
 /// ### Unused indices:
-/// The following indices aren't used by the Geometry Dash servers: `11`, `16`, `17`, `20`, `21`,
-/// `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`, `41`, `44`
+/// The following indices aren't used by the Geometry Dash servers: `11`, `16`,
+/// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
+/// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct PartialLevel {
@@ -217,15 +251,16 @@ pub struct PartialLevel {
     #[raw_data(index = 2)]
     pub name: String,
 
-    /// The [`Level`]'s description. Is [`None`] if the creator didn't put any description.
+    /// The [`Level`]'s description. Is [`None`] if the creator didn't put any
+    /// description.
     ///
     /// ## GD Internals:
     /// This value is provided at index `3` and encoded using urlsafe base 64.
     #[raw_data(index = 3, deserialize_with = "de::description", default)]
     pub description: Option<String>,
 
-    /// The [`PartialLevel`]'s version. The version get incremented every time the level is updated,
-    /// and the initial version is always version 1.
+    /// The [`PartialLevel`]'s version. The version get incremented every time
+    /// the level is updated, and the initial version is always version 1.
     ///
     /// ## GD Internals:
     /// This value is provided at index `5`.
@@ -242,12 +277,15 @@ pub struct PartialLevel {
     /// The difficulty of this [`PartialLevel`]
     ///
     /// ## GD Internals:
-    /// This value is a construct from the value at the indices `9`, `17` and `25`, whereas index 9
-    /// is an integer representation of either the [LevelRating](struct.LevelRating.html) or the
-    /// [DemonRating](struct.DemonRating.html) struct, depending on the value of index 17.
+    /// This value is a construct from the value at the indices `9`, `17` and
+    /// `25`, whereas index 9 is an integer representation of either the
+    /// [LevelRating](struct.LevelRating.html) or the [DemonRating](struct.
+    /// DemonRating.html)
+    /// struct, depending on
+    /// the value of index 17.
     ///
-    /// If index 25 is set to true, the level is an auto level and the value at index 9 is some nonsense,
-    /// in which case it is ignored.
+    /// If index 25 is set to true, the level is an auto level and the value at
+    /// index 9 is some nonsense, in which case it is ignored.
     #[raw_data(custom = "de::level_rating")]
     pub difficulty: LevelRating,
 
@@ -261,9 +299,11 @@ pub struct PartialLevel {
     /// The [`MainSong`] the level uses, if any.
     ///
     /// ## GD Internals:
-    /// This value is provided at index `12`. Interpretation is additionally dependant on the value
-    /// at index `35` (the custom song id), as without that information, a value of `0` for this
-    /// field could either mean the level uses `Stereo Madness` or no main song.
+    /// This value is provided at index `12`. Interpretation is additionally
+    /// dependant on the value at index `35` (the custom song id), as
+    /// without that information, a value of `0` for
+    /// this field could either mean the level uses `Stereo Madness` or no
+    /// main song.
     #[raw_data(custom = "de::main_song")]
     pub main_song: Option<&'static MainSong>,
 
@@ -284,8 +324,8 @@ pub struct PartialLevel {
     /// The length of this [`PartialLevel`]
     ///
     /// ## GD Internals:
-    /// This value is provided as an integer representation of the [LevelLength](struct.LevelLength.html)
-    /// struct at index `15`
+    /// This value is provided as an integer representation of the
+    /// [LevelLength](struct.LevelLength.html) struct at index `15`
     #[raw_data(index = 15)]
     pub length: LevelLength,
 
@@ -303,18 +343,20 @@ pub struct PartialLevel {
     #[raw_data(index = 19)]
     pub featured: Featured,
 
-    /// The ID of the level this [`PartialLevel`] is a copy of, or [`None`], if this [`PartialLevel`]
-    /// isn't a copy.
+    /// The ID of the level this [`PartialLevel`] is a copy of, or [`None`], if
+    /// this [`PartialLevel`] isn't a copy.
     ///
     /// ## GD Internals:
     /// This value is provided at index `30`
     #[raw_data(index = 30, deserialize_with = "de::default_to_none")]
     pub copy_of: Option<u64>,
 
-    /// The id of the newgrounds song this [`PartialLevel`] uses, or [`None`] if it useds a main song.
+    /// The id of the newgrounds song this [`PartialLevel`] uses, or [`None`]
+    /// if it useds a main song.
     ///
     /// ## GD Internals:
-    /// This value is provided at index `35`, and a value of `0` means, that no custom song is used.
+    /// This value is provided at index `35`, and a value of `0` means, that no
+    /// custom song is used.
     #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
     pub custom_song_id: Option<u64>,
 
@@ -325,18 +367,20 @@ pub struct PartialLevel {
     #[raw_data(index = 37)]
     pub coin_amount: u8,
 
-    /// Value indicating whether the user coins (if present) in this [`PartialLevel`] are verified
+    /// Value indicating whether the user coins (if present) in this
+    /// [`PartialLevel`] are verified
     ///
     /// ## GD Internals:
     /// This value is provided at index `38
     #[raw_data(index = 38, deserialize_with = "de::int_to_bool")]
     pub coins_verified: bool,
 
-    /// The amount of stars the level creator has requested when uploading this [`PartialLevel`],
-    /// or [`None`] if no stars were requested.
+    /// The amount of stars the level creator has requested when uploading this
+    /// [`PartialLevel`], or [`None`] if no stars were requested.
     ///
     /// ## GD Internals:
-    /// This value is provided at index `39`, and a value of `0` means no stars were requested
+    /// This value is provided at index `39`, and a value of `0` means no stars
+    /// were requested
     #[raw_data(index = 39, deserialize_with = "de::default_to_none")]
     pub stars_requested: Option<u8>,
 
@@ -348,8 +392,8 @@ pub struct PartialLevel {
     pub is_epic: bool,
 
     // TODO: figure this value out
-    /// According to the GDPS source its a value called `starDemonDiff`. It seems to correlate to
-    /// the level's difficulty.
+    /// According to the GDPS source its a value called `starDemonDiff`. It
+    /// seems to correlate to the level's difficulty.
     ///
     /// ## GD Internals:
     /// This value is provided at index `43` and seems to be an integer
@@ -359,19 +403,21 @@ pub struct PartialLevel {
     /// The amount of objects in this [`PartialLevel`]
     ///
     /// ## GD Internals:
-    /// This value is provided at index `45`, although only for levels uploaded in version
-    /// 2.1 or later. For all older levels this is always `0`
+    /// This value is provided at index `45`, although only for levels uploaded
+    /// in version 2.1 or later. For all older levels this is always `0`
     #[raw_data(index = 45)]
     pub object_amount: u32,
 
-    /// According to the GDPS source this is always `1`, although that is evidently wrong
+    /// According to the GDPS source this is always `1`, although that is
+    /// evidently wrong
     ///
     /// ## GD Internals:
     /// This value is provided at index `46` and seems to be an integer
     #[raw_data(index = 46, default)]
     pub index_46: String,
 
-    /// According to the GDPS source, this is always `2`, although that is evidently wrong
+    /// According to the GDPS source, this is always `2`, although that is
+    /// evidently wrong
     ///
     /// ## GD Internals:
     /// This value is provided at index `47` and seems to be an integer
@@ -379,15 +425,17 @@ pub struct PartialLevel {
     pub index_47: String,
 }
 
-/// Struct representing full levels, extending [`PartialLevel`] with the fields only retrieved when
-/// fully downloading a level.
+/// Struct representing full levels, extending [`PartialLevel`] with the fields
+/// only retrieved when fully downloading a level.
 ///
 /// ## GD Internals:
-/// The Geometry Dash servers provide full information about a level via the `downloadGJLevel` endpoint
+/// The Geometry Dash servers provide full information about a level via the
+/// `downloadGJLevel` endpoint
 ///
 /// ### Unused indices:
-/// The following indices aren't used by the Geometry Dash servers: `11`, `16`, `17`, `20`, `21`,
-/// `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`, `41`, `44`
+/// The following indices aren't used by the Geometry Dash servers: `11`, `16`,
+/// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
+/// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct Level {
@@ -395,24 +443,25 @@ pub struct Level {
     #[raw_data(flatten)]
     pub base: PartialLevel,
 
-    /// The raw level data. Note that GDCF performs the base64 decoding, though not the DEFLATE
-    /// decompression, sincce he base64 decoded version of the level data requires the least amount
-    /// of space.
+    /// The raw level data. Note that GDCF performs the base64 decoding, though
+    /// not the DEFLATE decompression, sincce he base64 decoded version of
+    /// the level data requires the least amount of space.
     ///
     /// ## GD Internals:
-    /// This value is provided at index `4`, and is urlsafe base64 encoded and DEFLATE
-    /// compressed
+    /// This value is provided at index `4`, and is urlsafe base64 encoded and
+    /// DEFLATE compressed
     #[raw_data(index = 4, deserialize_with = "convert::to::b64_decoded_bytes")]
     pub level_data: Vec<u8>,
 
     /// The level's password
     ///
     /// ## GD Internals:
-    /// This value is provided at index `27`, and is to be interpreted as follows:
-    /// + If the provided value is `"0"`, then the level isn't copyable
-    /// + Otherwise the value is base64 encoded and "encrypted" using robtop's XOR routine
-    /// using key `26364`. If the "decrypted" value is `"1"`, the level is free to copy.
-    /// Otherwise the decrypted value is the level password.
+    /// This value is provided at index `27`, and is to be interpreted as
+    /// follows: + If the provided value is `"0"`, then the level isn't
+    /// copyable + Otherwise the value is base64 encoded and "encrypted"
+    /// using robtop's XOR routine using key `26364`. If the "decrypted"
+    /// value is `"1"`, the level is free to
+    /// copy. Otherwise the decrypted value is the level password.
     #[raw_data(index = 27, deserialize_with = "convert::to::level_password")]
     pub password: Password,
 

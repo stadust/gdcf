@@ -1,10 +1,10 @@
 pub(crate) mod newgrounds_song {
-    use gdcf::model::NewgroundsSong;
     use core::backend::Error;
+    use gdcf::model::NewgroundsSong;
 
     use schema::NowAtUtc;
 
-    use pm_gdcf_dbcache::{iqtable, create};
+    use pm_gdcf_dbcache::{create, iqtable};
 
     iqtable! {
         NewgroundsSong => newgrounds_song {

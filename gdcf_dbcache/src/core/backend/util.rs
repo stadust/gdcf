@@ -1,15 +1,17 @@
-//! Module containing utility functions or struct-impls that are valid across (most) backends
+//! Module containing utility functions or struct-impls that are valid across
+//! (most) backends
 
-use core::backend::Database;
-use core::QueryPart;
-use core::statement::Preparation;
-use core::statement::Prepare;
+use core::{
+    backend::Database,
+    statement::{Preparation, Prepare},
+    QueryPart,
+};
 
 pub fn join_statements<'a, DB: 'a, QP: 'a, I>(stmts: I, seperator: Option<&str>) -> Preparation<'a, DB>
-    where
-        DB: Database,
-        QP: QueryPart<DB>,
-        I: IntoIterator<Item=&'a QP>
+where
+    DB: Database,
+    QP: QueryPart<DB>,
+    I: IntoIterator<Item = &'a QP>,
 {
     let mut p = Preparation::<DB>::default();
     let mut sep = None;

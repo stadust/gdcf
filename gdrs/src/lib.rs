@@ -1,8 +1,15 @@
 #![feature(pattern)]
 #![feature(try_from)]
-
 #![deny(
-bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+    bare_trait_objects,
+    missing_debug_implementations,
+    unused_extern_crates,
+    patterns_in_fns_without_body,
+    stable_features,
+    unknown_lints,
+    unused_features,
+    unused_imports,
+    unused_parens
 )]
 
 extern crate futures;
@@ -15,26 +22,22 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_urlencoded;
 
-use futures::Future;
-use futures::Stream;
-use gdcf::api::ApiClient;
-use gdcf::api::client::ApiFuture;
-use gdcf::api::request::level::LevelRequest;
-use gdcf::api::request::level::LevelsRequest;
-use gdcf::error::ApiError;
-use hyper::Body;
-use hyper::Client;
-use hyper::client::HttpConnector;
-use hyper::Error;
-use hyper::header::HeaderValue;
-use hyper::Method;
-use hyper::Request;
-use hyper::StatusCode;
-use ser::LevelRequestRem;
-use ser::LevelsRequestRem;
+use futures::{future::Executor, Future, Stream};
+use gdcf::{
+    api::{
+        client::ApiFuture,
+        request::level::{LevelRequest, LevelsRequest},
+        ApiClient,
+    },
+    error::ApiError,
+};
+use hyper::{
+    client::{Builder, HttpConnector},
+    header::HeaderValue,
+    Body, Client, Error, Method, Request, StatusCode,
+};
+use ser::{LevelRequestRem, LevelsRequestRem};
 use std::str;
-use futures::future::Executor;
-use hyper::client::Builder;
 
 #[macro_use]
 mod macros;
@@ -60,22 +63,16 @@ impl BoomlingsClient {
     pub fn new() -> BoomlingsClient {
         info!("Creating new BoomlingsApiClient");
 
-        BoomlingsClient {
-            client: Client::new(),
-        }
+        BoomlingsClient { client: Client::new() }
     }
 
     pub fn with_exec<E>(exec: E) -> Self
-        where
-            E: Executor<Box<dyn Future<Item=(), Error=()> + Send>> + Send + Sync + 'static,
+    where
+        E: Executor<Box<dyn Future<Item = (), Error = ()> + Send>> + Send + Sync + 'static,
     {
-        let client = Builder::default()
-            .executor(exec)
-            .build_http();
+        let client = Builder::default().executor(exec).build_http();
 
-        BoomlingsClient {
-            client
-        }
+        BoomlingsClient { client }
     }
 
     fn make_request(&self, endpoint: &str, req: Req) -> Request<Body> {
@@ -88,8 +85,10 @@ impl BoomlingsClient {
 
         *req.method_mut() = Method::POST;
         *req.uri_mut() = endpoint!(endpoint);
-        req.headers_mut().insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
-        req.headers_mut().insert("Content-Length", HeaderValue::from_str(&len.to_string()).unwrap());
+        req.headers_mut()
+            .insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
+        req.headers_mut()
+            .insert("Content-Length", HeaderValue::from_str(&len.to_string()).unwrap());
 
         req
     }

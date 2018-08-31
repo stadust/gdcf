@@ -27,15 +27,15 @@ impl Table {
             let model = ident!(iter);
 
             match iter.next() {
-                Some(TokenTree::Punct(ref punct)) if punct.as_char() == '=' => {}
+                Some(TokenTree::Punct(ref punct)) if punct.as_char() == '=' => {},
                 Some(TokenTree::Punct(ref punct)) if punct.as_char() == ',' => {
                     fields.push((None, model));
-                    continue;
-                }
+                    continue
+                },
                 Some(crap) => panic!("Expected ',' or '=', got {:?}", crap),
                 None => {
-                    break fields.push((None, model));
-                }
+                    break fields.push((None, model))
+                },
             };
 
             alone_punct!(iter, '>');
@@ -46,7 +46,7 @@ impl Table {
             match iter.next() {
                 Some(TokenTree::Punct(ref punct)) if punct.as_char() == ',' => continue,
                 Some(crap) => panic!("Expected ',' or end-of-stream, got {:?}", crap),
-                None => break
+                None => break,
             };
         }
 
@@ -67,7 +67,9 @@ impl Table {
 
         for (_, field) in &self.field_mapping {
             streams.push(
-                format!("pub static {}: Field = Field {{ table: table_name, name: \"{}\" }};", field, field).parse().unwrap()
+                format!("pub static {}: Field = Field {{ table: table_name, name: \"{}\" }};", field, field)
+                    .parse()
+                    .unwrap(),
             );
 
             field_string = format!("{},&{}", field_string, field);
@@ -76,14 +78,19 @@ impl Table {
         field_string.remove(0);
 
         streams.push(
-            format!("pub static table: Table = Table {{ name: table_name, fields: &[{}] }};", field_string).parse().unwrap()
+            format!(
+                "pub static table: Table = Table {{ name: table_name, fields: &[{}] }};",
+                field_string
+            ).parse()
+            .unwrap(),
         );
 
         TokenStream::from_iter(streams)
     }
 
     pub(super) fn insert(&self, backend: &str) -> TokenStream {
-        let field_setter = self.field_mapping
+        let field_setter = self
+            .field_mapping
             .iter()
             .filter(|(model, _)| model.is_some())
             .map(|(model, field)| format!("{}.set(&self.{})", field, model.as_ref().unwrap()))
@@ -91,17 +98,18 @@ impl Table {
 
         format!(
             "use core::{{table::{{SetField, Table}}, query::insert::Insertable}};\
-            impl Insertable<{}> for {} {{\
-                fn table(&self) -> &Table {{\
-                    &table\
-                }}\
-                \
-                fn values(&self) -> Vec<SetField<{}>> {{\
-                    vec![{}] \
-                }}\
-            }}",
+             impl Insertable<{}> for {} {{\
+             fn table(&self) -> &Table {{\
+             &table\
+             }}\
+             \
+             fn values(&self) -> Vec<SetField<{}>> {{\
+             vec![{}] \
+             }}\
+             }}",
             backend, self.model_name, backend, field_setter
-        ).parse().unwrap()
+        ).parse()
+        .unwrap()
     }
 
     pub(super) fn query(&self, backend: &str) -> TokenStream {
@@ -115,15 +123,16 @@ impl Table {
 
         format!(
             "use core::query::select::{{Queryable, Row}};\
-            impl Queryable<{}> for {} {{\
-                fn from_row(row: &Row<{}>, offset: isize) -> Result<Self, Error<{}>> {{\
-                    Ok({} {{\
-                        {}\
-                    }})\
-                }}\
-            }}",
+             impl Queryable<{}> for {} {{\
+             fn from_row(row: &Row<{}>, offset: isize) -> Result<Self, Error<{}>> {{\
+             Ok({} {{\
+             {}\
+             }})\
+             }}\
+             }}",
             backend, self.model_name, backend, backend, self.model_name, field_getter
-        ).parse().unwrap()
+        ).parse()
+        .unwrap()
     }
 
     pub(super) fn gated_impl(&self, feature: &str, module: &str, backend: &str) -> TokenStream {

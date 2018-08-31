@@ -1,12 +1,11 @@
-use core::{AsSql, backend::Database, table::Field};
+use core::{backend::Database, table::Field, AsSql, QueryPart};
 use std::fmt::Debug;
-use core::QueryPart;
 
 pub trait Condition<DB: Database>: QueryPart<DB> + Debug {
     fn and<Cond>(self, other: Cond) -> And<DB>
-        where
-            Self: Sized + 'static,
-            Cond: Condition<DB> + 'static
+    where
+        Self: Sized + 'static,
+        Cond: Condition<DB> + 'static,
     {
         And::new(self, other)
     }
@@ -47,38 +46,39 @@ impl<'f, 'sql, DB: Database + 'sql> EqValue<'f, DB> {
 
 impl<'a> EqField<'a> {
     pub fn new(field_1: &'a Field, field_2: &'a Field) -> EqField<'a> {
-        EqField {
-            field_1,
-            field_2,
-        }
+        EqField { field_1, field_2 }
     }
 }
 
 impl<DB: Database> And<DB> {
     pub fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> And<DB>
-        where
-            A: Condition<DB>,
-            B: Condition<DB>
+    where
+        A: Condition<DB>,
+        B: Condition<DB>,
     {
-        And { cond_1: Box::new(cond_1), cond_2: Box::new(cond_2) }
+        And {
+            cond_1: Box::new(cond_1),
+            cond_2: Box::new(cond_2),
+        }
     }
 }
 
 impl<DB: Database> Or<DB> {
     pub fn new<A: 'static, B: 'static>(cond_1: A, cond_2: B) -> Or<DB>
-        where
-            A: Condition<DB>,
-            B: Condition<DB>
+    where
+        A: Condition<DB>,
+        B: Condition<DB>,
     {
-        Or { cond_1: Box::new(cond_1), cond_2: Box::new(cond_2) }
+        Or {
+            cond_1: Box::new(cond_1),
+            cond_2: Box::new(cond_2),
+        }
     }
 }
 
 macro_rules! condition {
     ($cond_type: ty) => {
-        impl<'a, DB: Database> Condition<DB> for $cond_type
-            where
-                $cond_type: QueryPart<DB> {}
+        impl<'a, DB: Database> Condition<DB> for $cond_type where $cond_type: QueryPart<DB> {}
     };
 }
 

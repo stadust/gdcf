@@ -1,25 +1,19 @@
-use core::AsSql;
-use core::backend::sqlite::Sqlite;
-use core::backend::util::join_statements;
-use core::query::condition::And;
-use core::query::condition::EqField;
-use core::query::condition::EqValue;
-use core::query::condition::Or;
-use core::query::create::{Column, Create};
-use core::query::create::{DefaultConstraint, NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint};
-use core::query::delete::Delete;
-use core::query::Insert;
-use core::query::insert::OnConflict;
-use core::query::Select;
-use core::query::select::Join;
-use core::query::select::OrderBy;
-use core::query::select::Ordering;
-use core::QueryPart;
-use core::statement::{Preparation, Prepare, PreparedStatement};
-use core::table::FieldValue;
-use core::types::{BigInteger, Boolean, Bytes, Double, Float, Integer, SmallInteger, Text, Unsigned, UtcTimestamp};
+use core::{
+    backend::{sqlite::Sqlite, util::join_statements},
+    query::{
+        condition::{And, EqField, EqValue, Or},
+        create::{Column, Create, DefaultConstraint, NotNullConstraint, PrimaryKeyConstraint, UniqueConstraint},
+        delete::Delete,
+        insert::OnConflict,
+        select::{Join, OrderBy, Ordering},
+        Insert, Select,
+    },
+    statement::{Preparation, Prepare, PreparedStatement},
+    table::FieldValue,
+    types::{BigInteger, Boolean, Bytes, Double, Float, Integer, SmallInteger, Text, Unsigned, UtcTimestamp},
+    AsSql, QueryPart,
+};
 use joinery::Joinable;
-
 
 macro_rules! constraint_query_part {
     ($back: ty, $t: ty, $val: expr) => {
@@ -27,10 +21,11 @@ macro_rules! constraint_query_part {
             fn to_sql(&self) -> Preparation<$back> {
                 match self.0 {
                     None => Preparation::<$back>::default().with_static($val),
-                    Some(name) => Preparation::<$back>::default()
-                        .with_static("CONSTRAINT")
-                        .with_static(name)
-                        .with_static($val)
+                    Some(name) =>
+                        Preparation::<$back>::default()
+                            .with_static("CONSTRAINT")
+                            .with_static(name)
+                            .with_static($val),
                 }
             }
         }
@@ -44,14 +39,14 @@ constraint_query_part!(Sqlite, NotNullConstraint<'a>, "NOT NULL");
 impl<'a> QueryPart<Sqlite> for DefaultConstraint<'a, Sqlite> {
     fn to_sql(&self) -> Preparation<Sqlite> {
         match self.name {
-            None => Preparation::<Sqlite>::default()
-                .with_static("DEFAULT")
-                .with_static(self.default.to_raw_sql()),
-            Some(_) => unimplemented!()
+            None =>
+                Preparation::<Sqlite>::default()
+                    .with_static("DEFAULT")
+                    .with_static(self.default.to_raw_sql()),
+            Some(_) => unimplemented!(),
         }
     }
 }
-
 
 simple_query_part!(Sqlite, Text, "TEXT");
 simple_query_part!(Sqlite, SmallInteger, "INTEGER");
@@ -113,37 +108,29 @@ impl QueryPart<Sqlite> for Or<Sqlite> {
 impl<'a> QueryPart<Sqlite> for Insert<'a, Sqlite> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         let p = match self.conflict {
-            OnConflict::Ignore => Preparation::<Sqlite>::default()
-                .with_static("INSERT OR IGNORE"),
-            OnConflict::Update(_) => Preparation::<Sqlite>::default()
-                .with_static("INSERT OR REPLACE"),  // TODO: maybe use actual UPSERT here
-            OnConflict::Fail => Preparation::<Sqlite>::default()
-                .with_static("INSERT OR FAIL")
+            OnConflict::Ignore => Preparation::<Sqlite>::default().with_static("INSERT OR IGNORE"),
+            OnConflict::Update(_) => Preparation::<Sqlite>::default().with_static("INSERT OR REPLACE"), /* TODO: maybe use actual
+                                                                                                          * UPSERT here */
+            OnConflict::Fail => Preparation::<Sqlite>::default().with_static("INSERT OR FAIL"),
         };
 
-        let mut p = p.with_static("INTO")
-            .with_static(self.table().name)
-            .with_static("(");
+        let mut p = p.with_static("INTO").with_static(self.table().name).with_static("(");
 
-        let mut pv = Preparation::<Sqlite>::default()
-            .with_static("VALUES (");
+        let mut pv = Preparation::<Sqlite>::default().with_static("VALUES (");
 
         for set_field in self.values() {
-            p = p.with_static(set_field.field.name())
-                .with_static(",");
+            p = p.with_static(set_field.field.name()).with_static(",");
 
             pv = match set_field.value {
                 FieldValue::Default => pv.with_static("DEFAULT"),
-                FieldValue::Value(v) => pv.with(v.to_sql())
+                FieldValue::Value(v) => pv.with(v.to_sql()),
             }.with_static(",");
         }
 
         p.0.pop();
         pv.0.pop();
 
-        p.with_static(")")
-            .with(pv)
-            .with_static(")")
+        p.with_static(")").with(pv).with_static(")")
     }
 }
 
@@ -163,8 +150,7 @@ impl<'a> QueryPart<Sqlite> for Column<'a, Sqlite> {
 
 impl<'a> QueryPart<Sqlite> for Create<'a, Sqlite> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
-        let mut p = Preparation::<Sqlite>::default()
-            .with_static("CREATE TABLE");
+        let mut p = Preparation::<Sqlite>::default().with_static("CREATE TABLE");
 
         if self.ignore_if_exists {
             p = p.with_static("IF NOT EXISTS");
@@ -184,15 +170,9 @@ impl<'a> Select<'a, Sqlite> {
 
     fn fields(&self) -> String {
         if self.qualify() {
-            self.fields.iter()
-                .map(|f| f.qualified_name())
-                .join_with(",")
-                .to_string()
+            self.fields.iter().map(|f| f.qualified_name()).join_with(",").to_string()
         } else {
-            self.fields.iter()
-                .map(|f| f.name())
-                .join_with(",")
-                .to_string()
+            self.fields.iter().map(|f| f.name()).join_with(",").to_string()
         }
     }
 
@@ -201,7 +181,7 @@ impl<'a> Select<'a, Sqlite> {
             (None, None) => String::new(),
             (Some(limit), None) => format!("LIMIT {}", limit),
             (None, Some(offset)) => format!("OFFSET {}", offset),
-            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset)
+            (Some(limit), Some(offset)) => format!("LIMIT {} OFFSET {}", limit, offset),
         }
     }
 }
@@ -216,12 +196,10 @@ impl<'a> QueryPart<Sqlite> for Select<'a, Sqlite> {
             .with(join_statements(&self.joins, None));
 
         if let Some(ref cond) = self.filter {
-            p = p.with_static("WHERE")
-                .with(cond.to_sql());
+            p = p.with_static("WHERE").with(cond.to_sql());
         }
 
-        p.with_static(self.bounds())
-            .with(join_statements(&self.order, Some(",")))
+        p.with_static(self.bounds()).with(join_statements(&self.order, Some(",")))
     }
 }
 
@@ -237,12 +215,11 @@ impl<'a> QueryPart<Sqlite> for Join<'a, Sqlite> {
 
 impl<'a> QueryPart<Sqlite> for OrderBy<'a> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
-        let p = Preparation::<Sqlite>::default()
-            .with_static(self.field.name);
+        let p = Preparation::<Sqlite>::default().with_static(self.field.name);
 
         match self.ordering {
             Ordering::Asc => p.with_static("ASC"),
-            Ordering::Desc => p.with_static("DESC")
+            Ordering::Desc => p.with_static("DESC"),
         }
     }
 }
@@ -254,8 +231,7 @@ impl<'a> QueryPart<Sqlite> for Delete<'a, Sqlite> {
             .with_static(self.table.name);
 
         if let Some(ref filter) = self.filter {
-            p = p.with_static("WHERE")
-                .with(filter.to_sql());
+            p = p.with_static("WHERE").with(filter.to_sql());
         }
 
         p

@@ -1,12 +1,14 @@
-use core::AsSql;
-use core::query::Query;
-use core::query::select::Queryable;
-use core::query::select::Row;
-use std::error::Error as StdError;
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::fmt::Error as FmtError;
-use std::fmt::Formatter;
+use core::{
+    query::{
+        select::{Queryable, Row},
+        Query,
+    },
+    AsSql,
+};
+use std::{
+    error::Error as StdError,
+    fmt::{Debug, Display, Error as FmtError, Formatter},
+};
 
 #[cfg(feature = "pg")]
 pub mod pg;
@@ -19,8 +21,12 @@ pub mod mysql;
 
 mod util;
 
-// TODO: during FromSql<DB> and AsSql<DB> we are excessively copying things. We probably either wanna work with references more, or take ownership more
-// TODO: error handling when creating connections
+// TODO: during FromSql<DB> and AsSql<DB> we are excessively copying things. We
+// probably either wanna work with references more, or take ownership more TODO:
+// error
+// handling
+// when creating
+// connections
 
 #[derive(Debug)]
 pub enum Error<DB: Database> {
@@ -47,8 +53,8 @@ pub trait Database: Debug + Sized {
     fn prepare(idx: usize) -> String;
 
     fn execute(&self, query: &dyn Query<Self>) -> Result<(), Error<Self>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         trace!("Executing query {}", query.to_raw_sql());
 
@@ -57,8 +63,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn execute_unprepared(&self, query: &dyn Query<Self>) -> Result<(), Error<Self>>
-        where
-            Self: Sized
+    where
+        Self: Sized,
     {
         self.execute_raw(query.to_raw_sql(), &[])
     }
@@ -66,8 +72,8 @@ pub trait Database: Debug + Sized {
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Self>>;
 
     fn query_one<T>(&self, query: &dyn Query<Self>) -> Result<T, Error<Self>>
-        where
-            T: Queryable<Self>
+    where
+        T: Queryable<Self>,
     {
         let mut result = self.query(query)?;
 
@@ -93,8 +99,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn query_one_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<T, Error<Self>>
-        where
-            T: Queryable<Self>
+    where
+        T: Queryable<Self>,
     {
         let mut result = self.query_unprepared(query)?;
 
@@ -108,8 +114,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn query<T>(&self, query: &dyn Query<Self>) -> Result<Vec<T>, Error<Self>>
-        where
-            T: Queryable<Self>
+    where
+        T: Queryable<Self>,
     {
         trace!("Executing query {}", query.to_raw_sql());
 
@@ -132,8 +138,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn query_unprepared<T>(&self, query: &dyn Query<Self>) -> Result<Vec<T>, Error<Self>>
-        where
-            T: Queryable<Self>
+    where
+        T: Queryable<Self>,
     {
         let mut ts = Vec::new();
 
@@ -145,8 +151,8 @@ pub trait Database: Debug + Sized {
     }
 
     fn query_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<Vec<Row<Self>>, Error<Self>>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
 
 impl<DB: Database> StdError for Error<DB> {}
@@ -156,7 +162,7 @@ impl<DB: Database> Display for Error<DB> {
         match self {
             Error::Database(err) => write!(f, "{}", err),
             Error::Conversion(value, target) => write!(f, "Failed to convert {:?} to {}", value, target),
-            e => write!(f, "{}", e)
+            e => write!(f, "{}", e),
         }
     }
 }

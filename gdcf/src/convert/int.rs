@@ -1,12 +1,11 @@
-//! Module containing various conversion to and from integral type for GDCF models
+//! Module containing various conversion to and from integral type for GDCF
+//! models
 
-use model::DemonRating;
-use model::GameVersion;
-use model::level::Featured;
-use model::LevelLength;
-use model::LevelRating;
-use model::MainSong;
-use model::song::{MAIN_SONGS, UNKNOWN};
+use model::{
+    level::Featured,
+    song::{MAIN_SONGS, UNKNOWN},
+    DemonRating, GameVersion, LevelLength, LevelRating, MainSong,
+};
 use std;
 
 impl From<u8> for GameVersion {
@@ -26,7 +25,7 @@ impl Into<u8> for GameVersion {
     fn into(self) -> u8 {
         match self {
             GameVersion::Unknown => 10,
-            GameVersion::Version { minor, major } => major * 10 + minor
+            GameVersion::Version { minor, major } => major * 10 + minor,
         }
     }
 }
@@ -46,7 +45,7 @@ impl Into<i32> for Featured {
         match self {
             Featured::Unfeatured => -1,
             Featured::NotFeatured => 0,
-            Featured::Featured(value) => value as i32
+            Featured::Featured(value) => value as i32,
         }
     }
 }
@@ -135,8 +134,6 @@ impl Into<i32> for DemonRating {
 
 impl From<u8> for &'static MainSong {
     fn from(song_id: u8) -> Self {
-        MAIN_SONGS
-            .get(song_id as usize)
-            .unwrap_or(&UNKNOWN)
+        MAIN_SONGS.get(song_id as usize).unwrap_or(&UNKNOWN)
     }
 }

@@ -1,9 +1,10 @@
 use model::GDObject;
 
-use std::iter;
-use std::iter::Once;
-use std::slice::Iter;
-use std::vec::IntoIter;
+use std::{
+    iter::{self, Once},
+    slice::Iter,
+    vec::IntoIter,
+};
 
 #[derive(Debug)]
 pub enum ProcessedResponse {
@@ -15,26 +16,26 @@ impl ProcessedResponse {
     pub fn iter(&self) -> RespIter {
         match *self {
             ProcessedResponse::One(ref obj) => RespIter::One(iter::once(obj)),
-            ProcessedResponse::Many(ref objs) => RespIter::Many(objs.iter())
+            ProcessedResponse::Many(ref objs) => RespIter::Many(objs.iter()),
         }
     }
 }
 
 impl IntoIterator for ProcessedResponse {
-    type Item = GDObject;
     type IntoIter = RespIntoIter;
+    type Item = GDObject;
 
     fn into_iter(self) -> RespIntoIter {
         match self {
             ProcessedResponse::One(obj) => RespIntoIter::One(iter::once(obj)),
-            ProcessedResponse::Many(objs) => RespIntoIter::Many(objs.into_iter())
+            ProcessedResponse::Many(objs) => RespIntoIter::Many(objs.into_iter()),
         }
     }
 }
 
 impl<'a> IntoIterator for &'a ProcessedResponse {
-    type Item = &'a GDObject;
     type IntoIter = RespIter<'a>;
+    type Item = &'a GDObject;
 
     fn into_iter(self) -> RespIter<'a> {
         self.iter()
@@ -53,7 +54,7 @@ impl Iterator for RespIntoIter {
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         match *self {
             RespIntoIter::One(ref mut once) => once.next(),
-            RespIntoIter::Many(ref mut i) => i.next()
+            RespIntoIter::Many(ref mut i) => i.next(),
         }
     }
 }
@@ -70,7 +71,7 @@ impl<'a> Iterator for RespIter<'a> {
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         match *self {
             RespIter::One(ref mut once) => once.next(),
-            RespIter::Many(ref mut i) => i.next()
+            RespIter::Many(ref mut i) => i.next(),
         }
     }
 }

@@ -13,7 +13,7 @@ extern crate gdrs;
 extern crate tokio;
 
 use chrono::Duration;
-use futures::{lazy, Future};
+use futures::{lazy, stream::Stream, Future};
 use gdcf::{
     api::request::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters},
     model::{DemonRating, LevelRating},
@@ -22,7 +22,6 @@ use gdcf::{
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use std::io::{self, Read};
-use futures::stream::Stream;
 
 fn main() {
     env_logger::init();

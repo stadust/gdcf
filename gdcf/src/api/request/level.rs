@@ -1,26 +1,29 @@
 //! Module containing request definitions for retrieving levels
 //!
-//! Note that all `Hash` impls are to be forward compatible with new fields in the request.
-//! This means, that if an update to the GD API arrives which adds more fields to a request,
-//! those fields are hashed _only_ if they are different from their default values.
-//! This way, the hashes of requests made before the update will stay the same
+//! Note that all `Hash` impls are to be forward compatible with new fields in
+//! the request. This means, that if an update to the GD API arrives which adds
+//! more fields to a request, those fields are hashed _only_ if they are
+//! different from their default values. This way, the hashes of requests made
+//! before the update will stay the same
 
-use api::ApiClient;
-use api::client::ApiFuture;
-use api::request::{BaseRequest, Request};
-use api::request::StreamableRequest;
+use api::{
+    client::ApiFuture,
+    request::{BaseRequest, Request, StreamableRequest},
+    ApiClient,
+};
 use model::{DemonRating, LevelLength, LevelRating};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
-use std::fmt::{Display, Error, Formatter};
-use std::hash::Hash;
-use std::hash::Hasher;
+use std::{
+    fmt::{Display, Error, Formatter},
+    hash::{Hash, Hasher},
+};
 
 /// Struct modelled after a request to `downloadGJLevel22.php`.
 ///
-/// In the Geometry Dash API, this endpoint is used to download a level from the servers
-/// and retrieve some additional information that isn't provided with the response to a
-/// [LevelsRequest](struct.LevelsRequest.html)
+/// In the Geometry Dash API, this endpoint is used to download a level from
+/// the servers and retrieve some additional information that isn't provided
+/// with the response to a [LevelsRequest](struct.LevelsRequest.html)
 #[derive(Debug, Default)]
 pub struct LevelRequest {
     /// The base request data
@@ -41,7 +44,8 @@ pub struct LevelRequest {
     /// Some weird field the Geometry Dash Client sends along
     ///
     /// ## GD Internals:
-    /// This field is called `extras` in the boomlings API and needs to be converted to an integer
+    /// This field is called `extras` in the boomlings API and needs to be
+    /// converted to an integer
     pub extra: bool,
 }
 
@@ -56,9 +60,10 @@ impl Hash for LevelRequest {
 
 /// Struct modelled after a request to `getGJLevels21.php`
 ///
-/// In the Geometry Dash API, this endpoint is used to retrieve a list of levels matching
-/// the specified criteria, along with their [NewgroundsSong](../../../model/song/struct.NewgroundsSong.html)s
-/// and some basic information on their creators.
+/// In the Geometry Dash API, this endpoint is used to retrieve a list of
+/// levels matching the specified criteria, along with their
+/// [NewgroundsSong](../../../model/song/struct.NewgroundsSong.
+/// html)s and some basic information on their creators.
 #[derive(Debug, Default, Clone)]
 pub struct LevelsRequest {
     /// The base request data
@@ -67,12 +72,14 @@ pub struct LevelsRequest {
     /// The type of level list to retrieve
     ///
     /// ## GD Internals:
-    /// This field is called `type` in the boomlings API and needs to be converted to an integer
+    /// This field is called `type` in the boomlings API and needs to be
+    /// converted to an integer
     pub request_type: LevelRequestType,
 
     /// A search string to filter the levels by
     ///
-    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// This value is ignored unless
+    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     ///
     /// ## GD Internals:
@@ -81,44 +88,51 @@ pub struct LevelsRequest {
 
     /// A list of level lengths to filter by
     ///
-    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// This value is ignored unless
+    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     ///
     /// ## GD Internals:
-    /// This field is called `len` in the boomlings API and needs to be converted to a
-    /// comma separated list of integers, or a single dash (`-`) if filtering by level length isn't
-    /// wanted.
+    /// This field is called `len` in the boomlings API and needs to be
+    /// converted to a comma separated list of integers, or a single dash
+    /// (`-`) if filtering by level length isn't wanted.
     pub lengths: Vec<LevelLength>,
 
     /// A list of level ratings to filter by.
     ///
-    /// To filter by any demon, add [LevelRating::Demon(_)](../../../model/level/enum.LevelRating.html#variant.Demon)
-    /// with any arbitrary [DemonRating](../../../model/level/enum.DemonRating.html) value.
+    /// To filter by any demon, add
+    /// [LevelRating::Demon(_)](../../../model/level/enum.LevelRating.
+    /// html#variant.Demon) with any arbitrary
+    /// [DemonRating](../../../model/level/enum.
+    /// DemonRating.html) value.
     ///
-    /// `ratings` and [demon_rating](struct.LevelsRequest.html#structfield.demon_rating) are
+    /// `ratings` and
+    /// [demon_rating](struct.LevelsRequest.html#structfield.demon_rating) are
     /// mutually exlusive.
     ///
-    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// This value is ignored unless
+    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     ///
     /// ## GD Internals:
-    /// This field is called `diff` in the boomlings API and needs to be converted to a
-    /// comma separated list of integers, or a single dash (`-`) if filtering by level rating isn't
-    /// wanted.
+    /// This field is called `diff` in the boomlings API and needs to be
+    /// converted to a comma separated list of integers, or a single dash
+    /// (`-`) if filtering by level rating isn't wanted.
     pub ratings: Vec<LevelRating>,
 
-    /// Optionally, a single demon rating to filter by. To filter by any demon rating, use
-    /// [ratings](struct.LevelsRequest.html#structfield.ratings)
+    /// Optionally, a single demon rating to filter by. To filter by any demon
+    /// rating, use [ratings](struct.LevelsRequest.html#structfield.ratings)
     ///
     /// `demon_rating` and `ratings` are mutually exlusive.
     ///
-    /// This value is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// This value is ignored unless
+    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     ///
     /// ## GD Internals:
-    /// This field is called `demonFilter` in the boomlings API and needs to be converted to
-    /// an integer. If filtering by demon rating isn't wanted, the value has to be omitted from the
-    /// request.
+    /// This field is called `demonFilter` in the boomlings API and needs to be
+    /// converted to an integer. If filtering by demon rating isn't wanted,
+    /// the value has to be omitted from the request.
     pub demon_rating: Option<DemonRating>,
 
     /// The page of results to retrieve
@@ -129,7 +143,8 @@ pub struct LevelsRequest {
 
     /// Search filters to apply.
     ///
-    /// These values is ignored unless [request_type](struct.LevelsRequest.html#structfield.request_type)
+    /// These values is ignored unless
+    /// [request_type](struct.LevelsRequest.html#structfield.request_type)
     /// is set to [Search](enum.LevelRequestType.html#variant.Search)
     pub search_filters: SearchFilters,
 }
@@ -148,9 +163,8 @@ impl Hash for LevelsRequest {
     }
 }
 
-
-/// Enum representing the various filter states that can be achieved using the `completed` and `uncompleted`
-/// options in the Geometry Dash client
+/// Enum representing the various filter states that can be achieved using the
+/// `completed` and `uncompleted` options in the Geometry Dash client
 #[derive(Debug, Clone, Hash)]
 pub enum CompletionFilter {
     /// No filtering based upon completion
@@ -161,8 +175,9 @@ pub enum CompletionFilter {
         /// The list of level ids to filter
         ids: Vec<u64>,
 
-        /// if `true`, only the levels matching the ids in [`ids`] will be searched, if `false`,
-        /// the levels in [`ids`] will be excluded.
+        /// if `true`, only the levels matching the ids in [`ids`] will be
+        /// searched, if `false`, the levels in [`ids`] will be
+        /// excluded.
         include: bool,
     },
 }
@@ -174,7 +189,8 @@ impl Default for CompletionFilter {
 }
 
 impl CompletionFilter {
-    /// Constructs a [`CompletionFilter`] that'll restrict the search to the list of provided ids
+    /// Constructs a [`CompletionFilter`] that'll restrict the search to the
+    /// list of provided ids
     pub fn completed(completed: Vec<u64>) -> CompletionFilter {
         CompletionFilter::List {
             ids: completed,
@@ -182,7 +198,8 @@ impl CompletionFilter {
         }
     }
 
-    /// Constructs a [`CompletionFilter`] that'll exclude the list of given ids from the search
+    /// Constructs a [`CompletionFilter`] that'll exclude the list of given ids
+    /// from the search
     pub fn uncompleted(completed: Vec<u64>) -> CompletionFilter {
         CompletionFilter::List {
             ids: completed,
@@ -191,23 +208,29 @@ impl CompletionFilter {
     }
 }
 
-/// Struct containing the various search filters provided by the Geometry Dash client.
+/// Struct containing the various search filters provided by the Geometry Dash
+/// client.
 #[derive(Debug, Default, Clone, Hash)]
 pub struct SearchFilters {
-    /// In- or excluding levels that have already been beaten. Since the GDCF client doesn't really
-    /// have a notion of "completing" a level, this can be used to restrict the result a subset of
-    /// an arbitrary set of levels, or exclude an arbitrary set of levels the result.
+    /// In- or excluding levels that have already been beaten. Since the GDCF
+    /// client doesn't really have a notion of "completing" a level, this
+    /// can be used to restrict the result a subset of an arbitrary set of
+    /// levels, or exclude
+    /// an arbitrary set of
+    /// levels the result.
     ///
     /// ## GD Internals:
-    /// This field abstracts away the `uncompleted`, `onlyCompleted` and `completedLevels` fields.
+    /// This field abstracts away the `uncompleted`, `onlyCompleted` and
+    /// `completedLevels` fields.
     ///
-    /// + `uncompleted` is to be set to `1` if we wish to exclude completed levels from the results
-    /// (and to `0` otherwise).
-    /// + `onlyCompleted` is to be set to `1` if we wish to only search through completed levels
-    /// (and to `0` otherwise)
-    /// + `completedLevels` is a list of levels ids that have been completed. If needs to be provided
-    /// if, and only if, either `uncompleted` or `onlyCompleted` are set to `1`. The ids are comma
-    /// seperated and enclosed by parenthesis.
+    /// + `uncompleted` is to be set to `1` if we wish to exclude completed
+    /// levels from the results (and to `0` otherwise).
+    /// + `onlyCompleted` is to be set to `1` if we wish to only search through
+    /// completed levels (and to `0` otherwise)
+    /// + `completedLevels` is a list of levels ids that have been completed.
+    /// If needs to be provided if, and only if, either `uncompleted` or
+    /// `onlyCompleted` are set to `1`. The ids are
+    /// comma seperated and enclosed by parenthesis.
     pub completion: CompletionFilter,
 
     /// Only retrieve featured levels
@@ -225,8 +248,8 @@ pub struct SearchFilters {
     /// Only retrieve two-player levels
     ///
     /// ## GD Internals:
-    /// This field is called `twoPlayer` in the boomlings API and needs to be converted to
-    /// an integer
+    /// This field is called `twoPlayer` in the boomlings API and needs to be
+    /// converted to an integer
     pub two_player: bool,
 
     /// Only retrieve levels with coins
@@ -244,26 +267,32 @@ pub struct SearchFilters {
     /// Only retrieve star rated levels
     ///
     /// ## GD Internals:
-    /// This field is called `star` in the boomlings API and needs to be converted to
-    /// an integer
+    /// This field is called `star` in the boomlings API and needs to be
+    /// converted to an integer
     pub rated: bool,
 
     /// Optionally only retrieve levels that match the given `SongFilter`
     ///
     /// ## GD Internals:
-    /// This field composes both the `customSong` and `song` fields of the boomlings API.
-    /// To filter by main song, set the `song` field to the id of the main song, and omit the `customSong`
-    /// field from the request. To filter by a newgrounds song, set `customSong` to `1` and `song`
-    /// to the newgrounds ID of the custom song.
+    /// This field composes both the `customSong` and `song` fields of the
+    /// boomlings API. To filter by main song, set the `song` field to the
+    /// id of the main song, and omit the `customSong` field from the
+    /// request. To filter
+    /// by a newgrounds
+    /// song, set `customSong`
+    /// to `1` and `song` to the newgrounds ID of the custom song.
     pub song: Option<SongFilter>,
 }
 
-/// Enum containing the various types of [LevelsRequest](struct.LevelsRequest.html) possible
+/// Enum containing the various types of
+/// [LevelsRequest](struct.LevelsRequest.html) possible
 ///
 /// ## GD Internals:
 /// + Unused values: `8`, `9`, `14`
-/// + The values `15` and `17` are only used in Geometry Dash World and are the same as `0` ([`Search`](enum.LevelRequestType.html#variant.Search))
-/// and `6` ([`Featured`](enum.LevelRequestType.html#variant.Featured)) respectively
+/// + The values `15` and `17` are only used in Geometry Dash World and are the
+/// same as `0` ([`Search`](enum.LevelRequestType.html#variant.Search))
+/// and `6` ([`Featured`](enum.LevelRequestType.html#variant.Featured))
+/// respectively
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Hash)]
 pub enum LevelRequestType {
     /// A search request.
@@ -304,7 +333,8 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `5` in requests
     User,
 
-    /// Request to retrieve the list of featured levels, ordered by their [featured weight](../../../model/level/enum.Featured.html)
+    /// Request to retrieve the list of featured levels, ordered by their
+    /// [featured weight](../../../model/level/enum.Featured.html)
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `6` in requests
@@ -316,8 +346,8 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `7` in requests
     Magic,
 
-    /// Map pack levels. The search string is set to a comma seperated list of levels, which are the
-    /// levels contained in the map pack
+    /// Map pack levels. The search string is set to a comma seperated list of
+    /// levels, which are the levels contained in the map pack
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `10` in requests
@@ -411,19 +441,6 @@ impl SearchFilters {
 }
 
 impl LevelRequest {
-    /// Constructs a new `LevelRequest` to retrieve the level with the given id
-    ///
-    /// Uses a default [BaseRequest](../struct.BaseRequest.html), and sets the `inc` field to
-    /// `true` and `extra` to `false`, as are the default values set the by the Geometry Dash Client
-    pub fn new(level_id: u64) -> LevelRequest {
-        LevelRequest {
-            base: BaseRequest::default(),
-            level_id,
-            inc: true,
-            extra: false,
-        }
-    }
-
     setter! {
         /// Sets the `BaseRequest` to be used
         ///
@@ -444,14 +461,31 @@ impl LevelRequest {
         /// Allows builder-style creation of requests
         extra: bool
     }
+
+    /// Constructs a new `LevelRequest` to retrieve the level with the given id
+    ///
+    /// Uses a default [BaseRequest](../struct.BaseRequest.html), and sets the
+    /// `inc` field to `true` and `extra` to `false`, as are the default
+    /// values set the by the Geometry Dash Client
+    pub fn new(level_id: u64) -> LevelRequest {
+        LevelRequest {
+            base: BaseRequest::default(),
+            level_id,
+            inc: true,
+            extra: false,
+        }
+    }
 }
 
 impl LevelsRequest {
     setter!(with_base, base, BaseRequest);
 
     setter!(filter, search_filters, SearchFilters);
+
     setter!(page, u32);
+
     setter!(total, i32);
+
     setter!(request_type, LevelRequestType);
 
     pub fn search(mut self, search_string: String) -> Self {
@@ -526,8 +560,7 @@ impl Request for LevelsRequest {
 
 impl StreamableRequest for LevelsRequest {
     fn next(&self) -> Self {
-        self.clone()
-            .page(self.page + 1)
+        self.clone().page(self.page + 1)
     }
 }
 

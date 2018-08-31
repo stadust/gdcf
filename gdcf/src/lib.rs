@@ -261,6 +261,7 @@ where
     fn poll(&mut self) -> Result<Async<Option<N>>, GdcfError<A::Err, C::Err>> {
         match self.current.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
+
             Ok(Async::Ready(result)) => {
                 task::current().notify();
 
@@ -271,6 +272,7 @@ where
 
                 Ok(Async::Ready(Some(result)))
             },
+
             Err(err) => Err(err),
         }
     }

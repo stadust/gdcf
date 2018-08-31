@@ -2,10 +2,10 @@
 
 pub trait Resulter {
     fn partition_results<T, E, B, C>(self) -> (B, C)
-        where
-            Self: Sized + Iterator<Item=Result<T, E>>,
-            B: Default + Extend<T>,
-            C: Default + Extend<E>
+    where
+        Self: Sized + Iterator<Item = Result<T, E>>,
+        B: Default + Extend<T>,
+        C: Default + Extend<E>,
     {
         let mut oks = B::default();
         let mut errs = C::default();
@@ -13,7 +13,7 @@ pub trait Resulter {
         for result in self {
             match result {
                 Ok(ok) => oks.extend(Some(ok)),
-                Err(err) => errs.extend(Some(err))
+                Err(err) => errs.extend(Some(err)),
             }
         }
 
@@ -21,19 +21,17 @@ pub trait Resulter {
     }
 
     fn flatten_results<T, E>(self) -> FlattenResults<Self>
-        where
-            Self: Sized + Iterator<Item=Result<Result<T, E>, E>>
+    where
+        Self: Sized + Iterator<Item = Result<Result<T, E>, E>>,
     {
-        FlattenResults {
-            iter: self
-        }
+        FlattenResults { iter: self }
     }
 
     fn collect2<T, E, B, C>(self) -> Result<B, C>
-        where
-            Self: Sized + Iterator<Item=Result<T, E>>,
-            B: Default + Extend<T>,
-            C: Default + Extend<E>
+    where
+        Self: Sized + Iterator<Item = Result<T, E>>,
+        B: Default + Extend<T>,
+        C: Default + Extend<E>,
     {
         let mut oks = B::default();
         let mut errs = C::default();
@@ -46,7 +44,7 @@ pub trait Resulter {
                 Err(err) => {
                     errs.extend(Some(err));
                     has_err = true;
-                }
+                },
             }
         }
 
@@ -58,32 +56,28 @@ pub trait Resulter {
     }
 
     fn oks<T, E>(self) -> Oks<Self>
-        where
-            Self: Sized + Iterator<Item=Result<T, E>>
+    where
+        Self: Sized + Iterator<Item = Result<T, E>>,
     {
-        Oks {
-            iter: self
-        }
+        Oks { iter: self }
     }
 
     fn errs<T, E>(self) -> Errs<Self>
-        where
-            Self: Sized + Iterator<Item=Result<T, E>>
+    where
+        Self: Sized + Iterator<Item = Result<T, E>>,
     {
-        Errs {
-            iter: self
-        }
+        Errs { iter: self }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Oks<I> {
-    iter: I
+    iter: I,
 }
 
 impl<T, E, I> Iterator for Oks<I>
-    where
-        I: Iterator<Item=Result<T, E>>
+where
+    I: Iterator<Item = Result<T, E>>,
 {
     type Item = T;
 
@@ -92,7 +86,7 @@ impl<T, E, I> Iterator for Oks<I>
             match self.iter.next() {
                 Some(Ok(t)) => return Some(t),
                 None => return None,
-                _ => continue
+                _ => continue,
             }
         }
     }
@@ -100,12 +94,12 @@ impl<T, E, I> Iterator for Oks<I>
 
 #[derive(Debug, Clone)]
 pub struct Errs<I> {
-    iter: I
+    iter: I,
 }
 
 impl<T, E, I> Iterator for Errs<I>
-    where
-        I: Iterator<Item=Result<T, E>>
+where
+    I: Iterator<Item = Result<T, E>>,
 {
     type Item = E;
 
@@ -114,7 +108,7 @@ impl<T, E, I> Iterator for Errs<I>
             match self.iter.next() {
                 Some(Err(e)) => return Some(e),
                 None => return None,
-                _ => continue
+                _ => continue,
             }
         }
     }
@@ -122,12 +116,12 @@ impl<T, E, I> Iterator for Errs<I>
 
 #[derive(Debug, Clone)]
 pub struct FlattenResults<I> {
-    iter: I
+    iter: I,
 }
 
 impl<T, E, I> Iterator for FlattenResults<I>
-    where
-        I: Iterator<Item=Result<Result<T, E>, E>>
+where
+    I: Iterator<Item = Result<Result<T, E>, E>>,
 {
     type Item = Result<T, E>;
 
@@ -135,11 +129,9 @@ impl<T, E, I> Iterator for FlattenResults<I>
         match self.iter.next() {
             Some(Ok(result)) => Some(result),
             Some(Err(err)) => Some(Err(err)),
-            None => None
+            None => None,
         }
     }
 }
 
-impl<T, E, I> Resulter for I
-    where
-        I: Iterator<Item=Result<T, E>> {}
+impl<T, E, I> Resulter for I where I: Iterator<Item = Result<T, E>> {}

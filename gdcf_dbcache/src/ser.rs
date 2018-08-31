@@ -1,15 +1,12 @@
-use core::AsSql;
-use core::backend::Database;
-use gdcf::model::GameVersion;
-use gdcf::model::level::Featured;
-use gdcf::model::level::Password;
-use gdcf::model::LevelLength;
-use gdcf::model::LevelRating;
-use gdcf::model::MainSong;
+use core::{backend::Database, AsSql};
+use gdcf::model::{
+    level::{Featured, Password},
+    GameVersion, LevelLength, LevelRating, MainSong,
+};
 
 impl<DB: Database> AsSql<DB> for LevelRating
-    where
-        String: AsSql<DB>
+where
+    String: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         self.to_string().as_sql()
@@ -17,8 +14,8 @@ impl<DB: Database> AsSql<DB> for LevelRating
 }
 
 impl<DB: Database> AsSql<DB> for MainSong
-    where
-        u8: AsSql<DB>
+where
+    u8: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         self.main_song_id.as_sql()
@@ -26,8 +23,8 @@ impl<DB: Database> AsSql<DB> for MainSong
 }
 
 impl<DB: Database> AsSql<DB> for GameVersion
-    where
-        u8: AsSql<DB>
+where
+    u8: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         let v: u8 = (*self).into();
@@ -36,8 +33,8 @@ impl<DB: Database> AsSql<DB> for GameVersion
 }
 
 impl<DB: Database> AsSql<DB> for LevelLength
-    where
-        String: AsSql<DB>
+where
+    String: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         self.to_string().as_sql()
@@ -45,8 +42,8 @@ impl<DB: Database> AsSql<DB> for LevelLength
 }
 
 impl<DB: Database> AsSql<DB> for Featured
-    where
-        i32: AsSql<DB>
+where
+    i32: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         let v: i32 = (*self).into();
@@ -55,16 +52,16 @@ impl<DB: Database> AsSql<DB> for Featured
 }
 
 impl<'a, DB: Database + 'a> AsSql<DB> for Password
-    where
-        String: AsSql<DB>,
-        Option<String>: AsSql<DB>,
-        &'a str: AsSql<DB>
+where
+    String: AsSql<DB>,
+    Option<String>: AsSql<DB>,
+    &'a str: AsSql<DB>,
 {
     fn as_sql(&self) -> <DB as Database>::Types {
         match self {
             Password::NoCopy => None.as_sql(),
             Password::FreeCopy => "1".as_sql(),
-            Password::PasswordCopy(password) => password.as_sql()
+            Password::PasswordCopy(password) => password.as_sql(),
         }
     }
 }

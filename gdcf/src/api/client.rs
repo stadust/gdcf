@@ -1,12 +1,14 @@
 use futures::Future;
 
-use api::request::{LevelsRequest, LevelRequest};
-use api::response::ProcessedResponse;
+use api::{
+    request::{LevelRequest, LevelsRequest},
+    response::ProcessedResponse,
+};
 
-use std::error::Error;
 use error::ApiError;
+use std::error::Error;
 
-pub type ApiFuture<E> = Box<dyn Future<Item=ProcessedResponse, Error=ApiError<E>> + Send + 'static>;
+pub type ApiFuture<E> = Box<dyn Future<Item = ProcessedResponse, Error = ApiError<E>> + Send + 'static>;
 
 pub trait ApiClient: Sized + Send + 'static {
     type Err: Error + Send + 'static;

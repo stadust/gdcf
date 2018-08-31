@@ -1,5 +1,4 @@
-use gdcf::api::request::BaseRequest;
-use gdcf::model::GameVersion;
+use gdcf::{api::request::BaseRequest, model::GameVersion};
 
 use ser;
 

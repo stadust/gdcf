@@ -1,5 +1,4 @@
-use core::AsSql;
-use core::backend::Database;
+use core::{backend::Database, AsSql};
 use joinery::Joinable;
 
 #[derive(Debug)]
@@ -10,13 +9,13 @@ pub enum StatementPart {
 
 #[derive(Debug, Default)]
 pub struct PreparedStatement {
-    parts: Vec<StatementPart>
+    parts: Vec<StatementPart>,
 }
 
 impl PreparedStatement {
     pub fn placeholder() -> PreparedStatement {
         PreparedStatement {
-            parts: vec!(StatementPart::Placeholder)
+            parts: vec![StatementPart::Placeholder],
         }
     }
 
@@ -27,15 +26,17 @@ impl PreparedStatement {
     pub fn to_statement(&self, placeholder_fmt: fn(usize) -> String) -> String {
         let mut idx = 0;
 
-        self.parts.iter()
-            .map(move |part| match part {
-                StatementPart::Static(string) => string.to_string(),
-                StatementPart::Placeholder => {
-                    idx += 1;
-                    placeholder_fmt(idx)
+        self.parts
+            .iter()
+            .map(move |part| {
+                match part {
+                    StatementPart::Static(string) => string.to_string(),
+                    StatementPart::Placeholder => {
+                        idx += 1;
+                        placeholder_fmt(idx)
+                    },
                 }
-            })
-            .join_with(" ")
+            }).join_with(" ")
             .to_string()
     }
 
@@ -69,7 +70,9 @@ impl<'a, DB: Database> Prepare<DB> for (PreparedStatement, Vec<&'a dyn AsSql<DB>
     fn unprepared(&self) -> String {
         let mut idx = 0;
 
-        self.0.parts.iter()
+        self.0
+            .parts
+            .iter()
             .map(move |part| {
                 match part {
                     StatementPart::Static(string) => string.clone(),
@@ -77,17 +80,16 @@ impl<'a, DB: Database> Prepare<DB> for (PreparedStatement, Vec<&'a dyn AsSql<DB>
                         let raw = self.1[idx].as_sql().to_string();
                         idx += 1;
                         raw
-                    }
+                    },
                 }
-            })
-            .join_with(" ")
+            }).join_with(" ")
             .to_string()
     }
 }
 
 impl<T> From<T> for StatementPart
-    where
-        T: Into<String>
+where
+    T: Into<String>,
 {
     fn from(t: T) -> Self {
         StatementPart::Static(t.into())
@@ -95,8 +97,8 @@ impl<T> From<T> for StatementPart
 }
 
 impl<T> From<T> for PreparedStatement
-    where
-        T: Into<String>
+where
+    T: Into<String>,
 {
     fn from(t: T) -> Self {
         let mut stmt = PreparedStatement::default();

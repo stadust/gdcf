@@ -1,9 +1,4 @@
-use core::backend::Database;
-use core::query::Query;
-use core::QueryPart;
-use core::SqlExpr;
-use core::table::Field;
-use core::types::Type;
+use core::{backend::Database, query::Query, table::Field, types::Type, QueryPart, SqlExpr};
 
 #[derive(Debug)]
 pub struct Create<'a, DB: Database + 'a> {
@@ -49,43 +44,43 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
     }
 
     pub fn primary(self) -> Self
-        where
-            PrimaryKeyConstraint<'a>: Constraint<DB> + 'static
+    where
+        PrimaryKeyConstraint<'a>: Constraint<DB> + 'static,
     {
         self.constraint(PrimaryKeyConstraint::default())
     }
 
     pub fn unique(self) -> Self
-        where
-            UniqueConstraint<'a>: Constraint<DB> + 'static
+    where
+        UniqueConstraint<'a>: Constraint<DB> + 'static,
     {
         self.constraint(UniqueConstraint::default())
     }
 
     pub fn not_null(self) -> Self
-        where
-            NotNullConstraint<'a>: Constraint<DB> + 'static
+    where
+        NotNullConstraint<'a>: Constraint<DB> + 'static,
     {
         self.constraint(NotNullConstraint::default())
     }
 
     pub fn default<D: SqlExpr<DB> + 'static>(self, default: D) -> Self
-        where
-            DefaultConstraint<'a, DB>: Constraint<DB> + 'static
+    where
+        DefaultConstraint<'a, DB>: Constraint<DB> + 'static,
     {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
     pub fn foreign_key(self, references: &'a Field) -> Self
-        where
-            ForeignKeyConstraint<'a>: Constraint<DB> + 'static
+    where
+        ForeignKeyConstraint<'a>: Constraint<DB> + 'static,
     {
         self.constraint(ForeignKeyConstraint::new(None, references))
     }
 
     pub fn constraint<Con: 'static>(mut self, constraint: Con) -> Self
-        where
-            Con: Constraint<DB>
+    where
+        Con: Constraint<DB>,
     {
         self.constraints.push(Box::new(constraint));
         self
@@ -116,25 +111,21 @@ pub struct ForeignKeyConstraint<'a> {
 #[derive(Debug)]
 pub struct DefaultConstraint<'a, DB: Database + 'a> {
     pub name: Option<&'a str>,
-    pub default: Box<dyn SqlExpr<DB>>
+    pub default: Box<dyn SqlExpr<DB>>,
 }
 
 impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
     pub fn new<D: SqlExpr<DB> + 'static>(name: Option<&'a str>, default: D) -> DefaultConstraint<'a, DB> {
         DefaultConstraint {
             name,
-            default: Box::new(default)
+            default: Box::new(default),
         }
     }
 }
 
-
 impl<'a> ForeignKeyConstraint<'a> {
     pub fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
-        ForeignKeyConstraint {
-            name,
-            references,
-        }
+        ForeignKeyConstraint { name, references }
     }
 }
 
