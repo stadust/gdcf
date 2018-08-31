@@ -1,14 +1,10 @@
-use gdcf::api::response::ProcessedResponse;
-use gdcf::error::ApiError;
-use gdcf::error::ValueError;
-use gdcf::model::GDObject;
-use gdcf::model::Level;
-use gdcf::model::NewgroundsSong;
-use gdcf::model::PartialLevel;
-use gdcf::model::raw::RawObject;
+use gdcf::{
+    api::response::ProcessedResponse,
+    error::{ApiError, ValueError},
+    model::{raw::RawObject, GDObject, Level, NewgroundsSong, PartialLevel},
+};
 use hyper::Error;
-use std::convert::TryFrom;
-use std::str::pattern::Pattern;
+use std::{convert::TryFrom, str::pattern::Pattern};
 
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
@@ -28,17 +24,17 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     let mut sections = body.split("#");
 
     match sections.next() {
-        Some(section) => {
+        Some(section) =>
             for fragment in section.split("|") {
                 result.push(parse_fragment::<PartialLevel, _>(fragment, ":")?);
-            }
-        }
+            },
         None => return Err(ApiError::UnexpectedFormat),
     }
 
     sections.next(); // ignore the creator section (for now)
 
-    if let Some(section) = sections.next() {  // No song fragment is fine with us
+    if let Some(section) = sections.next() {
+        // No song fragment is fine with us
         if !section.is_empty() {
             for fragment in section.split("~:~") {
                 result.push(parse_fragment::<NewgroundsSong, _>(fragment, "~|~")?);
@@ -50,9 +46,9 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
 }
 
 fn parse_fragment<'a, A, P>(fragment: &'a str, seperator: P) -> Result<GDObject, ApiError<Error>>
-    where
-        P: Pattern<'a>,
-        A: TryFrom<RawObject, Error=ValueError> + Into<GDObject>,
+where
+    P: Pattern<'a>,
+    A: TryFrom<RawObject, Error = ValueError> + Into<GDObject>,
 {
     let mut iter = fragment.split(seperator);
     let mut raw_obj = RawObject::new();

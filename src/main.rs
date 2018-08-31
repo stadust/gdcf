@@ -1,5 +1,7 @@
 //#![deny(
-//bare_trait_objects, missing_debug_implementations, unused_extern_crates, patterns_in_fns_without_body, stable_features, unknown_lints, unused_features, unused_imports, unused_parens
+//bare_trait_objects, missing_debug_implementations, unused_extern_crates,
+// patterns_in_fns_without_body, stable_features, unknown_lints,
+// unused_features, unused_imports, unused_parens
 //)]
 
 extern crate chrono;
@@ -11,17 +13,16 @@ extern crate gdrs;
 extern crate tokio;
 
 use chrono::Duration;
-use futures::{Future, lazy};
-use gdcf::api::request::{LevelRequest, LevelsRequest};
-use gdcf::api::request::LevelRequestType;
-use gdcf::api::request::SearchFilters;
-use gdcf::Gdcf;
+use futures::{lazy, Future};
+use gdcf::{
+    api::request::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters},
+    model::{DemonRating, LevelRating},
+    Gdcf,
+};
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
-use std::io;
-use std::io::Read;
-use gdcf::model::LevelRating;
-use gdcf::model::DemonRating;
+use std::io::{self, Read};
+use futures::stream::Stream;
 
 fn main() {
     env_logger::init();
@@ -53,7 +54,7 @@ fn main() {
                 }
             })
     }));*/
-    tokio::run(lazy(move || {
+    /*tokio::run(lazy(move || {
         let request = LevelsRequest::default()
             .search("Dark Realm".to_string())
             .filter(SearchFilters::default()
@@ -71,6 +72,13 @@ fn main() {
 
                 tokio::spawn(future);
             })
+    }));*/
+    tokio::run(lazy(move || {
+        let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
+
+        gdcf.levels_stream(request)
+            .for_each(|levels| Ok(println!("We got the levels {:?}", levels)))
+            .map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
     }));
 
     println!("Press return to continue...");

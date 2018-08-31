@@ -102,3 +102,7 @@ pub trait Request: Display + Default + Hash {
     /// should use the methods provided by your implementation of `ApiClient`
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err>;
 }
+
+pub trait StreamableRequest: Request {
+    fn next(&self) -> Self;
+}

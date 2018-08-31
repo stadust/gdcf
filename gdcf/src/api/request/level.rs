@@ -8,6 +8,7 @@
 use api::ApiClient;
 use api::client::ApiFuture;
 use api::request::{BaseRequest, Request};
+use api::request::StreamableRequest;
 use model::{DemonRating, LevelLength, LevelRating};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
@@ -520,6 +521,13 @@ impl Request for LevelRequest {
 impl Request for LevelsRequest {
     fn make<C: ApiClient>(&self, client: &C) -> ApiFuture<C::Err> {
         client.levels(&self)
+    }
+}
+
+impl StreamableRequest for LevelsRequest {
+    fn next(&self) -> Self {
+        self.clone()
+            .page(self.page + 1)
     }
 }
 
