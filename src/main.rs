@@ -79,7 +79,6 @@ fn main() {
             .search("20".to_string())
             .request_type(LevelRequestType::User);*/
 
-
         let request = LevelsRequest::default()
             .request_type(LevelRequestType::Recent)
             .filter(SearchFilters::default())

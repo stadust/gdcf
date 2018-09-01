@@ -145,6 +145,13 @@ macro_rules! cache {
             }
         }
 
+        impl DatabaseCache<$backend> {
+            /// Retrieves every partial level stored in the database
+            pub fn all_partial_levels(&self) -> Result<Vec<PartialLevel>, <Self as Cache>::Err> {
+                self.config.backend.query(&partial_level::table.select())
+            }
+        }
+
         #[cfg(feature = $feature)]
         impl Cache for DatabaseCache<$backend> {
             // we cannot turn this into an impl generic over DB: Database
@@ -247,7 +254,6 @@ macro_rules! cache {
     };
 }
 
-// TODO: turn cache impl into a macro
 cache!("pg", Pg);
 cache!("sqlite", Sqlite);
 

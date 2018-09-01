@@ -22,11 +22,11 @@ pub mod mysql;
 mod util;
 
 // TODO: during FromSql<DB> and AsSql<DB> we are excessively copying things. We
-// probably either wanna work with references more, or take ownership more TODO:
-// error
-// handling
-// when creating
-// connections
+// probably either wanna work with references more, or take ownership more
+
+// TODO: error handling when creating connections
+
+// TODO: transaction support
 
 #[derive(Debug)]
 pub enum Error<DB: Database> {

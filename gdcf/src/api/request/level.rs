@@ -337,7 +337,10 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `10` in requests
     MapPack,
 
-    /// Request to retrieve the list of levels most recently awarded a rating
+    /// Request to retrieve the list of levels most recently awarded a rating.
+    ///
+    /// Using this option you can only receive levels that were awarded a rating in Geometry Dash
+    /// 1.9 or later
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `11` in requests
