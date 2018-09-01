@@ -17,6 +17,7 @@ pub fn from_raw_object_derive(input: TokenStream) -> TokenStream {
 
 fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
     let name = &ast.ident;
+    let generics = &ast.generics.params;
     let mut data = Vec::new();
 
     match ast.data {
@@ -155,7 +156,7 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
     });
 
     quote! {
-        impl TryFrom<RawObject> for #name {
+        impl<#generics> TryFrom<RawObject> for #name<#generics> {
             type Error = ValueError;
 
             fn try_from(raw_obj: RawObject) -> Result<Self, ValueError> {
@@ -163,7 +164,7 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
             }
         }
 
-        impl<'a> TryFrom<&'a RawObject> for #name {
+        impl<'a, #generics> TryFrom<&'a RawObject> for #name<#generics> {
             type Error = ValueError;
 
             fn try_from(raw_obj: &'a RawObject) -> Result<Self, ValueError> {

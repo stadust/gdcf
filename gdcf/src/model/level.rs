@@ -231,7 +231,7 @@ pub enum Password {
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct PartialLevel {
+pub struct PartialLevel<S> {
     /// The [`Level`]'s unique level id
     ///
     /// ## GD Internals:
@@ -351,7 +351,7 @@ pub struct PartialLevel {
     /// This value is provided at index `35`, and a value of `0` means, that no
     /// custom song is used.
     #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
-    pub custom_song_id: Option<u64>,
+    pub custom_song: Option<S>,
 
     /// The amount of coints in this [`PartialLevel`]
     ///
@@ -431,10 +431,10 @@ pub struct PartialLevel {
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct Level {
+pub struct Level<S> {
     /// The [`PartialLevel`] this [`Level`] instance supplements
     #[raw_data(flatten)]
-    pub base: PartialLevel,
+    pub base: PartialLevel<S>,
 
     /// The raw level data. Note that GDCF performs the base64 decoding, though
     /// not the DEFLATE decompression, sincce he base64 decoded version of
@@ -477,13 +477,13 @@ pub struct Level {
     pub index_36: String,
 }
 
-impl Display for PartialLevel {
+impl<S> Display for PartialLevel<S> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "PartialLevel({}, {})", self.level_id, self.name)
     }
 }
 
-impl Display for Level {
+impl<S> Display for Level<S> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }
