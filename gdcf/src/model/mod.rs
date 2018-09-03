@@ -39,13 +39,27 @@ pub enum GameVersion {
 #[derive(Debug, Clone, PartialEq)]
 pub enum GDObject {
     NewgroundsSong(NewgroundsSong),
-    PartialLevel(PartialLevel),
-    Level(Level),
+    PartialLevel(PartialLevel<u64>),
+    Level(Level<u64>),
 }
 
-into_gdo!(Level);
-into_gdo!(PartialLevel);
-into_gdo!(NewgroundsSong);
+impl From<NewgroundsSong> for GDObject {
+    fn from(song: NewgroundsSong) -> Self {
+        GDObject::NewgroundsSong(song)
+    }
+}
+
+impl From<PartialLevel<u64>> for GDObject {
+    fn from(level: PartialLevel<u64>) -> Self {
+        GDObject::PartialLevel(level)
+    }
+}
+
+impl From<Level<u64>> for GDObject {
+    fn from(level: Level<u64>) -> Self {
+        GDObject::Level(level)
+    }
+}
 
 impl Display for GDObject {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {

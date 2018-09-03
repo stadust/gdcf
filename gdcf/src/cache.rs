@@ -16,10 +16,10 @@ pub trait Cache: Send {
 
     fn config(&self) -> &Self::Config;
 
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel>, Self::Err>;
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel>) -> Result<(), CacheError<Self::Err>>;
+    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64>>, Self::Err>;
+    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64>>) -> Result<(), CacheError<Self::Err>>;
 
-    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level, Self::Err>;
+    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64>, Self::Err>;
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
 
     /// Stores an arbitrary `GDObject` in this `Cache`

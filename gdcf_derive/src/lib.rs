@@ -1,13 +1,16 @@
+#![recursion_limit = "128"]
+
 extern crate proc_macro;
-extern crate syn;
+extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
+extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::Tokens;
-use syn::{Attribute, Data, DeriveInput, ExprPath, Fields, Ident, Lit, Meta, NestedMeta};
+use syn::{Attribute, Data, DeriveInput, ExprPath, Fields, GenericParam, Ident, Lit, Meta, MetaList, NestedMeta, Type};
 
-#[proc_macro_derive(FromRawObject, attributes(raw_data))]
+#[proc_macro_derive(FromRawObject, attributes(raw_data, raw_type))]
 pub fn from_raw_object_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let generated = impl_from_raw_object(&ast);
@@ -17,8 +20,40 @@ pub fn from_raw_object_derive(input: TokenStream) -> TokenStream {
 
 fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
     let name = &ast.ident;
-    let generics = &ast.generics.params;
     let mut data = Vec::new();
+    let mut gen_types: Vec<Type> = Vec::new();
+
+    'outer: for param in &ast.generics.params {
+        if let GenericParam::Type(type_param) = param {
+            for attr in &type_param.attrs {
+                if attr.path.segments.len() == 1 && attr.path.segments[0].ident == "raw_type" {
+                    if let Some(meta) = attr.interpret_meta() {
+                        if let Meta::List(MetaList { ident, nested, .. }) = meta {
+                            if ident == "raw_type" && nested.len() == 1 {
+                                if let Some(NestedMeta::Literal(Lit::Str(ls))) = nested.iter().next() {
+                                    gen_types
+                                        .push(syn::parse_str(&ls.value()).expect("Raw type for generic parameter didn't parse as type"));
+                                    continue 'outer
+                                } else {
+                                    panic!("Invalid raw_type attribute")
+                                }
+                            } else {
+                                panic!("Invalid raw_type attribute")
+                            }
+                        } else {
+                            panic!("Invalid raw_type attribute")
+                        }
+                    } else {
+                        panic!("Invalid raw_type attribute")
+                    }
+                }
+            }
+
+            panic!("Generic type parameter without raw_type attribute: {}", type_param.ident)
+        } else {
+            panic!("Uhh, no lifetimes, sorry")
+        }
+    }
 
     match ast.data {
         Data::Struct(ref structure) =>
@@ -120,18 +155,21 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
 
     let things = data.into_iter().map(|FieldData { field_name, mode }| {
         match mode {
-            Mode::Auto(idx, DefaultValue::None) =>
+            Mode::Auto(idx, DefaultValue::None) => {
                 quote! {
-                    #field_name : raw_obj.get(#idx)?
-                },
-            Mode::Auto(idx, DefaultValue::Literal(lit)) =>
+                    #field_name : raw_obj.get(#idx)? // FromStr
+                }
+            },
+            Mode::Auto(idx, DefaultValue::Literal(lit)) => {
                 quote! {
-                    #field_name : raw_obj.get_or(#idx, #lit)?
-                },
-            Mode::Auto(idx, DefaultValue::Default) =>
+                    #field_name : raw_obj.get_or(#idx, #lit)?   // FromStr
+                }
+            },
+            Mode::Auto(idx, DefaultValue::Default) => {
                 quote! {
-                    #field_name : raw_obj.get_or_default(#idx)?
-                },
+                    #field_name : raw_obj.get_or_default(#idx)?  // Default + FromStr
+                }
+            },
             Mode::With(path, idx, DefaultValue::None) =>
                 quote! {
                     #field_name : raw_obj.get_with(#idx, #path)?
@@ -140,10 +178,11 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
                 quote! {
                     #field_name : raw_obj.get_with_or(#idx, #path, #lit)?
                 },
-            Mode::With(path, idx, DefaultValue::Default) =>
+            Mode::With(path, idx, DefaultValue::Default) => {
                 quote! {
-                    #field_name : raw_obj.get_with_or_default(#idx, #path)?
-                },
+                    #field_name : raw_obj.get_with_or_default(#idx, #path)?  // Default
+                }
+            },
             Mode::Flatten =>
                 quote! {
                     #field_name : TryFrom::try_from(raw_obj)?
@@ -155,8 +194,10 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
         }
     });
 
+    let gen_types2 = gen_types.clone();
+
     quote! {
-        impl<#generics> TryFrom<RawObject> for #name<#generics> {
+        impl TryFrom<RawObject> for #name<#(#gen_types,)*> {
             type Error = ValueError;
 
             fn try_from(raw_obj: RawObject) -> Result<Self, ValueError> {
@@ -164,7 +205,7 @@ fn impl_from_raw_object(ast: &DeriveInput) -> Tokens {
             }
         }
 
-        impl<'a, #generics> TryFrom<&'a RawObject> for #name<#generics> {
+        impl<'a> TryFrom<&'a RawObject> for #name<#(#gen_types2,)*> {
             type Error = ValueError;
 
             fn try_from(raw_obj: &'a RawObject) -> Result<Self, ValueError> {

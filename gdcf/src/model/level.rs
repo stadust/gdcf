@@ -231,7 +231,10 @@ pub enum Password {
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct PartialLevel<S> {
+pub struct PartialLevel<#[raw_type("u64")] S>
+where
+    S: PartialEq,
+{
     /// The [`Level`]'s unique level id
     ///
     /// ## GD Internals:
@@ -431,7 +434,10 @@ pub struct PartialLevel<S> {
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct Level<S> {
+pub struct Level<#[raw_type("u64")] S>
+where
+    S: PartialEq,
+{
     /// The [`PartialLevel`] this [`Level`] instance supplements
     #[raw_data(flatten)]
     pub base: PartialLevel<S>,
@@ -477,13 +483,19 @@ pub struct Level<S> {
     pub index_36: String,
 }
 
-impl<S> Display for PartialLevel<S> {
+impl<S> Display for PartialLevel<S>
+where
+    S: PartialEq,
+{
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "PartialLevel({}, {})", self.level_id, self.name)
     }
 }
 
-impl<S> Display for Level<S> {
+impl<S> Display for Level<S>
+where
+    S: PartialEq,
+{
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }
