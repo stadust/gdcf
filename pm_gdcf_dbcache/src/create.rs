@@ -258,7 +258,7 @@ impl Constraint {
     }
 }
 
-fn parse_ty(iter: &mut impl Iterator<Item = TokenTree>) -> (TokenStream, Option<TokenTree>) {
+pub(crate) fn parse_ty(iter: &mut impl Iterator<Item = TokenTree>) -> (TokenStream, Option<TokenTree>) {
     let mut tts = vec![TokenTree::Ident(ident!(iter))];
     let next = iter.next();
 

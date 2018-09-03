@@ -84,13 +84,13 @@ fn main() {
             .filter(SearchFilters::default())
             .with_rating(LevelRating::Demon(DemonRating::Hard));
 
-        gdcf.levels_stream(request)
+        gdcf.levels2s(request)
             .take(5)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
 
                 for level in levels {
-                    print!("{} ", level)
+                    print!("{} with song {:?}", level, level.custom_song)
                 }
 
                 Ok(println!())

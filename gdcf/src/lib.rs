@@ -101,6 +101,10 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf<A, C> {
     }
 }
 
+// TODO: find better names for the methods
+
+// TODO: figure out a better way for the building stuff
+
 impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
     gdcf_one!(level, lookup_level, LevelRequest, Level<u64>, Level);
 
@@ -249,6 +253,7 @@ impl<T, AE: Error + Send + 'static, CE: Error + Send + 'static> Future for GdcfF
     }
 }
 
+// TODO: This struct is just a huge WTF
 #[allow(missing_debug_implementations)]
 pub struct GdcfStream<S, T, AE, CE, F, Fut>
 where

@@ -12,7 +12,7 @@ pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     let mut sections = body.split("#");
 
     match sections.next() {
-        Some(section) => parse_fragment::<Level, _>(section, ":").map(ProcessedResponse::One),
+        Some(section) => parse_fragment::<Level<u64>, _>(section, ":").map(ProcessedResponse::One),
         None => Err(ApiError::UnexpectedFormat),
     }
 }
@@ -26,7 +26,7 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     match sections.next() {
         Some(section) =>
             for fragment in section.split("|") {
-                result.push(parse_fragment::<PartialLevel, _>(fragment, ":")?);
+                result.push(parse_fragment::<PartialLevel<u64>, _>(fragment, ":")?);
             },
         None => return Err(ApiError::UnexpectedFormat),
     }

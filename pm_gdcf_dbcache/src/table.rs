@@ -1,9 +1,10 @@
+use create::parse_ty;
 use itertools::Itertools;
 use proc_macro::{Delimiter, Group, Ident, Spacing, TokenStream, TokenTree};
 use std::iter::FromIterator;
 
 pub(super) struct Table {
-    model_name: Ident,
+    model_name: TokenStream,
     table_name: Ident,
     field_mapping: Vec<(Option<Ident>, Ident)>,
 }
@@ -12,8 +13,19 @@ impl Table {
     pub(super) fn parse(ts: TokenStream) -> Table {
         let mut iter = ts.into_iter();
 
-        let model_name = ident!(iter);
-        joint_punct!(iter, '=');
+        let (model_name, next) = parse_ty(&mut iter);
+
+        match next {
+            Some(TokenTree::Punct(punct)) =>
+                match punct.spacing() {
+                    Spacing::Joint if punct.as_char() == '=' => (),
+                    Spacing::Joint => panic!("Expected '{}', got '{}'", '=', punct.as_char()),
+                    _ => panic!("Expected joint '{}', got alone '{}'", '=', punct.as_char()),
+                },
+            Some(crap) => panic!("Expected '{}', got {:?}", '=', crap),
+            None => panic!("Excepted '{}', got end-of-stream", '='),
+        }
+
         alone_punct!(iter, '>');
         let table_name = ident!(iter);
 
@@ -128,7 +140,7 @@ impl Table {
              }})\
              }}\
              }}",
-            backend, self.model_name, backend, backend, self.model_name, field_getter
+            backend, self.model_name, backend, backend, self.type_name(), field_getter
         ).parse()
         .unwrap()
     }
@@ -154,5 +166,9 @@ impl Table {
                 self.insert(backend)
             })).into()
         }
+    }
+
+    fn type_name(&self) -> TokenTree {
+        self.model_name.clone().into_iter().next().unwrap()
     }
 }

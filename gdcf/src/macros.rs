@@ -1,3 +1,5 @@
+//TODO: abstract away the common parts of these two macros
+
 macro_rules! gdcf_one {
     ($api_call: ident, $cache_lookup: ident, $request_type: ty, $result_type: ty, $enum_variant: ident) => {
         pub fn $api_call(&self, request: $request_type) -> impl Future<Item = $result_type, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
