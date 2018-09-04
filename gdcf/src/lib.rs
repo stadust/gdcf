@@ -81,8 +81,6 @@ pub mod convert;
 pub mod error;
 pub mod model;
 
-// TODO: since we ensure integrity, we can actually give PartialLevel a NewgroundsSong
-
 // TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
 // a User
 
@@ -116,6 +114,10 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
         PartialLevel<u64>,
         PartialLevel
     );
+
+    stream!(levels, levelss, LevelsRequest, Vec<PartialLevel<u64>>);
+
+    stream!(levels2, levels2s, LevelsRequest, Vec<PartialLevel<NewgroundsSong>>);
 
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
         Gdcf {
@@ -176,16 +178,6 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
 
             Ok(built_levels)
         })
-    }
-
-    pub fn levelss(&self, req: LevelsRequest) -> impl Stream<Item = Vec<PartialLevel<u64>>, Error = GdcfError<A::Err, C::Err>> {
-        let self2 = self.clone();
-        GdcfStream::new(req, move |req| self2.levels(req))
-    }
-
-    pub fn levels2s(&self, req: LevelsRequest) -> impl Stream<Item = Vec<PartialLevel<NewgroundsSong>>, Error = GdcfError<A::Err, C::Err>> {
-        let self2 = self.clone();
-        GdcfStream::new(req, move |req| self2.levels2(req))
     }
 
     pub fn cache(&self) -> MutexGuard<C> {
@@ -253,7 +245,7 @@ impl<T, AE: Error + Send + 'static, CE: Error + Send + 'static> Future for GdcfF
     }
 }
 
-// TODO: This struct is just a huge WTF
+// FIXME: This struct is just a huge WTF
 #[allow(missing_debug_implementations)]
 pub struct GdcfStream<S, T, AE, CE, F, Fut>
 where
@@ -265,7 +257,7 @@ where
 {
     request: S,
     current: Fut,
-    request_maker: F, //Box<dyn Fn(S) -> GdcfFuture<N, A::Err, C::Err> + Send + 'static>
+    request_maker: F,
 }
 
 impl<S, T, AE, CE, F, Fut> GdcfStream<S, T, AE, CE, F, Fut>

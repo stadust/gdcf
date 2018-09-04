@@ -107,6 +107,15 @@ macro_rules! gdcf_many {
      }
 }
 
+macro_rules! stream {
+    ($to_stream: ident, $name: ident, $request_type: ty, $result_type: ty) => {
+        pub fn $name(&self, req: $request_type) -> impl Stream<Item = $result_type, Error = GdcfError<A::Err, C::Err>> {
+            let gdcf = self.clone();
+            GdcfStream::new(req, move |req| gdcf.$to_stream(req))
+        }
+    }
+}
+
 macro_rules! setter {
     ($name: ident, $field: ident, $t: ty) => {
         pub fn $name(mut self, $field: $t) -> Self {

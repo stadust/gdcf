@@ -21,6 +21,7 @@ mod de;
 pub mod level;
 pub mod raw;
 pub mod song;
+pub mod user;
 
 /// Enum modelling the version of a Geometry Dash client
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]

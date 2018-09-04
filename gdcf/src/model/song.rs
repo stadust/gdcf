@@ -27,7 +27,7 @@ pub struct MainSong {
 
 /// Struct representing a Newgrounds song.
 ///
-/// ## GD Internals
+/// ## GD Internals:
 /// The Geometry Dash servers provide a list of the newgrounds songs of the
 /// levels in a `getGJLevels` response.
 ///

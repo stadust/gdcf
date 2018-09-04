@@ -197,6 +197,8 @@ pub enum Password {
     PasswordCopy(String),
 }
 
+// TODO: figure out a way to make the raw_type annotation not take the type by string.
+
 /// Struct representing partial levels. These are returned to
 /// [`LevelsRequest`](::api::request::level::LevelsRequest)s and only
 /// contain metadata
@@ -367,7 +369,7 @@ where
     /// [`PartialLevel`] are verified
     ///
     /// ## GD Internals:
-    /// This value is provided at index `38
+    /// This value is provided at index `38`, as an integer
     #[raw_data(index = 38, deserialize_with = "de::int_to_bool")]
     pub coins_verified: bool,
 

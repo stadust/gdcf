@@ -9,19 +9,18 @@
 //! (de)serialization for requests, take a look at solutions like serde's
 //! remote types.
 //!
-//! # Creating custom request structs
-//!
-//! Libraries extending GDCF can define custom requests by implementing the
-//! [Request](trait.Request.html) trait. The [gdcf!](../../macro.gdcf.html)
-//! macro can then be used to generate the
-//! boilerplate code that links the request to a cache lookup, allowing it to
-//! be used with an implementation of the [Gdcf](../../trait.Gdcf.html) trait.
+//! Note that all `Hash` impls are to be forward compatible with new fields in
+//! the request. This means, that if an update to the GD API arrives which adds
+//! more fields to a request, those fields are hashed _only_ if they are
+//! different from their default values. This way, the hashes of requests made
+//! before the update will stay the same
 
 pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
 use model::GameVersion;
 use std::{fmt::Display, hash::Hash};
 
 pub mod level;
+pub mod user;
 
 /// Base data included in every request made
 ///
