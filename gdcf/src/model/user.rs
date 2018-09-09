@@ -2,12 +2,45 @@
 
 use error::ValueError;
 use model::{de, raw::RawObject};
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    fmt::{Display, Error, Formatter},
+};
+
+/// Struct representing a [`Level`]'s creator.
+///
+/// ## GD Internals:
+/// These minimal representations of a [`User`] are provided by the Geometry Dash servers in a
+/// `getGJLevels` response.
+///
+/// ### Indexing:
+/// These objects aren't indexed in the response. The indexes used here are based on the order in
+/// which the fields appear in the response
+#[derive(FromRawObject, Debug, Eq, PartialEq, Clone)]
+pub struct Creator {
+    /// The [`Creator`]'s unique user ID
+    #[raw_data(index = 1)]
+    pub user_id: u64,
+
+    /// The [`Creator`]'s name
+    #[raw_data(index = 2)]
+    pub name: String,
+
+    /// The [`Creator`]'s unique account ID
+    #[raw_data(index = 3)]
+    pub account_id: u64,
+}
+
+impl Display for Creator {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "Creator({})", self.name)
+    }
+}
 
 /// Struct representing a Geometry Dash User
 ///
 /// ## GD Internals:
-/// The Geometry Dash servers provide user dadta in a `getGJProfile` response
+/// The Geometry Dash servers provide user data in a `getGJProfile` response
 ///
 /// ### Unused Indices
 /// The following indices aren't used by the Geometry Dash servers: `5`, `6`, `7`, `9`, `12`, `14`,

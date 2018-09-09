@@ -79,13 +79,13 @@ fn main() {
             .filter(SearchFilters::default())
             .with_rating(LevelRating::Demon(DemonRating::Hard));
 
-        tokio::spawn(
+        /*tokio::spawn(
             gdcf.level::<NewgroundsSong>(LevelRequest::new(10000000))
                 .map_err(|err| println!("{:?}", err))
                 .map(|lvl| println!("Level {:?}", lvl)),
-        )
+        );*/
 
-        /*gdcf.paginate_levels::<NewgroundsSong>(request)
+        gdcf.paginate_levels::<NewgroundsSong>(request)
             .take(5)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
@@ -95,7 +95,7 @@ fn main() {
                 }
 
                 Ok(println!())
-            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))*/
+            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
     }));
 
     println!("Press return to continue...");

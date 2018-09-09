@@ -138,7 +138,11 @@ impl Action for ApiRequestAction {
                     .map_err(|err| ApiError::Custom(err))
                     .and_then(move |body| {
                         match str::from_utf8(&body) {
-                            Ok(body) => parser(body),
+                            Ok(body) => {
+                                trace!("Received response {}", body);
+
+                                parser(body)
+                            },
                             Err(_) => Err(ApiError::UnexpectedFormat),
                         }
                     })

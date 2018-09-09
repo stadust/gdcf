@@ -1,7 +1,7 @@
 use api::request::{LevelRequest, LevelsRequest};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
-use model::{GDObject, Level, NewgroundsSong, PartialLevel};
+use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel};
 use std::error::Error;
 
 pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
@@ -21,8 +21,9 @@ pub trait Cache: Send {
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64>, Self::Err>;
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
+    fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
-    /// Stores an arbitrary `GDObject` in this `Cache`
+    /// Stores an arbitrary [`GDObject`] in this [`Cache`]
     fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<Self::Err>>;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {

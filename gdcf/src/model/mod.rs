@@ -14,6 +14,7 @@
 pub use self::{
     level::{DemonRating, Featured, Level, LevelLength, LevelRating, PartialLevel, Password},
     song::{MainSong, NewgroundsSong},
+    user::{Creator, User},
 };
 use std::fmt::{self, Display, Formatter};
 
@@ -42,11 +43,18 @@ pub enum GDObject {
     NewgroundsSong(NewgroundsSong),
     PartialLevel(PartialLevel<u64>),
     Level(Level<u64>),
+    Creator(Creator),
 }
 
 impl From<NewgroundsSong> for GDObject {
     fn from(song: NewgroundsSong) -> Self {
         GDObject::NewgroundsSong(song)
+    }
+}
+
+impl From<Creator> for GDObject {
+    fn from(creator: Creator) -> Self {
+        GDObject::Creator(creator)
     }
 }
 
@@ -64,10 +72,11 @@ impl From<Level<u64>> for GDObject {
 
 impl Display for GDObject {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            GDObject::NewgroundsSong(ref inner) => inner.fmt(f),
-            GDObject::PartialLevel(ref inner) => inner.fmt(f),
-            GDObject::Level(ref inner) => inner.fmt(f),
+        match self {
+            GDObject::NewgroundsSong(inner) => inner.fmt(f),
+            GDObject::PartialLevel(inner) => inner.fmt(f),
+            GDObject::Level(inner) => inner.fmt(f),
+            GDObject::Creator(inner) => inner.fmt(f),
         }
     }
 }

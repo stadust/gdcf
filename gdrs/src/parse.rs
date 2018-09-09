@@ -1,7 +1,7 @@
 use gdcf::{
     api::response::ProcessedResponse,
     error::{ApiError, ValueError},
-    model::{raw::RawObject, GDObject, Level, NewgroundsSong, PartialLevel},
+    model::{raw::RawObject, Creator, GDObject, Level, NewgroundsSong, PartialLevel},
 };
 use hyper::Error;
 use std::{convert::TryFrom, str::pattern::Pattern};
@@ -31,7 +31,14 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
         None => return Err(ApiError::UnexpectedFormat),
     }
 
-    sections.next(); // ignore the creator section (for now)
+    if let Some(section) = sections.next() {
+        // No creators are fine with us
+        if !section.is_empty() {
+            for fragment in section.split('|') {
+                result.push(parse_unindexed_fragment::<Creator, _>(fragment, ':')?);
+            }
+        }
+    }
 
     if let Some(section) = sections.next() {
         // No song fragment is fine with us
@@ -43,6 +50,22 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     }
 
     Ok(ProcessedResponse::Many(result))
+}
+
+fn parse_unindexed_fragment<'a, A, P>(fragment: &'a str, seperator: P) -> Result<GDObject, ApiError<Error>>
+where
+    P: Pattern<'a>,
+    A: TryFrom<RawObject, Error = ValueError> + Into<GDObject>,
+{
+    let mut raw_obj = RawObject::new();
+
+    for (value, idx) in fragment.split(seperator).zip(1..) {
+        raw_obj.set(idx, value.into())
+    }
+
+    let object: A = TryFrom::try_from(raw_obj)?;
+
+    Ok(object.into())
 }
 
 fn parse_fragment<'a, A, P>(fragment: &'a str, seperator: P) -> Result<GDObject, ApiError<Error>>

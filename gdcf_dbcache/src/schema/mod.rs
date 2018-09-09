@@ -13,6 +13,7 @@ use gdcf::cache::CachedObject;
 
 pub mod level;
 pub mod song;
+pub mod user;
 
 impl<DB: Database, T: Queryable<DB>> Queryable<DB> for CachedObject<T>
 where

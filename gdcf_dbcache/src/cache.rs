@@ -11,11 +11,12 @@ use gdcf::{
     api::request::{LevelRequest, LevelsRequest},
     cache::{Cache, CacheConfig, CachedObject, Lookup},
     error::CacheError,
-    model::{GDObject, Level, NewgroundsSong, PartialLevel},
+    model::{GDObject, Level, NewgroundsSong, PartialLevel, Creator},
 };
 use schema::{
     level::{self, full_level, partial_level, partial_levels},
     song::{self, newgrounds_song},
+    user::{self, creator}
 };
 use std::path::Path;
 use util;
@@ -95,7 +96,12 @@ macro_rules! cache {
                 level::partial_levels::cached_at::create()
                     .ignore_if_exists()
                     .execute(&self.config.backend)?;
-                level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
+                level::full_level::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
+                user::creator::create()
+                    .ignore_if_exists()
+                    .execute(&self.config.backend)?;
 
                 Ok(())
             }
@@ -140,6 +146,18 @@ macro_rules! cache {
                     .with(full_level::level_id.set(&level.base.level_id))
                     .with(full_level::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&full_level::level_id])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)
+            }
+
+            fn store_creator(&self, creator: &Creator) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                debug!("Storing creator {}", creator);
+
+                let ts = Utc::now().naive_utc();
+
+                creator.insert()
+                    .with(creator::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&creator::user_id])
                     .execute(&self.config.backend)
                     .map_err(convert_error)
             }
@@ -225,7 +243,7 @@ macro_rules! cache {
                         .execute(&self.config.backend)
                         .map_err(convert_error)?;
 
-                    self.store_partial_level(level)?;
+                    //self.store_partial_level(level)?;
                 }
 
                 Ok(())
@@ -243,11 +261,18 @@ macro_rules! cache {
                 self.config.backend.query_one(&select).map_err(convert_error) // for some reason I can use the question mark operator?????
             }
 
+            fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err> {
+                let select = Creator::select_from(&creator::table).filter(creator::user_id.eq(user_id));
+
+                self.config.backend.query_one(&select).map_err(convert_error)
+            }
+
             fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
                 match obj {
                     GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
                     GDObject::NewgroundsSong(song) => self.store_song(song),
                     GDObject::Level(lvl) => self.store_level(lvl),
+                    GDObject::Creator(creator) => self.store_creator(creator),
                 }
             }
         }
