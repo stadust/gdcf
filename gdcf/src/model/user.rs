@@ -211,8 +211,8 @@ pub struct User {
     #[raw_data(index = 46)]
     pub diamonds: u16,
 
-    /// The 1-based index of the death-effect this [`User`] currently uses. Indexing of icons starts at
-    /// the top left corner and then goes left-to-right and top-to-bottom
+    /// The 1-based index of the death-effect this [`User`] currently uses. Indexing of icons
+    /// starts at the top left corner and then goes left-to-right and top-to-bottom
     ///
     /// ## GD Internals:
     /// This value is provied at index `48`

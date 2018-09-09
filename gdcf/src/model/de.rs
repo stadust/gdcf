@@ -55,14 +55,14 @@ pub(super) fn into_option(value: &str) -> Result<Option<String>, !> {
     Ok(Some(value.to_string()))
 }
 
-pub(super) fn youtube(value: &str) -> Result<String, !> {
+pub(super) fn youtube(value: &str) -> Result<Option<String>, !> {
     Ok(Some(format!("https://www.youtube.com/channel/{}", value)))
 }
 
-pub(super) fn twitter(value: &str) -> Result<String, !> {
+pub(super) fn twitter(value: &str) -> Result<Option<String>, !> {
     Ok(Some(format!("https://www.twitter.com/{}", value)))
 }
 
-pub(super) fn twitch(value: &str) -> Result<String, !> {
+pub(super) fn twitch(value: &str) -> Result<Option<String>, !> {
     Ok(Some(format!("https://www.twitch.tv/{}", value)))
 }

@@ -16,7 +16,7 @@ use chrono::Duration;
 use futures::{lazy, stream::Stream, Future};
 use gdcf::{
     api::request::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters},
-    model::{DemonRating, LevelRating},
+    model::{DemonRating, LevelRating, NewgroundsSong},
     Gdcf,
 };
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
@@ -74,17 +74,18 @@ fn main() {
             })
     }));*/
     tokio::run(lazy(move || {
-        //let request = LevelsRequest::default().request_type(LevelRequestType::Featured);
-        /*let request = LevelsRequest::default()
-            .search("20".to_string())
-            .request_type(LevelRequestType::User);*/
-
         let request = LevelsRequest::default()
             .request_type(LevelRequestType::Recent)
             .filter(SearchFilters::default())
             .with_rating(LevelRating::Demon(DemonRating::Hard));
 
-        gdcf.levels2s(request)
+        tokio::spawn(
+            gdcf.level::<NewgroundsSong>(LevelRequest::new(10000000))
+                .map_err(|err| println!("{:?}", err))
+                .map(|lvl| println!("Level {:?}", lvl)),
+        )
+
+        /*gdcf.paginate_levels::<NewgroundsSong>(request)
             .take(5)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
@@ -94,7 +95,7 @@ fn main() {
                 }
 
                 Ok(println!())
-            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
+            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))*/
     }));
 
     println!("Press return to continue...");

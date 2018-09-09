@@ -1,119 +1,74 @@
-//TODO: abstract away the common parts of these two macros
+macro_rules! collect_one {
+    ($cache: expr, $variant: ident) => {
+        move |response| {
+            let mut cache = $cache.lock().unwrap();
+            let mut result = None;
 
-macro_rules! gdcf_one {
-    ($api_call: ident, $cache_lookup: ident, $request_type: ty, $result_type: ty, $enum_variant: ident) => {
-        pub fn $api_call(&self, request: $request_type) -> impl Future<Item = $result_type, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
-            let cache = self.cache();
+            for obj in response {
+                cache.store_object(&obj)?;
 
-            fn generate_future<A: ApiClient, C: Cache>(gdcf: &Gdcf<A, C>, request: $request_type) -> impl Future<Item=$result_type, Error=GdcfError<A::Err, C::Err>> {
-                let cache = gdcf.cache.clone();
+                if let GDObject::$variant(level) = obj {
+                    result = Some(level)
+                }
+            }
 
-                gdcf.client().$api_call(request)
-                    .map_err(GdcfError::Api)
-                    .and_then(move |response| {
-                        let mut result = None;
-                        let mut cache = cache.lock().unwrap();
-
-                        for obj in response {
-                            cache.store_object(&obj)?;
-
-                            if let GDObject::$enum_variant(inner) = obj {
-                                result = Some(inner);
-                            }
-                        }
-
-                        result.ok_or(GdcfError::NoContent)
-                    })
-            };
-
-
-            let gdcf_future = match cache.$cache_lookup(&request) {
-                Ok(cached) =>
-                    if cache.is_expired(&cached) {
-                        info!("Cache entry for request {} is expired!", request);
-
-                        GdcfFuture::outdated(cached.extract(), generate_future(self, request))
-                    } else {
-                        GdcfFuture::up_to_date(cached.extract())
-                    },
-
-                Err(CacheError::CacheMiss) => {
-                    info!("No cache entry for request {}", request);
-
-                    GdcfFuture::absent(generate_future(self, request))
-                },
-
-                Err(err) => return Either::B(result(Err(GdcfError::Cache(err)))),
-            };
-
-            Either::A(gdcf_future)
+            result.ok_or(GdcfError::NoContent)
         }
-     }
+    };
 }
 
-macro_rules! gdcf_many {
-    ($api_call: ident, $cache_lookup: ident, $cache_store: ident, $request_type: ty, $result_type: ty, $enum_variant: ident) => {
-        pub fn $api_call(&self, request: $request_type) -> impl Future<Item = Vec<$result_type>, Error=GdcfError<A::Err, C::Err>> + Send + 'static {
-            let cache = self.cache();
+macro_rules! collect_many {
+    ($request: expr, $cache: expr, $bulk_store: ident, $variant: ident) => {
+        move |response| {
+            let mut cache = $cache.lock().unwrap();
+            let mut result = Vec::new();
 
-            fn generate_future<A: ApiClient, C: Cache>(gdcf: &Gdcf<A, C>, request: $request_type) -> impl Future<Item=Vec<$result_type>, Error=GdcfError<A::Err, C::Err>> {
-                let cache = gdcf.cache.clone();
+            for obj in response {
+                cache.store_object(&obj)?;
 
-                gdcf.client().$api_call(request.clone())
-                    .map_err(GdcfError::Api)
-                    .and_then(move |response| {
-                        let mut result = Vec::new();
-                        let mut cache = cache.lock().unwrap();
+                if let GDObject::$variant(level) = obj {
+                    result.push(level)
+                }
+            }
 
-                        for obj in response {
-                            match obj {
-                                GDObject::$enum_variant(object) => result.push(object),
-                                _ => cache.store_object(&obj)?
-                            }
-                        }
+            if !result.is_empty() {
+                cache.$bulk_store(&$request, &result)?;
 
-                        if result.is_empty() {
-                            Err(GdcfError::NoContent)
-                        } else {
-                            cache.$cache_store(&request, &result)?;
-
-                            Ok(result)
-                        }
-                    })
-            };
-
-
-            let gdcf_future = match cache.$cache_lookup(&request) {
-                Ok(cached) =>
-                    if cache.is_expired(&cached) {
-                        info!("Cache entry for request {} is expired!", request);
-
-                        GdcfFuture::outdated(cached.extract(), generate_future(self, request))
-                    } else {
-                        GdcfFuture::up_to_date(cached.extract())
-                    },
-
-                Err(CacheError::CacheMiss) => {
-                    info!("No cache entry for request {}", request);
-
-                    GdcfFuture::absent(generate_future(self, request))
-                },
-
-                Err(err) => return Either::B(result(Err(GdcfError::Cache(err)))),
-            };
-
-            Either::A(gdcf_future)
+                Ok(result)
+            } else {
+                Err(GdcfError::NoContent)
+            }
         }
-     }
+    };
 }
 
-macro_rules! stream {
-    ($to_stream: ident, $name: ident, $request_type: ty, $result_type: ty) => {
-        pub fn $name(&self, req: $request_type) -> impl Stream<Item = $result_type, Error = GdcfError<A::Err, C::Err>> {
-            let gdcf = self.clone();
-            GdcfStream::new(req, move |req| gdcf.$to_stream(req))
+macro_rules! gdcf {
+    ($self: expr, $request: expr, $cache_lookup: ident, $future_closure: expr) => {{
+        let cache = $self.cache();
+
+        match cache.$cache_lookup(&$request) {
+            Ok(cached) =>
+                if cache.is_expired(&cached) {
+                    info!("Cache entry for request {} is expired!", $request);
+
+                    GdcfFuture::outdated(cached.extract(), Either::A::<_, FutureResult<_, _>>($future_closure()))
+                } else {
+                    info!("Cached entry for request {} is up-to-date!", $request);
+
+                    GdcfFuture::up_to_date(cached.extract())
+                },
+
+            Err(err) =>
+                GdcfFuture::absent(match err {
+                    CacheError::CacheMiss => {
+                        info!("No cache entry for request {}", $request);
+
+                        Either::A($future_closure())
+                    },
+                    _ => Either::B(result(Err(GdcfError::Cache(err)))),
+                }),
         }
-    }
+    }};
 }
 
 macro_rules! setter {

@@ -86,6 +86,7 @@ impl ApiClient for BoomlingsClient {
     type Err = Error;
 
     api_call!(level, LevelRequest, "downloadGJLevel22", parse::level);
+
     api_call!(levels, LevelsRequest, "getGJLevels21", parse::levels);
 }
 
@@ -151,7 +152,7 @@ fn make_request(endpoint: &str, req: &Req) -> Request<Body> {
     let body = serde_urlencoded::to_string(req).unwrap();
     let len = body.len();
 
-    debug!("Preparing request {} to {}", body, endpoint);
+    info!("Preparing request {} to {}", body, endpoint);
 
     let mut req = Request::new(Body::from(body));
 

@@ -101,6 +101,6 @@ pub trait Request: Display + Default + Hash + Clone {
     }
 }
 
-pub trait StreamableRequest: Request {
+pub trait PaginatableRequest: Request {
     fn next(&self) -> Self;
 }

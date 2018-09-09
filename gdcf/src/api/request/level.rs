@@ -1,6 +1,6 @@
 //! Module containing request definitions for retrieving levels
 
-use api::request::{BaseRequest, Request, StreamableRequest};
+use api::request::{BaseRequest, PaginatableRequest, Request};
 use model::{DemonRating, LevelLength, LevelRating};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
@@ -531,7 +531,7 @@ impl Request for LevelRequest {}
 
 impl Request for LevelsRequest {}
 
-impl StreamableRequest for LevelsRequest {
+impl PaginatableRequest for LevelsRequest {
     fn next(&self) -> Self {
         self.clone().page(self.page + 1)
     }

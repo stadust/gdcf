@@ -1,8 +1,6 @@
-use cache::Cache;
-use error::CacheError;
 use model::{Level, NewgroundsSong, PartialLevel};
 
-pub(crate) fn build_partial_level<C: Cache>(
+pub(crate) fn build_partial_level(
     PartialLevel {
         level_id,
         name,
@@ -18,7 +16,6 @@ pub(crate) fn build_partial_level<C: Cache>(
         stars,
         featured,
         copy_of,
-        custom_song: custom_song_id,
         coin_amount,
         coins_verified,
         stars_requested,
@@ -27,15 +24,11 @@ pub(crate) fn build_partial_level<C: Cache>(
         object_amount,
         index_46,
         index_47,
+        ..
     }: PartialLevel<u64>,
-    cache: &C,
-) -> Result<PartialLevel<NewgroundsSong>, CacheError<C::Err>> {
-    let custom_song = match custom_song_id {
-        None => None,
-        Some(song_id) => Some(cache.lookup_song(song_id)?.extract()),
-    };
-
-    Ok(PartialLevel {
+    custom_song: Option<NewgroundsSong>,
+) -> PartialLevel<NewgroundsSong> {
+    PartialLevel {
         custom_song,
 
         level_id,
@@ -60,10 +53,10 @@ pub(crate) fn build_partial_level<C: Cache>(
         object_amount,
         index_46,
         index_47,
-    })
+    }
 }
 
-pub(crate) fn build_level<C: Cache>(
+pub(crate) fn build_level(
     Level {
         base,
         level_data,
@@ -72,14 +65,16 @@ pub(crate) fn build_level<C: Cache>(
         time_since_upload,
         index_36,
     }: Level<u64>,
-    cache: &C,
-) -> Result<Level<NewgroundsSong>, CacheError<C::Err>> {
-    Ok(Level {
-        base: build_partial_level(base, cache)?,
+    song: Option<NewgroundsSong>,
+) -> Level<NewgroundsSong> {
+    trace!("Building a level with base {}", base);
+
+    Level {
+        base: build_partial_level(base, song),
         level_data,
         password,
         time_since_update,
         time_since_upload,
         index_36,
-    })
+    }
 }

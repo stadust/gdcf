@@ -140,7 +140,12 @@ impl Table {
              }})\
              }}\
              }}",
-            backend, self.model_name, backend, backend, self.type_name(), field_getter
+            backend,
+            self.model_name,
+            backend,
+            backend,
+            self.type_name(),
+            field_getter
         ).parse()
         .unwrap()
     }
