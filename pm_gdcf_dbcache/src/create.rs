@@ -265,21 +265,26 @@ pub(crate) fn parse_ty(iter: &mut impl Iterator<Item = TokenTree>) -> (TokenStre
     match next {
         Some(TokenTree::Punct(p)) =>
             if p.as_char() == '<' {
-                let (inner, end) = parse_ty(iter);
-
                 tts.push(TokenTree::Punct(p));
-                tts.extend(inner);
 
-                match end {
-                    Some(TokenTree::Punct(p)) =>
-                        if p.as_char() == '>' {
+                loop {
+                    let (inner, end) = parse_ty(iter);
+
+                    tts.extend(inner);
+
+                    match end {
+                        Some(TokenTree::Punct(p)) => {
+                            let c = p.as_char();
                             tts.push(TokenTree::Punct(p));
-                            (TokenStream::from_iter(tts), iter.next())
-                        } else {
-                            panic!("Expected '>', got {:?}", TokenTree::Punct(p))
+                            match c {
+                                '>' => break (TokenStream::from_iter(tts), iter.next()),
+                                ',' => continue,
+                                _ => panic!("Expected '>' or ',', got {:?}", c),
+                            }
                         },
-                    Some(end) => panic!("Expected '>', got {:?}", end),
-                    None => panic!("Expected '>', got end-of-stream"),
+                        Some(end) => panic!("Expected '>' or ',', got {:?}", end),
+                        None => panic!("Expected '>' or ',', got end-of-stream"),
+                    }
                 }
             } else {
                 (TokenStream::from_iter(tts), Some(TokenTree::Punct(p)))

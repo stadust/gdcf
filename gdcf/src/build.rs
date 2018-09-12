@@ -1,12 +1,12 @@
 use model::{Level, NewgroundsSong, PartialLevel};
 
-pub(crate) fn build_partial_level(
+pub(crate) fn partial_level_song<User: PartialEq>(
     PartialLevel {
         level_id,
         name,
         description,
         version,
-        creator_id,
+        creator,
         difficulty,
         downloads,
         main_song,
@@ -25,9 +25,9 @@ pub(crate) fn build_partial_level(
         index_46,
         index_47,
         ..
-    }: PartialLevel<u64>,
+    }: PartialLevel<u64, User>,
     custom_song: Option<NewgroundsSong>,
-) -> PartialLevel<NewgroundsSong> {
+) -> PartialLevel<NewgroundsSong, User> {
     PartialLevel {
         custom_song,
 
@@ -35,7 +35,7 @@ pub(crate) fn build_partial_level(
         name,
         description,
         version,
-        creator_id,
+        creator,
         difficulty,
         downloads,
         main_song,
@@ -56,7 +56,7 @@ pub(crate) fn build_partial_level(
     }
 }
 
-pub(crate) fn build_level(
+pub(crate) fn level_song<User: PartialEq>(
     Level {
         base,
         level_data,
@@ -64,13 +64,13 @@ pub(crate) fn build_level(
         time_since_update,
         time_since_upload,
         index_36,
-    }: Level<u64>,
+    }: Level<u64, User>,
     song: Option<NewgroundsSong>,
-) -> Level<NewgroundsSong> {
+) -> Level<NewgroundsSong, User> {
     trace!("Building a level with base {}", base);
 
     Level {
-        base: build_partial_level(base, song),
+        base: partial_level_song(base, song),
         level_data,
         password,
         time_since_update,

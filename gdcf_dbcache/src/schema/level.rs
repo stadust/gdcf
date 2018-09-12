@@ -7,12 +7,12 @@ pub(crate) mod partial_level {
     use pm_gdcf_dbcache::{create, iqtable};
 
     iqtable! {
-        PartialLevel<u64> => partial_level {
+        PartialLevel<u64, u64> => partial_level {
             level_id => level_id,
             name => level_name,
             description => description,
             version => level_version,
-            creator_id => creator_id,
+            creator => creator_id,
 
             difficulty => difficulty,
 
@@ -141,7 +141,7 @@ pub(crate) mod full_level {
     use schema::NowAtUtc;
 
     itable! {
-        Level<u64> => level {
+        Level<u64, u64> => level {
             level_id,
             level_data => level_data,
             password => level_password,
@@ -173,7 +173,7 @@ pub(crate) mod full_level {
     #[cfg(feature = "pg")]
     use core::backend::pg::Pg;
     #[cfg(feature = "pg")]
-    impl Queryable<Pg> for Level<u64> {
+    impl Queryable<Pg> for Level<u64, u64> {
         fn select_from(from: &Table) -> Select<Pg> {
             Select::new(from, Vec::new())
                 .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
@@ -197,7 +197,7 @@ pub(crate) mod full_level {
     #[cfg(feature = "sqlite")]
     use core::backend::sqlite::Sqlite;
     #[cfg(feature = "sqlite")]
-    impl Queryable<Sqlite> for Level<u64> {
+    impl Queryable<Sqlite> for Level<u64, u64> {
         fn select_from(from: &Table) -> Select<Sqlite> {
             Select::new(from, Vec::new())
                 .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))

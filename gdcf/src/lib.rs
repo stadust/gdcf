@@ -118,8 +118,8 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Clone for Gdcf<A, C> {
     }
 }
 
-impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<u64>> for Gdcf<A, C> {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64>, A::Err, C::Err> {
+impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<u64, u64>> for Gdcf<A, C> {
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, u64>, A::Err, C::Err> {
         info!("Processing request {} with 'u64' as Song type", request);
 
         gdcf! {
@@ -134,11 +134,17 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<u64>> for 
     }
 }
 
-impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong>> for Gdcf<A, C> {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong>, A::Err, C::Err> {
+impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
+where
+    Self: ProcessRequest<A, C, LevelRequest, Level<u64, User>>,
+    A: ApiClient,
+    C: Cache,
+    User: PartialEq + Send + 'static,
+{
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, A::Err, C::Err> {
         info!("Processing request {} with 'NewgroundsSong' as Song type", request);
 
-        let raw: GdcfFuture<Level<u64>, _, _> = self.process_request(request);
+        let raw: GdcfFuture<Level<u64, User>, _, _> = self.process_request(request);
         let cache = self.cache.clone();
 
         // TODO: reintroduce debugging statements
@@ -149,27 +155,27 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<Newgrounds
                 inner: None,
             } =>
                 match cached.base.custom_song {
-                    None => GdcfFuture::up_to_date(build::build_level(cached, None)),
+                    None => GdcfFuture::up_to_date(build::level_song(cached, None)),
                     Some(custom_song_id) => {
                         // We cannot do the lookup in the match because then the cache would be locked for the entire match
                         // block which would deadlock because of the `process_request` call in it.
                         let lookup = self.cache().lookup_song(custom_song_id);
 
                         match lookup {
-                            Ok(song) => GdcfFuture::up_to_date(build::build_level(cached, Some(song.extract()))),
+                            Ok(song) => GdcfFuture::up_to_date(build::level_song(cached, Some(song.extract()))),
 
                             Err(CacheError::CacheMiss) => {
                                 warn!("The level requested was cached, but not its song, performing a request to retrieve it!");
 
                                 GdcfFuture::absent(
-                                    self.process_request(
+                                    self.levels::<u64, u64>(
                                         LevelsRequest::default()
                                             .with_id(cached.base.level_id)
                                             .filter(SearchFilters::default().custom_song(custom_song_id)),
-                                    ).and_then(move |_: Vec<PartialLevel<u64>>| {
+                                    ).and_then(move |_| {
                                         let cache = cache.lock().unwrap();
 
-                                        Ok(build::build_level(cached, Some(cache.lookup_song(custom_song_id)?.extract())))
+                                        Ok(build::level_song(cached, Some(cache.lookup_song(custom_song_id)?.extract())))
                                     }),
                                 )
                             },
@@ -183,10 +189,10 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<Newgrounds
                 let cached = match cached {
                     Some(cached) =>
                         match cached.base.custom_song {
-                            None => Some(build::build_level(cached, None)),
+                            None => Some(build::level_song(cached, None)),
                             Some(custom_song_id) =>
                                 match self.cache().lookup_song(custom_song_id) {
-                                    Ok(song) => Some(build::build_level(cached, Some(song.extract()))),
+                                    Ok(song) => Some(build::level_song(cached, Some(song.extract()))),
 
                                     Err(CacheError::CacheMiss) => None,
 
@@ -213,24 +219,24 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<Newgrounds
                                     );
 
                                     Either::A(
-                                        gdcf.process_request(
+                                        gdcf.levels::<u64, u64>(
                                             LevelsRequest::default()
                                                 .with_id(level.base.level_id)
                                                 .filter(SearchFilters::default().custom_song(song_id)),
-                                        ).and_then(move |_: Vec<PartialLevel<u64>>| {
+                                        ).and_then(move |_| {
                                             let cache = cache.lock().unwrap();
 
-                                            Ok(build::build_level(level, Some(cache.lookup_song(song_id)?.extract())))
+                                            Ok(build::level_song(level, Some(cache.lookup_song(song_id)?.extract())))
                                         }),
                                     )
                                 },
 
                                 Err(err) => Either::B(result(Err(GdcfError::Cache(err)))),
 
-                                Ok(song) => Either::B(result(Ok(build::build_level(level, Some(song.extract()))))),
+                                Ok(song) => Either::B(result(Ok(build::level_song(level, Some(song.extract()))))),
                             }
                         } else {
-                            Either::B(result(Ok(build::build_level(level, None))))
+                            Either::B(result(Ok(build::level_song(level, None))))
                         }
                     })),
                 )
@@ -241,8 +247,12 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelRequest, Level<Newgrounds
     }
 }
 
-impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64>>> for Gdcf<A, C> {
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64>>, A::Err, C::Err> {
+impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, u64>>> for Gdcf<A, C>
+where
+    A: ApiClient,
+    C: Cache,
+{
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, u64>>, A::Err, C::Err> {
         info!("Processing request {} with 'u64' as Song type", request);
 
         gdcf! {
@@ -257,14 +267,20 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelsRequest, Vec<PartialLeve
     }
 }
 
-impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong>>> for Gdcf<A, C> {
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong>>, A::Err, C::Err> {
+impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
+where
+    Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, User>>>,
+    A: ApiClient,
+    C: Cache,
+    User: PartialEq + Send + 'static,
+{
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, User>>, A::Err, C::Err> {
         info!("Processing request {} with 'NewgroundsSong' as Song type", request);
 
         let GdcfFuture { cached, inner } = self.process_request(request);
         let cache = self.cache.clone();
 
-        let processor = move |levels: Vec<PartialLevel<u64>>| {
+        let processor = move |levels: Vec<PartialLevel<u64, User>>| {
             let cache = cache.lock().unwrap();
             let mut vec = Vec::new();
 
@@ -272,14 +288,14 @@ impl<A: ApiClient, C: Cache> ProcessRequest<A, C, LevelsRequest, Vec<PartialLeve
                 let built = match partial_level.custom_song {
                     Some(custom_song_id) =>
                         match cache.lookup_song(custom_song_id) {
-                            Ok(song) => build::build_partial_level(partial_level, Some(song.extract())),
+                            Ok(song) => build::partial_level_song(partial_level, Some(song.extract())),
 
                             Err(CacheError::CacheMiss) => unreachable!(),
 
                             Err(err) => return Err(err.into()),
                         },
 
-                    None => build::build_partial_level(partial_level, None),
+                    None => build::partial_level_song(partial_level, None),
                 };
 
                 vec.push(built);
@@ -319,28 +335,33 @@ impl<A: ApiClient + 'static, C: Cache + 'static> Gdcf<A, C> {
         self.client.lock().unwrap()
     }
 
-    pub fn level<Song>(&self, request: LevelRequest) -> impl Future<Item = Level<Song>, Error = GdcfError<A::Err, C::Err>>
+    pub fn level<Song, User>(&self, request: LevelRequest) -> impl Future<Item = Level<Song, User>, Error = GdcfError<A::Err, C::Err>>
     where
-        Self: ProcessRequest<A, C, LevelRequest, Level<Song>>,
+        Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
+        User: PartialEq,
     {
         self.process_request(request)
     }
 
-    pub fn levels<Song>(&self, request: LevelsRequest) -> impl Future<Item = Vec<PartialLevel<Song>>, Error = GdcfError<A::Err, C::Err>>
-    where
-        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song>>>,
-        Song: PartialEq,
-    {
-        self.process_request(request)
-    }
-
-    pub fn paginate_levels<Song>(
+    pub fn levels<Song, User>(
         &self, request: LevelsRequest,
-    ) -> impl Stream<Item = Vec<PartialLevel<Song>>, Error = GdcfError<A::Err, C::Err>>
+    ) -> impl Future<Item = Vec<PartialLevel<Song, User>>, Error = GdcfError<A::Err, C::Err>>
     where
-        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song>>>,
+        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
+        User: PartialEq,
+    {
+        self.process_request(request)
+    }
+
+    pub fn paginate_levels<Song, User>(
+        &self, request: LevelsRequest,
+    ) -> impl Stream<Item = Vec<PartialLevel<Song, User>>, Error = GdcfError<A::Err, C::Err>>
+    where
+        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
+        Song: PartialEq,
+        User: PartialEq,
     {
         self.paginate(request)
     }

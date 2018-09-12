@@ -7,7 +7,7 @@ use std::{
     fmt::{Display, Error, Formatter},
 };
 
-/// Struct representing a [`Level`]'s creator.
+/// Struct representing a [`Level`](::model::level::Level)'s creator.
 ///
 /// ## GD Internals:
 /// These minimal representations of a [`User`] are provided by the Geometry Dash servers in a

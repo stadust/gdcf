@@ -11,12 +11,12 @@ use gdcf::{
     api::request::{LevelRequest, LevelsRequest},
     cache::{Cache, CacheConfig, CachedObject, Lookup},
     error::CacheError,
-    model::{GDObject, Level, NewgroundsSong, PartialLevel, Creator},
+    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel},
 };
 use schema::{
     level::{self, full_level, partial_level, partial_levels},
     song::{self, newgrounds_song},
-    user::{self, creator}
+    user::{self, creator},
 };
 use std::path::Path;
 use util;
@@ -96,12 +96,8 @@ macro_rules! cache {
                 level::partial_levels::cached_at::create()
                     .ignore_if_exists()
                     .execute(&self.config.backend)?;
-                level::full_level::create()
-                    .ignore_if_exists()
-                    .execute(&self.config.backend)?;
-                user::creator::create()
-                    .ignore_if_exists()
-                    .execute(&self.config.backend)?;
+                level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
+                user::creator::create().ignore_if_exists().execute(&self.config.backend)?;
 
                 Ok(())
             }
@@ -109,7 +105,7 @@ macro_rules! cache {
 
         #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
-            fn store_partial_level(&self, level: &PartialLevel<u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
                 debug!("Storing partial level {}", level);
 
                 let ts = Utc::now().naive_utc();
@@ -134,7 +130,7 @@ macro_rules! cache {
                     .map_err(convert_error)
             }
 
-            fn store_level(&self, level: &Level<u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_level(&self, level: &Level<u64, u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
                 debug!("Storing level {}", level);
 
                 let ts = Utc::now().naive_utc();
@@ -155,7 +151,8 @@ macro_rules! cache {
 
                 let ts = Utc::now().naive_utc();
 
-                creator.insert()
+                creator
+                    .insert()
                     .with(creator::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&creator::user_id])
                     .execute(&self.config.backend)
@@ -165,7 +162,7 @@ macro_rules! cache {
 
         impl DatabaseCache<$backend> {
             /// Retrieves every partial level stored in the database
-            pub fn all_partial_levels(&self) -> Result<Vec<PartialLevel<u64>>, <Self as Cache>::Err> {
+            pub fn all_partial_levels(&self) -> Result<Vec<PartialLevel<u64, u64>>, <Self as Cache>::Err> {
                 self.config.backend.query(&partial_level::table.select())
             }
         }
@@ -187,7 +184,7 @@ macro_rules! cache {
                 &self.config
             }
 
-            fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64>>, Self::Err> {
+            fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err> {
                 debug!("Performing cache lookup for request {}", req);
 
                 let h = util::hash(req);
@@ -214,12 +211,14 @@ macro_rules! cache {
                         partial_levels::level_id.same_as(&partial_level::level_id),
                     );
 
-                let levels: Vec<PartialLevel<u64>> = self.config.backend.query(&select).map_err(convert_error)?;
+                let levels: Vec<PartialLevel<u64, u64>> = self.config.backend.query(&select).map_err(convert_error)?;
 
                 Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
             }
 
-            fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64>>) -> Result<(), CacheError<Self::Err>> {
+            fn store_partial_levels(
+                &mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64, u64>>,
+            ) -> Result<(), CacheError<Self::Err>> {
                 let h = util::hash(req);
                 let ts = Utc::now().naive_utc();
 
@@ -249,7 +248,7 @@ macro_rules! cache {
                 Ok(())
             }
 
-            fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64>, Self::Err> {
+            fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err> {
                 let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
 
                 self.config.backend.query_one(&select).map_err(convert_error)

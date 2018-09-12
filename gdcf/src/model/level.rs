@@ -233,9 +233,10 @@ pub enum Password {
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct PartialLevel<#[raw_type("u64")] S>
+pub struct PartialLevel<#[raw_type("u64")] Song, #[raw_type("u64")] User>
 where
-    S: PartialEq,
+    Song: PartialEq,
+    User: PartialEq,
 {
     /// The [`Level`]'s unique level id
     ///
@@ -272,7 +273,7 @@ where
     /// ## GD Internals:
     /// This value is provided at index `6`.
     #[raw_data(index = 6)]
-    pub creator_id: u64,
+    pub creator: User,
 
     /// The difficulty of this [`PartialLevel`]
     ///
@@ -356,7 +357,7 @@ where
     /// This value is provided at index `35`, and a value of `0` means, that no
     /// custom song is used.
     #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
-    pub custom_song: Option<S>,
+    pub custom_song: Option<Song>,
 
     /// The amount of coints in this [`PartialLevel`]
     ///
@@ -436,21 +437,22 @@ where
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
-pub struct Level<#[raw_type("u64")] S>
+pub struct Level<#[raw_type("u64")] Song, #[raw_type("u64")] User>
 where
-    S: PartialEq,
+    Song: PartialEq,
+    User: PartialEq,
 {
     /// The [`PartialLevel`] this [`Level`] instance supplements
     #[raw_data(flatten)]
-    pub base: PartialLevel<S>,
+    pub base: PartialLevel<Song, User>,
 
     /// The raw level data. Note that GDCF performs the base64 decoding, though
-    /// not the DEFLATE decompression, sincce he base64 decoded version of
+    /// not the `DEFLATE` decompression, since he base64 decoded version of
     /// the level data requires the least amount of space.
     ///
     /// ## GD Internals:
     /// This value is provided at index `4`, and is urlsafe base64 encoded and
-    /// DEFLATE compressed
+    /// `DEFLATE` compressed
     #[raw_data(index = 4, deserialize_with = "convert::to::b64_decoded_bytes")]
     pub level_data: Vec<u8>,
 
@@ -485,18 +487,20 @@ where
     pub index_36: String,
 }
 
-impl<S> Display for PartialLevel<S>
+impl<Song, User> Display for PartialLevel<Song, User>
 where
-    S: PartialEq,
+    Song: PartialEq,
+    User: PartialEq,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "PartialLevel({}, {})", self.level_id, self.name)
     }
 }
 
-impl<S> Display for Level<S>
+impl<Song, User> Display for Level<Song, User>
 where
-    S: PartialEq,
+    Song: PartialEq,
+    User: PartialEq,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
