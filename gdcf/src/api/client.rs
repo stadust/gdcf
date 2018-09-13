@@ -5,6 +5,7 @@ use api::{
     response::ProcessedResponse,
 };
 
+use api::request::user::UserRequest;
 use error::ApiError;
 use std::error::Error;
 
@@ -15,4 +16,6 @@ pub trait ApiClient: Sized + Send + 'static {
 
     fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;
     fn levels(&self, req: LevelsRequest) -> ApiFuture<Self::Err>;
+
+    fn user(&self, req: UserRequest) -> ApiFuture<Self::Err>;
 }

@@ -7,6 +7,14 @@ use std::{
     fmt::{Display, Error, Formatter},
 };
 
+lazy_static! {
+    pub static ref DELETED: Creator = Creator {
+        user_id: 0,
+        name: String::new(),
+        account_id: None
+    };
+}
+
 /// Struct representing a [`Level`](::model::level::Level)'s creator.
 ///
 /// ## GD Internals:
@@ -27,8 +35,8 @@ pub struct Creator {
     pub name: String,
 
     /// The [`Creator`]'s unique account ID
-    #[raw_data(index = 3)]
-    pub account_id: u64,
+    #[raw_data(index = 3, deserialize_with = "de::default_to_none")]
+    pub account_id: Option<u64>,
 }
 
 impl Display for Creator {

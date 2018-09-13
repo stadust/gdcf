@@ -22,14 +22,18 @@ use gdcf::{
 use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use std::io::{self, Read};
+use gdcf::model::Creator;
 
 fn main() {
     env_logger::init();
 
     let mut config = DatabaseCacheConfig::postgres_config("postgres://gdcf:gdcf@localhost/gdcf");
-    //let mut config = DatabaseCacheConfig::sqlite_memory_config();
     //let mut config = DatabaseCacheConfig::sqlite_config("/home/patrick/gd.sqlite");
+
+
+    //let mut config = DatabaseCacheConfig::sqlite_memory_config();
     config.invalidate_after(Duration::minutes(3000));
+
     let cache = DatabaseCache::new(config);
 
     cache.initialize().expect("Error initializing cache");
@@ -37,61 +41,18 @@ fn main() {
     let client = BoomlingsClient::new();
     let gdcf = Gdcf::new(client, cache);
 
-    /*tokio::run(lazy(move || {
-        let request = LevelsRequest::default()
-            .request_type(LevelRequestType::Featured)
-            .page(89);
-
-        gdcf.levels(request)
-            .map_err(|err| eprintln!("Error retrieving 6th page of featured levels! {:?}", err))
-            .map(move |levels| {
-                for level in levels {
-                    let future = gdcf.level(LevelRequest::new(level.level_id))
-                        .map(|l| println!("Password of level {}: {:?}", l, l.password))
-                        .map_err(move |error| eprintln!("Error downloading level {}: {:?}", level.level_id, error));
-
-                    tokio::spawn(future);
-                }
-            })
-    }));*/
-    /*tokio::run(lazy(move || {
-        let request = LevelsRequest::default()
-            .search("Dark Realm".to_string())
-            .filter(SearchFilters::default()
-                .rated())
-            .with_rating(LevelRating::Demon(DemonRating::Hard));
-
-        gdcf.levels(request)
-            .map_err(|err| eprintln!("Error retrieving levels! {:?}", err))
-            .map(move |mut levels| {
-                let first = levels.remove(0);
-
-                let future = gdcf.level(first.level_id.into())
-                    .map_err(move |error| eprintln!("Error downloading level {}({}): {:?}", first.name, first.level_id, error))
-                    .map(|level| println!("The password of the level {}({}) is: {:?}", level.base.name, level.base.level_id, level.password));
-
-                tokio::spawn(future);
-            })
-    }));*/
     tokio::run(lazy(move || {
         let request = LevelsRequest::default()
-            .request_type(LevelRequestType::Recent)
-            .filter(SearchFilters::default())
-            .with_rating(LevelRating::Demon(DemonRating::Hard));
+            .request_type(LevelRequestType::Featured);
+            //.with_rating(LevelRating::Demon(DemonRating::Hard));
 
-        /*tokio::spawn(
-            gdcf.level::<NewgroundsSong>(LevelRequest::new(10000000))
-                .map_err(|err| println!("{:?}", err))
-                .map(|lvl| println!("Level {:?}", lvl)),
-        );*/
-
-        gdcf.paginate_levels::<NewgroundsSong, u64>(request)
-            .take(5)
+        gdcf.paginate_levels::<NewgroundsSong, Creator>(request)
+            .take(50)
             .for_each(|levels| {
                 print!("We got {} levels: ", levels.len());
 
                 for level in levels {
-                    print!("{} with song {:?}", level, level.custom_song)
+                    print!("{} with song {:?} by {:?} ", level, level.custom_song, level.creator)
                 }
 
                 Ok(println!())

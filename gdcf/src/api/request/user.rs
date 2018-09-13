@@ -1,6 +1,7 @@
 //! Module ontianing request definitions for retrieving users
 
 use api::request::BaseRequest;
+use std::hash::{Hash, Hasher};
 
 /// Struct modelled after a request to `getGJProfile20.php`.
 ///
@@ -16,4 +17,25 @@ pub struct UserRequest {
     /// ## GD Internals:
     /// This field is called `targetAccountID` in the boomlings API
     pub user: u64,
+}
+
+impl UserRequest {
+    pub fn new(user_id: u64) -> UserRequest {
+        UserRequest {
+            base: BaseRequest::gd_21(),
+            user: user_id,
+        }
+    }
+}
+
+impl Hash for UserRequest {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.user.hash(state)
+    }
+}
+
+impl Into<UserRequest> for u64 {
+    fn into(self) -> UserRequest {
+        UserRequest::new(self)
+    }
 }
