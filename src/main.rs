@@ -42,7 +42,7 @@ fn main() {
     let gdcf = Gdcf::new(client, cache);
 
     tokio::run(lazy(move || {
-        let request = LevelsRequest::default()
+        /*let request = LevelsRequest::default()
             .request_type(LevelRequestType::Featured);
             //.with_rating(LevelRating::Demon(DemonRating::Hard));
 
@@ -56,7 +56,10 @@ fn main() {
                 }
 
                 Ok(println!())
-            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
+            }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))*/
+        gdcf.user(8451.into())
+            .map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
+            .map(|_|())
     }));
 
     println!("Press return to continue...");

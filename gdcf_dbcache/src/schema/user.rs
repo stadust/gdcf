@@ -29,7 +29,7 @@ pub(crate) mod creator {
     }
 }
 
-pub(crate) mod user {
+pub(crate) mod profile {
     use core::backend::Error;
     use gdcf::model::User;
 
@@ -38,7 +38,7 @@ pub(crate) mod user {
     use pm_gdcf_dbcache::{create, iqtable};
 
     iqtable! {
-        User => user {
+        User => profile {
             name => username,
             user_id => user_id,
             stars => stars,
@@ -76,7 +76,7 @@ pub(crate) mod user {
     }
 
     create! {
-        user => {
+        profile => {
             username: Text NotNull,
             user_id: Unsigned<BigInteger> NotNull Unique Primary,
             stars: Unsigned<Integer> NotNull,

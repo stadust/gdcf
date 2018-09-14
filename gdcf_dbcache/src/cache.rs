@@ -16,7 +16,7 @@ use gdcf::{
 use schema::{
     level::{self, full_level, partial_level, partial_levels},
     song::{self, newgrounds_song},
-    user::{self, creator, user as profile},
+    user::{self, creator, profile},
 };
 use std::path::Path;
 use util;
@@ -98,7 +98,7 @@ macro_rules! cache {
                     .execute(&self.config.backend)?;
                 level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
                 user::creator::create().ignore_if_exists().execute(&self.config.backend)?;
-                user::user::create().ignore_if_exists().execute(&self.config.backend)?;
+                user::profile::create().ignore_if_exists().execute(&self.config.backend)?;
 
                 Ok(())
             }
