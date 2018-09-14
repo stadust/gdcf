@@ -98,7 +98,7 @@ macro_rules! cache {
                     .execute(&self.config.backend)?;
                 level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
                 user::creator::create().ignore_if_exists().execute(&self.config.backend)?;
-                user::user::creator().ignore_if_exists().execute(&self.config.backend)?;
+                user::user::create().ignore_if_exists().execute(&self.config.backend)?;
 
                 Ok(())
             }

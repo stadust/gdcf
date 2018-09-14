@@ -587,6 +587,10 @@ where
     {
         self.paginate(request)
     }
+
+    pub fn user(&self, request: UserRequest) -> impl Future<Item = User, Error = GdcfError<A::Err, C::Err>> {
+        self.process_request(request)
+    }
 }
 
 #[allow(missing_debug_implementations)]
