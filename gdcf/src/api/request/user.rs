@@ -1,7 +1,10 @@
 //! Module ontianing request definitions for retrieving users
 
-use api::request::BaseRequest;
+use api::request::{BaseRequest, Request};
 use std::hash::{Hash, Hasher};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
 /// Struct modelled after a request to `getGJProfile20.php`.
 ///
@@ -39,3 +42,11 @@ impl Into<UserRequest> for u64 {
         UserRequest::new(self)
     }
 }
+
+impl Display for UserRequest {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "UserRequest({})", self.user)
+    }
+}
+
+impl Request for UserRequest {}

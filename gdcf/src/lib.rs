@@ -55,7 +55,7 @@ extern crate serde;
 extern crate serde_derive;
 
 use api::{
-    request::{level::SearchFilters, LevelRequest, LevelsRequest, PaginatableRequest, Request},
+    request::{level::SearchFilters, LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
     ApiClient,
 };
 use cache::Cache;
@@ -64,7 +64,7 @@ use futures::{
     future::{result, Either, FutureResult},
     task, Async, Future, Stream,
 };
-use model::{user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel};
+use model::{user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
 use std::{
     error::Error,
     mem,
@@ -123,6 +123,26 @@ where
         Gdcf {
             client: self.client.clone(),
             cache: self.cache.clone(),
+        }
+    }
+}
+
+impl<A, C> ProcessRequest<A, C, UserRequest, User> for Gdcf<A, C>
+where
+    A: ApiClient,
+    C: Cache,
+{
+    fn process_request(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
+        info!("Processing request {}", request);
+
+        gdcf! {
+            self, request, lookup_user, || {
+                let cache = self.cache.clone();
+
+                self.client().user(request)
+                    .map_err(GdcfError::Api)
+                    .and_then(collect_one!(cache, User))
+            }
         }
     }
 }

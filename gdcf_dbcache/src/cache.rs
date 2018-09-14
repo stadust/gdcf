@@ -164,8 +164,7 @@ macro_rules! cache {
 
                 let ts = Utc::now().naive_utc();
 
-                user
-                    .insert()
+                user.insert()
                     .with(profile::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&profile::user_id])
                     .execute(&self.config.backend)
@@ -290,7 +289,7 @@ macro_rules! cache {
                     GDObject::Level(lvl) => self.store_level(lvl),
                     GDObject::Creator(creator) => self.store_creator(creator),
                     GDObject::User(user) => self.store_user(user),
-                    _ => unimplemented!()
+                    _ => unimplemented!(),
                 }
             }
         }

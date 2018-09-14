@@ -275,7 +275,6 @@ pub struct User {
     pub index_50: String,
 }
 
-
 impl Display for User {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "User({}, {})", self.user_id, self.name)

@@ -44,7 +44,7 @@ pub enum GDObject {
     PartialLevel(PartialLevel<u64, u64>),
     Level(Level<u64, u64>),
     Creator(Creator),
-    User(User)
+    User(User),
 }
 
 impl From<NewgroundsSong> for GDObject {
@@ -84,7 +84,7 @@ impl Display for GDObject {
             GDObject::PartialLevel(inner) => inner.fmt(f),
             GDObject::Level(inner) => inner.fmt(f),
             GDObject::Creator(inner) => inner.fmt(f),
-            GDObject::User(inner) => inner.fmt(f)
+            GDObject::User(inner) => inner.fmt(f),
         }
     }
 }
