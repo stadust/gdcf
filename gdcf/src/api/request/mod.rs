@@ -15,7 +15,10 @@
 //! different from their default values. This way, the hashes of requests made
 //! before the update will stay the same
 
-pub use self::level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter};
+pub use self::{
+    level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
+    user::UserRequest,
+};
 use model::GameVersion;
 use std::{fmt::Display, hash::Hash};
 

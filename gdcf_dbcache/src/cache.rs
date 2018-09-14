@@ -8,15 +8,15 @@ use core::{
     query::{delete::Delete, insert::Insertable, select::Queryable, Insert, Query, Select},
 };
 use gdcf::{
-    api::request::{LevelRequest, LevelsRequest},
+    api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, Lookup},
     error::CacheError,
-    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel},
+    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
 };
 use schema::{
     level::{self, full_level, partial_level, partial_levels},
     song::{self, newgrounds_song},
-    user::{self, creator},
+    user::{self, creator, user as profile},
 };
 use std::path::Path;
 use util;
@@ -158,6 +158,19 @@ macro_rules! cache {
                     .execute(&self.config.backend)
                     .map_err(convert_error)
             }
+
+            fn store_user(&self, user: &User) -> Result<(), CacheError<<Self as Cache>::Err>> {
+                debug!("Storing user {}", user);
+
+                let ts = Utc::now().naive_utc();
+
+                user
+                    .insert()
+                    .with(profile::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&profile::user_id])
+                    .execute(&self.config.backend)
+                    .map_err(convert_error)
+            }
         }
 
         impl DatabaseCache<$backend> {
@@ -241,8 +254,6 @@ macro_rules! cache {
                         .with(partial_levels::level_id.set(&level.level_id))
                         .execute(&self.config.backend)
                         .map_err(convert_error)?;
-
-                    //self.store_partial_level(level)?;
                 }
 
                 Ok(())
@@ -266,12 +277,19 @@ macro_rules! cache {
                 self.config.backend.query_one(&select).map_err(convert_error)
             }
 
+            fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
+                let select = User::select_from(&profile::table).filter(profile::user_id.eq(req.user));
+
+                self.config.backend.query_one(&select).map_err(convert_error)
+            }
+
             fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
                 match obj {
                     GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
                     GDObject::NewgroundsSong(song) => self.store_song(song),
                     GDObject::Level(lvl) => self.store_level(lvl),
                     GDObject::Creator(creator) => self.store_creator(creator),
+                    GDObject::User(user) => self.store_user(user),
                     _ => unimplemented!()
                 }
             }

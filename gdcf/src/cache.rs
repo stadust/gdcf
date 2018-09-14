@@ -1,7 +1,7 @@
-use api::request::{/*user::UserRequest, */LevelRequest, LevelsRequest};
+use api::request::{user::UserRequest, LevelRequest, LevelsRequest};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
-use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel/*, User*/};
+use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
 use std::error::Error;
 
 pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
@@ -20,7 +20,7 @@ pub trait Cache: Send {
     fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64, u64>>) -> Result<(), CacheError<Self::Err>>;
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err>;
-    //fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;
+    fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
     fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
