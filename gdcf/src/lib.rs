@@ -505,6 +505,10 @@ where
     }
 }
 
+// TODO: impl ProcessRequest<LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf
+
+// TODO: impl ProcessRequest<LevelRequest, Level<u64, User>> for Gdcf
+
 /*impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf<A, C>
 where
     A: ApiClient,
