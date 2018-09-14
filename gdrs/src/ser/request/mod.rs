@@ -3,6 +3,7 @@ use gdcf::{api::request::BaseRequest, model::GameVersion};
 use ser;
 
 pub(super) mod level;
+pub(super) mod user;
 
 #[derive(Serialize)]
 #[serde(remote = "BaseRequest")]

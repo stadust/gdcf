@@ -272,6 +272,7 @@ macro_rules! cache {
                     GDObject::NewgroundsSong(song) => self.store_song(song),
                     GDObject::Level(lvl) => self.store_level(lvl),
                     GDObject::Creator(creator) => self.store_creator(creator),
+                    _ => unimplemented!()
                 }
             }
         }

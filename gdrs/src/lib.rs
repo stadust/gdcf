@@ -27,7 +27,10 @@ use futures::{future::Executor, Future, Stream};
 use gdcf::{
     api::{
         client::ApiFuture,
-        request::level::{LevelRequest, LevelsRequest},
+        request::{
+            level::{LevelRequest, LevelsRequest},
+            user::UserRequest,
+        },
         response::ProcessedResponse,
         ApiClient,
     },
@@ -38,7 +41,7 @@ use hyper::{
     header::HeaderValue,
     Body, Client, Error, Method, Request, StatusCode,
 };
-use ser::{LevelRequestRem, LevelsRequestRem};
+use ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem};
 use std::str;
 use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},
@@ -58,6 +61,9 @@ pub enum Req {
 
     #[serde(with = "LevelsRequestRem")]
     LevelsRequest(LevelsRequest),
+
+    #[serde(with = "UserRequestRem")]
+    UserRequest(UserRequest),
 }
 
 #[derive(Debug)]
@@ -88,6 +94,8 @@ impl ApiClient for BoomlingsClient {
     api_call!(level, LevelRequest, "downloadGJLevel22", parse::level);
 
     api_call!(levels, LevelsRequest, "getGJLevels21", parse::levels);
+
+    api_call!(user, UserRequest, "getGJUserInfo20", parse::user);
 }
 
 struct ApiRequestAction {

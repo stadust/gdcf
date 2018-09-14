@@ -1,5 +1,6 @@
 pub use self::request::{
     level::{LevelRequestRem, LevelsRequestRem},
+    user::UserRequestRem,
     BaseRequestRem,
 };
 use gdcf::{

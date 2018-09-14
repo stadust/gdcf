@@ -44,6 +44,7 @@ pub enum GDObject {
     PartialLevel(PartialLevel<u64, u64>),
     Level(Level<u64, u64>),
     Creator(Creator),
+    User(User)
 }
 
 impl From<NewgroundsSong> for GDObject {
@@ -70,6 +71,12 @@ impl From<Level<u64, u64>> for GDObject {
     }
 }
 
+impl From<User> for GDObject {
+    fn from(user: User) -> Self {
+        GDObject::User(user)
+    }
+}
+
 impl Display for GDObject {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
@@ -77,6 +84,7 @@ impl Display for GDObject {
             GDObject::PartialLevel(inner) => inner.fmt(f),
             GDObject::Level(inner) => inner.fmt(f),
             GDObject::Creator(inner) => inner.fmt(f),
+            GDObject::User(inner) => inner.fmt(f)
         }
     }
 }

@@ -5,6 +5,7 @@ use gdcf::{
 };
 use hyper::Error;
 use std::{convert::TryFrom, str::pattern::Pattern};
+use gdcf::model::User;
 
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
@@ -50,6 +51,12 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     }
 
     Ok(ProcessedResponse::Many(result))
+}
+
+pub fn user(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
+    check_resp!(body);
+
+    Ok(ProcessedResponse::One(parse_fragment::<User, _>(body, ':')?))
 }
 
 fn parse_unindexed_fragment<'a, A, P>(fragment: &'a str, seperator: P) -> Result<GDObject, ApiError<Error>>
