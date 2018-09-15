@@ -1,1 +1,3 @@
-# gdcf
+# Geometry Dash Caching Framework
+
+The idea behind the Geometry Dash Caching Framework is to provide fast and reliable access to the resources provided by the Geometry Dash servers. It achieves this goal by caching all responses from the servers. When a resource is requested, it is first looked up in the cache. If the cache entry is not yet expired, it is simply returned and the request can be handled nearly instantly without any interaction with the Geometry Dash servers. If the cache entry is existing, but expired, GDCF will make an asynchronous request to the Geometry Dash servers and create a future that resolves to the result of that request, while also providing access to the cached value. The only time you are actually forced to wait for a response from the Geometry Dash servers is when the cache entry for a request isn't existing.
