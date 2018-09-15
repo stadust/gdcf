@@ -50,7 +50,7 @@ impl Display for Creator {
 /// Struct representing a Geometry Dash User
 ///
 /// ## GD Internals:
-/// The Geometry Dash servers provide user data in a `getGJProfile` response
+/// The Geometry Dash servers provide user data in a `getGJUserInfo` response
 ///
 /// ### Unused Indices
 /// The following indices aren't used by the Geometry Dash servers: `5`, `6`, `7`, `9`, `12`, `14`,
