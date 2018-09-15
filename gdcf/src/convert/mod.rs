@@ -47,10 +47,6 @@ pub mod to {
     /// # Errors
     /// If the given string isn't valid URL-safe base64, a [`DecodeError`] is
     /// returned
-    ///
-    /// # Panics
-    /// Panics if the decoded data isn't valid UTF8. Use [`b64_decoded_bytes`]
-    /// if you aren't sure that the output is valid UTF8.
     pub fn b64_decoded_string(encoded: &str) -> Result<String, DecodeError> {
         b64_decoded_bytes(encoded).map(|bytes| String::from_utf8_lossy(&bytes[..]).to_string())
     }

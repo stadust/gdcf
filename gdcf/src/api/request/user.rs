@@ -6,7 +6,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-/// Struct modelled after a request to `getGJProfile20.php`.
+/// Struct modelled after a request to `getGJUserInfo20.php`.
 ///
 /// In the geometry Dash API, this endpoint is used to download player profiles from the servers by
 /// their account IDs
