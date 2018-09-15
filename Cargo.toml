@@ -19,3 +19,10 @@ path = "gdrs"
 path = "gdcf_dbcache"
 
 [workspace]
+members = [
+    "gdcf",
+    "gdrs",
+    "gdcf_dbcache",
+    "gdcf_derive",
+    "pm_gdcf_dbcache"
+]
