@@ -15,28 +15,25 @@
 
 //! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
 //! It provides all the core traits required to implement an API Client and
-//! a cache which are used by implementations of the [`Gdcf`] trait.
-//!
-//! [`Gdcf`]: trait.Gdcf.html
+//! a cache which are used by [`Gdcf`].
 //!
 //! # Geometry Dash Caching Framework
 //!
 //! The idea behind the Geometry Dash Caching Framework is to provide fast and
 //! reliable access to the resources provided by the Geometry Dash servers. It
-//! achieves this goal by caching all responses from the servers and only
-//! returning those cached responses when a
-//! request is attempted, while refreshing the cache asynchronously, in the
-//! background. This ensures instant access to information such as level
-//! description that can be used easily
-//! even in environments where the slow response times and unreliable
-//! availability of RobTop's server would be
-//! unacceptable otherwise
+//! achieves this goal by caching all responses from the servers. When a resource is requested, it
+//! is first looked up in the cache. If the cache entry is not yet expired, it is simply returned
+//! and the request can be handled nearly instantly without any interaction with the Geometry Dash
+//! servers. If the cache entry is existing, but expired, GDCF will make an asynchronous request to
+//! the Geometry Dash servers and create a [Future](GdcfFuture) that resolves to the result of that
+//! request, while also providing access to the cached value (without the need to poll the Future
+//! to completion). The only time you are actually forced to wait for a response from the Geometry
+//! Dash servers is when the cache entry for a request isn't existing.
 //!
-//! It further ensures the integrity of its cached data, which means it
-//! automatically generates more requests if it notices that, i.e., a level you
-//! just retrieved doesn't have its newgrounds song
-//! cached.
-//!
+//! Further, GDCF has the ability to "glue together" multiple requests to provide more information
+//! about requested objects. It is, for example, possible to issue a [`LevelRequest`]
+//! (`downloadGJLevel`) and have GDCF automatically issue a [`LevelsRequest`] (`getGJLevels`) to
+//! retrieve the creator and newgrounds song, which aren't provided by the former endpoint.
 extern crate base64;
 extern crate chrono;
 extern crate futures;
@@ -55,7 +52,7 @@ extern crate serde;
 extern crate serde_derive;
 
 use api::{
-    request::{level::SearchFilters, LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
+    request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
     ApiClient,
 };
 use cache::Cache;
@@ -233,15 +230,12 @@ where
                                 warn!("The level requested was cached, but not its song, performing a request to retrieve it!");
 
                                 GdcfFuture::absent(
-                                    self.levels::<u64, u64>(
-                                        LevelsRequest::default()
-                                            .with_id(cached.base.level_id)
-                                            .filter(SearchFilters::default().custom_song(custom_song_id)),
-                                    ).and_then(move |_| {
-                                        let song = gdcf.cache().lookup_song(custom_song_id)?;
+                                    self.levels::<u64, u64>(LevelsRequest::default().with_id(cached.base.level_id))
+                                        .and_then(move |_| {
+                                            let song = gdcf.cache().lookup_song(custom_song_id)?;
 
-                                        Ok(exchange::level_song(cached, Some(song.extract())))
-                                    }),
+                                            Ok(exchange::level_song(cached, Some(song.extract())))
+                                        }),
                                 )
                             },
 
@@ -290,15 +284,12 @@ where
                                     );
 
                                     Either::A(
-                                        gdcf.levels::<u64, u64>(
-                                            LevelsRequest::default()
-                                                .with_id(level.base.level_id)
-                                                .filter(SearchFilters::default().custom_song(song_id)),
-                                        ).and_then(move |_| {
-                                            let song = gdcf.cache().lookup_song(song_id)?;
+                                        gdcf.levels::<u64, u64>(LevelsRequest::default().with_id(level.base.level_id))
+                                            .and_then(move |_| {
+                                                let song = gdcf.cache().lookup_song(song_id)?;
 
-                                            Ok(exchange::level_song(level, Some(song.extract())))
-                                        }),
+                                                Ok(exchange::level_song(level, Some(song.extract())))
+                                            }),
                                     )
                                 },
 
@@ -557,6 +548,28 @@ where
         self.client.lock().unwrap()
     }
 
+    /// Processes the given [`LevelRequest`]
+    ///
+    /// The `User` and `Song` type parameters determine, which sequence of requests should be made
+    /// to retrieve the [`Level`]. A plain request to `downloadGJLevel` is equivalent to a call of
+    /// `Gdcf::level<u64, u64>`
+    ///
+    /// `User` can currently be one of the following:
+    /// + [`u64`] - see above
+    /// + [`Creator`] - Causes an additional [`LevelsRequest`] to retrieve the creator
+    /// + [`User`] - Causes an additional [`UserRequest`]  to retrieve the creator's profile (Not
+    /// Yet Implemented)
+    ///
+    /// `Song` can currently be one of the following:
+    /// + [`u64`] - see above
+    /// + [`NewgroundsSong`] - Causes an additional [`LevelsRequest`] to be made to retrieve the
+    /// custom song (only if the level actually uses a custom song though)
+    ///
+    /// Note that a call of `Gdcf::level<NewgroundsSong, Creator>` will **not** issue the same
+    /// `LevelsRequest` twice - GDCF will recognize the cache to be up-to-date when it attempts the
+    /// second one and uses the cached value (or at least it will if you set cache-expiry to
+    /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
+    /// cache)
     pub fn level<Song, User>(&self, request: LevelRequest) -> impl Future<Item = Level<Song, User>, Error = GdcfError<A::Err, C::Err>>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,

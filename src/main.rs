@@ -23,6 +23,7 @@ use gdcf_dbcache::cache::{DatabaseCache, DatabaseCacheConfig};
 use gdrs::BoomlingsClient;
 use std::io::{self, Read};
 use gdcf::model::Creator;
+use futures::stream::futures_ordered;
 
 fn main() {
     env_logger::init();
@@ -57,7 +58,11 @@ fn main() {
 
                 Ok(println!())
             }).map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))*/
+        //let futures: Vec<_> = (1..10).map(|account_id| gdcf.user(account_id.into())).collect();
+
         gdcf.user(8451.into())
+        /*futures_ordered(futures)
+            .for_each(|_|Ok(()))*/
             .map_err(|err| eprintln!("Something went wrong /shrug: {:?}", err))
             .map(|_|())
     }));

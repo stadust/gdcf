@@ -1,10 +1,10 @@
 //! Module ontianing request definitions for retrieving users
 
 use api::request::{BaseRequest, Request};
-use std::hash::{Hash, Hasher};
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::fmt::Error;
+use std::{
+    fmt::{Display, Error, Formatter},
+    hash::{Hash, Hasher},
+};
 
 /// Struct modelled after a request to `getGJProfile20.php`.
 ///
@@ -15,7 +15,7 @@ pub struct UserRequest {
     /// The base request data
     pub base: BaseRequest,
 
-    /// The **account ID** of the users whose data to retrieve.
+    /// The **account ID** (_not_ user ID) of the users whose data to retrieve.
     ///
     /// ## GD Internals:
     /// This field is called `targetAccountID` in the boomlings API

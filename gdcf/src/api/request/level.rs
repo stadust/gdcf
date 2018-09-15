@@ -13,7 +13,7 @@ use std::{
 ///
 /// In the Geometry Dash API, this endpoint is used to download a level from
 /// the servers and retrieve some additional information that isn't provided
-/// with the response to a [LevelsRequest](struct.LevelsRequest.html)
+/// with the response to a [`LevelsRequest`]
 #[derive(Debug, Default, Clone)]
 pub struct LevelRequest {
     /// The base request data
@@ -52,7 +52,7 @@ impl Hash for LevelRequest {
 ///
 /// In the Geometry Dash API, this endpoint is used to retrieve a list of
 /// levels matching the specified criteria, along with their
-/// [`NewgroundwSong`](::model::song::NewgroundsSong)s and some basic information on their creators.
+/// [`NewgroundsSong`s](::model::song::NewgroundsSong) and [`Creator`s](::model::user::Creator).
 #[derive(Debug, Default, Clone)]
 pub struct LevelsRequest {
     /// The base request data
