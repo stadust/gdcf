@@ -34,6 +34,78 @@
 //! about requested objects. It is, for example, possible to issue a [`LevelRequest`]
 //! (`downloadGJLevel`) and have GDCF automatically issue a [`LevelsRequest`] (`getGJLevels`) to
 //! retrieve the creator and newgrounds song, which aren't provided by the former endpoint.
+//!
+//! # How to use:
+//! This crate only provides the required traits for caches and API clients, and the code that
+//! connects them. To use GDCF you first need to either find yourself an existing implementation of
+//! those, or write your own.
+//!
+//! The following example uses the `gdcf_dbcache` crate as its cache implementation (a database
+//! cache with sqlite and postgreSQL backend) and the `gdrs` crate as its API client.
+//!
+//! ```rust
+//! // First we need to configure the cache. Here we're using a sqlite in-memory database
+//! // whose cache entries expire after 30 minutes.
+//! let mut config = DatabaseCacheConfig::sqlite_memory_config();
+//! config.invalidate_after(Duration::minutes(30));
+//!
+//! // Then we can create the actual cache and API wrapper
+//! let cache = DatabaseCache::new(config);
+//! let client = BoomlingsClient::new();
+//!
+//! // A database cache needs to go through initialization before it can be used, as it
+//! // needs to create all the required tables
+//! cache.initialize()?;
+//!
+//! // Then we can create an instance of the Gdcf struct, which we will use to
+//! // actually make all our requests
+//! let gdcf = Gdcf::new(client, cache);
+//!
+//! // And we're good to go! To make a request, we need to initialize one of the
+//! // request structs. Here, we're make a requests to retrieve the 6th page of
+//! // featured demon levels of any demon difficulty
+//! let request = LevelsRequest::default()
+//!     .request_type(LevelRequestType::Featured)
+//!     .with_rating(LevelRating::Demon(DemonRating::Hard))
+//!     .page(5);
+//!
+//! // To actually issue the request, we call the appropriate method on our Gdcf instance.
+//! // The type parameters on these methods determine how much associated information
+//! // should be retrieved for the request result. Here we're telling GDCF to also
+//! // get us information about the requested levels' custom songs and creators
+//! // instead of just their IDs. "paginate_levels" give us a stream over all pages
+//! // of results from our request instead of only the page we requested.
+//! let stream = gdcf.paginate_levels::<NewgroundsSong, Creator>(request);
+//!
+//! // Since we have a stream, we can use all our favorite Stream methods from the
+//! // futures crate. Here we limit the stream to 50 pages of levels and print
+//! // out each level's name, creator, song and song artist.
+//! let future = stream
+//!     .take(50)
+//!     .for_each(|levels| {
+//!         for level in levels {
+//!             match level.custom_song {
+//!                 Some(newgrounds_song) =>
+//!                     println!(
+//!                         "Retrieved demon level {} by {} using custom song {} by {}",
+//!                         level.name, level.creator.name, newgrounds_song.name, newgrounds_song.artist
+//!                     ),
+//!                 None =>
+//!                     println!(
+//!                         "Retrieved demon level {} by {} using main song {} by {}",
+//!                         level.name,
+//!                         level.creator.name,
+//!                         level.main_song.unwrap().name,
+//!                         level.main_song.unwrap().artist
+//!                     ),
+//!             }
+//!         }
+//!
+//!         Ok(())
+//!     }).map_err(|error| eprintln!("Something went wrong! {:?}", error));
+//!
+//! tokio::run(future);
+//! ```
 extern crate base64;
 extern crate chrono;
 extern crate futures;
@@ -555,15 +627,16 @@ where
     /// `Gdcf::level<u64, u64>`
     ///
     /// `User` can currently be one of the following:
-    /// + [`u64`] - see above
-    /// + [`Creator`] - Causes an additional [`LevelsRequest`] to retrieve the creator
+    /// + [`u64`] - The creator is provided as his user ID. Causes no additional requests.
+    /// + [`Creator`] - Causes an additional [`LevelsRequest`] to retrieve the creator.
     /// + [`User`] - Causes an additional [`UserRequest`]  to retrieve the creator's profile (Not
     /// Yet Implemented)
     ///
     /// `Song` can currently be one of the following:
-    /// + [`u64`] - see above
-    /// + [`NewgroundsSong`] - Causes an additional [`LevelsRequest`] to be made to retrieve the
-    /// custom song (only if the level actually uses a custom song though)
+    /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
+    /// requests
+    /// + [`NewgroundsSong`] - Causes an additional [`LevelsRequest`] to be made to
+    /// retrieve the custom song (only if the level actually uses a custom song though)
     ///
     /// Note that a call of `Gdcf::level<NewgroundsSong, Creator>` will **not** issue the same
     /// `LevelsRequest` twice - GDCF will recognize the cache to be up-to-date when it attempts the
@@ -579,6 +652,21 @@ where
         self.process_request(request)
     }
 
+    /// Processes the given [`LevelsRequest`]
+    ///
+    /// The `User` and `Song` type parameters determine, which sequence of requests should be made
+    /// to retrieve the [`Level`].
+    ///
+    /// `User` can currently be one of the following:
+    /// + [`u64`] - The creator are only provided as their user IDs. Causes no additional requests
+    /// + [`Creator`] - Causes no additional requests
+    /// + [`User`] - Causes up to 10 additional [`UserRequest`]s to retrieve every creator's
+    /// profile (Not Yet Implemented)
+    ///
+    /// `Song` can currently be one of the following:
+    /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
+    /// requests
+    /// + [`NewgroundsSong`] - Causes no additional requests.
     pub fn levels<Song, User>(
         &self, request: LevelsRequest,
     ) -> impl Future<Item = Vec<PartialLevel<Song, User>>, Error = GdcfError<A::Err, C::Err>>
@@ -590,6 +678,8 @@ where
         self.process_request(request)
     }
 
+    /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
+    /// parameter until it hits the first empty page.
     pub fn paginate_levels<Song, User>(
         &self, request: LevelsRequest,
     ) -> impl Stream<Item = Vec<PartialLevel<Song, User>>, Error = GdcfError<A::Err, C::Err>>
@@ -601,6 +691,7 @@ where
         self.paginate(request)
     }
 
+    /// Processes the given [`UserRequest`]
     pub fn user(&self, request: UserRequest) -> impl Future<Item = User, Error = GdcfError<A::Err, C::Err>> {
         self.process_request(request)
     }

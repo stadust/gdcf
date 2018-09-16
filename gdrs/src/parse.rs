@@ -1,11 +1,10 @@
 use gdcf::{
     api::response::ProcessedResponse,
     error::{ApiError, ValueError},
-    model::{raw::RawObject, Creator, GDObject, Level, NewgroundsSong, PartialLevel},
+    model::{raw::RawObject, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
 };
 use hyper::Error;
 use std::{convert::TryFrom, str::pattern::Pattern};
-use gdcf::model::User;
 
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
