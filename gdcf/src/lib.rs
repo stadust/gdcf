@@ -755,14 +755,6 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
     pub fn take(&mut self) -> Option<T> {
         self.cached.take()
     }
-
-    pub fn has_inner(&self) -> bool {
-        self.inner.is_some()
-    }
-
-    pub fn into_inner(self) -> Box<dyn Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static> {
-        self.inner.unwrap()
-    }
 }
 
 impl<T, AE, CE> Future for GdcfFuture<T, AE, CE>
