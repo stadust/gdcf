@@ -11,7 +11,7 @@ This whole thing is still in very early stages of development. The only document
 
 
 ## Example:
-Here's an example of how to download pages 6 through 55 of featured demons levels using gGDCF!
+Here's an example of how to download pages 6 through 55 of featured demons levels using GDCF!
 ```rust
 // First we need to configure the cache. Here we're using a sqlite in-memory database
 // whose cache entries expire after 30 minutes.
