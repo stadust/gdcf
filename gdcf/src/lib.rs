@@ -643,7 +643,7 @@ where
     /// second one and uses the cached value (or at least it will if you set cache-expiry to
     /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
     /// cache)
-    pub fn level<Song, User>(&self, request: LevelRequest) -> impl Future<Item = Level<Song, User>, Error = GdcfError<A::Err, C::Err>>
+    pub fn level<Song, User>(&self, request: LevelRequest) -> GdcfFuture<Level<Song, User>, A::Err, C::Err>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
@@ -667,9 +667,7 @@ where
     /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
     /// requests
     /// + [`NewgroundsSong`] - Causes no additional requests.
-    pub fn levels<Song, User>(
-        &self, request: LevelsRequest,
-    ) -> impl Future<Item = Vec<PartialLevel<Song, User>>, Error = GdcfError<A::Err, C::Err>>
+    pub fn levels<Song, User>(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
@@ -692,7 +690,7 @@ where
     }
 
     /// Processes the given [`UserRequest`]
-    pub fn user(&self, request: UserRequest) -> impl Future<Item = User, Error = GdcfError<A::Err, C::Err>> {
+    pub fn user(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
         self.process_request(request)
     }
 }
