@@ -80,18 +80,18 @@ mod _dummy {
     impl<T: AsSql<Sqlite>> SqlExpr<Sqlite> for T {}
 }
 
-as_sql_cast!(Sqlite, i8, i64, SqliteTypes::Integer);
-as_sql_cast!(Sqlite, u8, i64, SqliteTypes::Integer);
-as_sql_cast!(Sqlite, i16, i64, SqliteTypes::Integer);
-as_sql_cast!(Sqlite, u16, i64, SqliteTypes::Integer);
-as_sql_cast!(Sqlite, i32, i64, SqliteTypes::Integer);
-as_sql_cast!(Sqlite, u32, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, i8, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, u8, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, i16, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, u16, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, i32, i64, SqliteTypes::Integer);
+as_sql_cast_lossless!(Sqlite, u32, i64, SqliteTypes::Integer);
 as_sql_cast!(Sqlite, i64, i64, SqliteTypes::Integer);
 as_sql_cast!(Sqlite, u64, i64, SqliteTypes::Integer);
 
 as_sql_cast!(Sqlite, bool, i64, SqliteTypes::Integer);
 
-as_sql_cast!(Sqlite, f32, f64, SqliteTypes::Real);
+as_sql_cast_lossless!(Sqlite, f32, f64, SqliteTypes::Real);
 as_sql_cast!(Sqlite, f64, f64, SqliteTypes::Real);
 
 impl<'a> AsSql<Sqlite> for &'a str {

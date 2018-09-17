@@ -24,6 +24,16 @@ macro_rules! as_sql_cast {
     };
 }
 
+macro_rules! as_sql_cast_lossless {
+    ($back: ty, $src: ty, $dest: ident, $variant: path) => {
+        impl AsSql<$back> for $src {
+            fn as_sql(&self) -> <$back as Database>::Types {
+                $variant($dest::from(*self))
+            }
+        }
+    }
+}
+
 macro_rules! from_sql_cast {
     ($back: ty, $dest: ty, $variant: path) => {
         impl FromSql<$back> for $dest {

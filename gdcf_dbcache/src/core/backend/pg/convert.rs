@@ -155,8 +155,8 @@ mod _dummy {
     impl<T: AsSql<Pg>> SqlExpr<Pg> for T {}
 }
 
-as_sql_cast!(Pg, i8, i16, PgTypes::SmallInteger);
-as_sql_cast!(Pg, u8, i16, PgTypes::SmallInteger);
+as_sql_cast_lossless!(Pg, i8, i16, PgTypes::SmallInteger);
+as_sql_cast_lossless!(Pg, u8, i16, PgTypes::SmallInteger);
 as_sql_cast!(Pg, i16, i16, PgTypes::SmallInteger);
 as_sql_cast!(Pg, u16, i16, PgTypes::SmallInteger);
 as_sql_cast!(Pg, i32, i32, PgTypes::Integer);

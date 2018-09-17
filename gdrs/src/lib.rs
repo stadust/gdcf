@@ -66,7 +66,7 @@ pub enum Req {
     UserRequest(UserRequest),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BoomlingsClient {
     client: Client<HttpConnector>,
 }
@@ -127,11 +127,11 @@ impl Action for ApiRequestAction {
     fn run(&mut self) -> ApiFuture<Error> {
         let req = make_request(self.endpoint, &self.request);
 
-        let parser = self.parser.clone();
+        let parser = self.parser;
         let future = self
             .client
             .request(req)
-            .map_err(|err| ApiError::Custom(err))
+            .map_err(ApiError::Custom)
             .and_then(|resp| {
                 debug!("Received {} response", resp.status());
 
@@ -143,7 +143,7 @@ impl Action for ApiRequestAction {
             }).and_then(move |resp| {
                 resp.into_body()
                     .concat2()
-                    .map_err(|err| ApiError::Custom(err))
+                    .map_err(ApiError::Custom)
                     .and_then(move |body| {
                         match str::from_utf8(&body) {
                             Ok(body) => {

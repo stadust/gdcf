@@ -9,7 +9,7 @@ use std::{convert::TryFrom, str::pattern::Pattern};
 pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
 
-    let mut sections = body.split("#");
+    let mut sections = body.split('#');
 
     match sections.next() {
         Some(section) => parse_fragment::<Level<u64, u64>, _>(section, ":").map(ProcessedResponse::One),
@@ -21,11 +21,11 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
     check_resp!(body);
 
     let mut result = Vec::new();
-    let mut sections = body.split("#");
+    let mut sections = body.split('#');
 
     match sections.next() {
         Some(section) =>
-            for fragment in section.split("|") {
+            for fragment in section.split('|') {
                 result.push(parse_fragment::<PartialLevel<u64, u64>, _>(fragment, ":")?);
             },
         None => return Err(ApiError::UnexpectedFormat),

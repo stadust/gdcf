@@ -65,7 +65,7 @@ pub mod to {
     /// If the given string isn't `"0"` and also isn't valid URL-safe base64, a
     /// [`DecodeError`] is returned
     pub fn level_password(encrypted: &str) -> Result<Password, DecodeError> {
-        match encrypted.as_ref() {
+        match encrypted {
             "0" => Ok(Password::NoCopy),
             pass => {
                 let decoded = b64_decoded_string(pass)?;
@@ -109,7 +109,7 @@ pub mod from {
 
     /// Converts the given [`Vec`] of values convertible into signed integers
     /// into a robtop-approved string.
-    pub fn vec<T: Into<i32> + Copy>(list: &Vec<T>) -> String {
+    pub fn vec<T: Into<i32> + Copy>(list: &[T]) -> String {
         if list.is_empty() {
             String::from("-")
         } else {
@@ -125,7 +125,7 @@ pub mod from {
         value as u8
     }
 
-    pub fn level_list(ids: &Vec<u64>) -> String {
+    pub fn level_list(ids: &[u64]) -> String {
         let mut ids = ids.iter().join_with(",").to_string();
         ids.push(')');
         ids.insert(0, '(');
