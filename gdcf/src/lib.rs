@@ -704,8 +704,8 @@ where
     CE: Error + Send + 'static,
 {
     // invariant: at least one of the fields is not `None`
-    cached: Option<T>,
-    inner: Option<Box<dyn Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static>>,
+    pub cached: Option<T>,
+    pub inner: Option<Box<dyn Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static>>,
 }
 
 impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE, CE> {
@@ -753,10 +753,6 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
     pub fn cached(&self) -> &Option<T> {
         &self.cached
     }
-
-    pub fn take(&mut self) -> Option<T> {
-        self.cached.take()
-    }
 }
 
 impl<T, AE, CE> Future for GdcfFuture<T, AE, CE>
@@ -770,7 +766,7 @@ where
     fn poll(&mut self) -> Result<Async<T>, GdcfError<AE, CE>> {
         match self.inner {
             Some(ref mut fut) => fut.poll(),
-            None => Ok(Async::Ready(self.take().unwrap())),
+            None => Ok(Async::Ready(self.cached.take().unwrap())),
         }
     }
 }
