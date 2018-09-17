@@ -1,5 +1,6 @@
 use error::ValueError;
-use std::{error::Error, iter, str::FromStr};
+use std::{iter, str::FromStr};
+use failure::Fail;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Value {
@@ -23,10 +24,10 @@ impl RawObject {
     pub fn get<T>(&self, idx: usize) -> Result<T, ValueError>
     where
         T: FromStr + 'static,
-        <T as FromStr>::Err: Error + Send + 'static,
+        <T as FromStr>::Err: Fail,
     {
         match self.values.get(idx) {
-            None => Err(ValueError::IndexOutOfBounds(idx)),
+            None => Err(ValueError::NoValue(idx)),
             Some(value) =>
                 match *value {
                     Value::Value(ref string) =>
@@ -41,11 +42,11 @@ impl RawObject {
 
     pub fn get_with<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
     where
-        E: Error + Send + 'static,
+        E: Fail,
         F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
-            None => Err(ValueError::IndexOutOfBounds(idx)),
+            None => Err(ValueError::NoValue(idx)),
             Some(value) =>
                 match *value {
                     Value::Value(ref string) => f(string).map_err(|err| ValueError::Parse(idx, string.clone(), Box::new(err))),
@@ -56,7 +57,7 @@ impl RawObject {
 
     pub fn get_with_or<T, E, F>(&self, idx: usize, f: F, default: T) -> Result<T, ValueError>
     where
-        E: Error + Send + 'static,
+        E: Fail,
         F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
@@ -72,7 +73,7 @@ impl RawObject {
     pub fn get_with_or_default<T, E, F>(&self, idx: usize, f: F) -> Result<T, ValueError>
     where
         T: Default,
-        E: Error + Send + 'static,
+        E: Fail,
         F: Fn(&str) -> Result<T, E>,
     {
         match self.values.get(idx) {
@@ -88,7 +89,7 @@ impl RawObject {
     pub fn get_or<T>(&self, idx: usize, default: T) -> Result<T, ValueError>
     where
         T: FromStr + 'static,
-        <T as FromStr>::Err: Error + Send + 'static,
+        <T as FromStr>::Err: Fail,
     {
         match self.values.get(idx) {
             None => Ok(default),
@@ -107,7 +108,7 @@ impl RawObject {
     pub fn get_or_default<T>(&self, idx: usize) -> Result<T, ValueError>
     where
         T: FromStr + Default + 'static,
-        <T as FromStr>::Err: Error + Send + 'static,
+        <T as FromStr>::Err: Fail,
     {
         self.get_or(idx, Default::default())
     }

@@ -31,7 +31,7 @@ macro_rules! as_sql_cast_lossless {
                 $variant($dest::from(*self))
             }
         }
-    }
+    };
 }
 
 macro_rules! from_sql_cast {

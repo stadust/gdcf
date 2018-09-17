@@ -122,6 +122,7 @@ extern crate serde;
 #[cfg(feature = "deser")]
 #[macro_use]
 extern crate serde_derive;
+extern crate failure;
 
 use api::{
     request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
@@ -135,10 +136,10 @@ use futures::{
 };
 use model::{user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
 use std::{
-    error::Error,
     mem,
     sync::{Arc, Mutex, MutexGuard},
 };
+use failure::Fail;
 
 #[macro_use]
 mod macros;
@@ -154,7 +155,7 @@ pub mod model;
 // a User
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C::Err>;
+    fn process_request(&self, request: R) -> GdcfFuture<T, GdcfError<A::Err, C::Err>>;
 
     fn paginate(&self, request: R) -> GdcfStream<A, C, R, T, Self>
     where
@@ -175,7 +176,7 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
 #[derive(Debug)]
 pub struct Gdcf<A, C>
 where
-    A: ApiClient + 'static,
+    A: ApiClient,
     C: Cache + 'static,
 {
     client: Arc<A>,
@@ -200,7 +201,7 @@ where
     A: ApiClient,
     C: Cache,
 {
-    fn process_request(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
+    fn process_request(&self, request: UserRequest) -> GdcfFuture<User, GdcfError<A::Err, C::Err>> {
         info!("Processing request {}", request);
 
         gdcf! {
@@ -220,7 +221,7 @@ where
     A: ApiClient,
     C: Cache,
 {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, u64>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, u64>, GdcfError<A::Err, C::Err>> {
         info!("Processing request {} with 'u64' as Song type and 'u64' as User type", request);
 
         gdcf! {
@@ -240,7 +241,7 @@ where
     A: ApiClient,
     C: Cache,
 {
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, u64>>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, u64>>, GdcfError<A::Err, C::Err>> {
         info!("Processing request {} with 'u64' as Song type and 'u64' as User type", request);
 
         gdcf! {
@@ -262,7 +263,7 @@ where
     C: Cache,
     User: PartialEq + Send + 'static,
 {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, GdcfError<A::Err, C::Err>> {
         info!(
             "Processing request {} with 'NewgroundsSong' as Song type for arbitrary User type",
             request
@@ -271,7 +272,7 @@ where
         // When simply downloading a level, we do not get its song, only the song ID. The song itself is
         // only provided for a LevelsRequest
 
-        let raw: GdcfFuture<Level<u64, User>, _, _> = self.process_request(request);
+        let raw: GdcfFuture<Level<u64, User>, _> = self.process_request(request);
         let gdcf = self.clone();
 
         // TODO: reintroduce debugging statements
@@ -387,7 +388,7 @@ where
     C: Cache,
     User: PartialEq + Send + 'static,
 {
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, User>>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, User>>, GdcfError<A::Err, C::Err>> {
         info!("Processing request {} with 'NewgroundsSong' as Song type", request);
 
         let GdcfFuture { cached, inner } = self.process_request(request);
@@ -435,7 +436,7 @@ where
     A: ApiClient,
     C: Cache,
 {
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, Creator>>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, Creator>>, GdcfError<A::Err, C::Err>> {
         info!("Processing request {} with 'Creator' as User type", request);
 
         let GdcfFuture { cached, inner } = self.process_request(request);
@@ -483,10 +484,10 @@ where
     A: ApiClient,
     C: Cache,
 {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, Creator>, A::Err, C::Err> {
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, Creator>, GdcfError<A::Err, C::Err>> {
         // Note that the creator of a level cannot change. We can always use the user ID cached with the
         // level (if existing).
-        let raw: GdcfFuture<Level<u64, u64>, _, _> = self.process_request(request);
+        let raw: GdcfFuture<Level<u64, u64>, _> = self.process_request(request);
         let gdcf = self.clone();
 
         match raw {
@@ -642,7 +643,7 @@ where
     /// second one and uses the cached value (or at least it will if you set cache-expiry to
     /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
     /// cache)
-    pub fn level<Song, User>(&self, request: LevelRequest) -> GdcfFuture<Level<Song, User>, A::Err, C::Err>
+    pub fn level<Song, User>(&self, request: LevelRequest) -> GdcfFuture<Level<Song, User>, GdcfError<A::Err, C::Err>>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
@@ -666,7 +667,7 @@ where
     /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
     /// requests
     /// + [`NewgroundsSong`] - Causes no additional requests.
-    pub fn levels<Song, User>(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C::Err>
+    pub fn levels<Song, User>(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, User>>, GdcfError<A::Err, C::Err>>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
@@ -689,26 +690,23 @@ where
     }
 
     /// Processes the given [`UserRequest`]
-    pub fn user(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
+    pub fn user(&self, request: UserRequest) -> GdcfFuture<User, GdcfError<A::Err, C::Err>> {
         self.process_request(request)
     }
 }
 
 #[allow(missing_debug_implementations)]
-pub struct GdcfFuture<T, AE, CE>
-where
-    AE: Error + Send + 'static,
-    CE: Error + Send + 'static,
+pub struct GdcfFuture<T, E: Fail>
 {
     // invariant: at least one of the fields is not `None`
     pub cached: Option<T>,
-    pub inner: Option<Box<dyn Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static>>,
+    pub inner: Option<Box<dyn Future<Item = T, Error = E> + Send + 'static>>,
 }
 
-impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE, CE> {
-    fn new<F>(cached: Option<T>, f: Option<F>) -> GdcfFuture<T, AE, CE>
+impl<T, E: Fail> GdcfFuture<T, E> {
+    fn new<F>(cached: Option<T>, f: Option<F>) -> GdcfFuture<T, E>
     where
-        F: Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static,
+        F: Future<Item = T, Error = E> + Send + 'static,
     {
         GdcfFuture {
             cached,
@@ -719,28 +717,28 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
         }
     }
 
-    fn up_to_date(object: T) -> GdcfFuture<T, AE, CE> {
+    fn up_to_date(object: T) -> GdcfFuture<T, E> {
         GdcfFuture {
             cached: Some(object),
             inner: None,
         }
     }
 
-    fn outdated<F>(object: T, f: F) -> GdcfFuture<T, AE, CE>
+    fn outdated<F>(object: T, f: F) -> GdcfFuture<T,E>
     where
-        F: Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static,
+        F: Future<Item = T, Error = E> + Send + 'static,
     {
         GdcfFuture::new(Some(object), Some(f))
     }
 
-    fn absent<F>(f: F) -> GdcfFuture<T, AE, CE>
+    fn absent<F>(f: F) -> GdcfFuture<T, E>
     where
-        F: Future<Item = T, Error = GdcfError<AE, CE>> + Send + 'static,
+        F: Future<Item = T, Error = E> + Send + 'static,
     {
         GdcfFuture::new(None, Some(f))
     }
 
-    fn error<E: Into<GdcfError<AE, CE>>>(error: E) -> Self
+    fn error<Err: Into<E>>(error: Err) -> Self
     where
         T: Send + 'static,
     {
@@ -752,15 +750,12 @@ impl<T, CE: Error + Send + 'static, AE: Error + Send + 'static> GdcfFuture<T, AE
     }
 }
 
-impl<T, AE, CE> Future for GdcfFuture<T, AE, CE>
-where
-    AE: Error + Send + 'static,
-    CE: Error + Send + 'static,
+impl<T, E: Fail> Future for GdcfFuture<T, E>
 {
-    type Error = GdcfError<AE, CE>;
+    type Error = E;
     type Item = T;
 
-    fn poll(&mut self) -> Result<Async<T>, GdcfError<AE, CE>> {
+    fn poll(&mut self) -> Result<Async<T>, E> {
         match self.inner {
             Some(ref mut fut) => fut.poll(),
             None => Ok(Async::Ready(self.cached.take().unwrap())),
@@ -777,7 +772,7 @@ where
     C: Cache,
 {
     next_request: R,
-    current_request: GdcfFuture<T, A::Err, C::Err>,
+    current_request: GdcfFuture<T, GdcfError<A::Err, C::Err>>,
     source: M,
 }
 

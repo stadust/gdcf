@@ -5,10 +5,9 @@ use core::{
     },
     AsSql,
 };
-use std::{
-    error::Error as StdError,
-    fmt::{Debug, Display, Error as FmtError, Formatter},
-};
+use failure::Fail;
+use std::fmt::Debug;
+use std::fmt::Display;
 
 #[cfg(feature = "pg")]
 pub mod pg;
@@ -28,27 +27,32 @@ mod util;
 
 // TODO: transaction support
 
-#[derive(Debug)]
-pub enum Error<DB: Database> {
+#[derive(Debug, Fail)]
+pub enum Error<DB: Database + 'static> {
     /// Database specific error
-    Database(DB::Error),
+    #[fail(display = "Error in the underlying database layer")]
+    Database(#[cause] DB::Error),
 
     /// Many database specific errros
+    #[fail(display = "Somehow, multiple errors happened in the underlying database layer")]
     MultipleDatabase(Vec<DB::Error>),
 
     /// Conversion from a row item the expected Rust datatype failed
+    #[fail(display = "Conversion of '{}' to a value of type {} failed", _0, _1)]
     Conversion(String, &'static str),
 
     /// The query passed to `query_one` didn't yield any rows
+    #[fail(display = "The query passed to 'query_one' didnt yield any rows")]
     NoResult,
 
     /// The query passed to `query_one` yielded more than one row
+    #[fail(display = "The query passed to 'query_one' yielded more than one row")]
     TooManyRows,
 }
 
 pub trait Database: Debug + Sized {
     type Types: Display;
-    type Error: StdError + Send + 'static;
+    type Error: Fail;
 
     fn prepare(idx: usize) -> String;
 
@@ -153,18 +157,6 @@ pub trait Database: Debug + Sized {
     fn query_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<Vec<Row<Self>>, Error<Self>>
     where
         Self: Sized;
-}
-
-impl<DB: Database> StdError for Error<DB> {}
-
-impl<DB: Database> Display for Error<DB> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
-        match self {
-            Error::Database(err) => write!(f, "{}", err),
-            Error::Conversion(value, target) => write!(f, "Failed to convert {:?} to {}", value, target),
-            e => write!(f, "{}", e),
-        }
-    }
 }
 
 impl<DB: Database> From<Vec<DB::Error>> for Error<DB> {

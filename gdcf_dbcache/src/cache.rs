@@ -300,7 +300,7 @@ macro_rules! cache {
 cache!("pg", Pg);
 cache!("sqlite", Sqlite);
 
-fn convert_error<DB: Database>(db_error: Error<DB>) -> CacheError<Error<DB>> {
+fn convert_error<DB: Database + 'static>(db_error: Error<DB>) -> CacheError<Error<DB>> {
     match db_error {
         Error::NoResult => CacheError::CacheMiss,
         _ => CacheError::Custom(db_error),

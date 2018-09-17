@@ -1,9 +1,9 @@
 use api::request::{user::UserRequest, LevelRequest, LevelsRequest};
 use error::CacheError;
 use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
-use std::error::Error;
 
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use failure::Fail;
 
 pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
 
@@ -15,7 +15,7 @@ pub trait CacheConfig {
 
 pub trait Cache: Send {
     type Config: CacheConfig;
-    type Err: Error + Send + 'static;
+    type Err: Fail;
 
     fn config(&self) -> &Self::Config;
 

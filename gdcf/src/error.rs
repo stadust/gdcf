@@ -1,172 +1,94 @@
 //! Module containing the various error types used by gdcf
 
-use std::{
-    error::Error,
-    fmt::{self, Display, Formatter},
-};
+use failure::Fail;
 
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum ValueError {
-    IndexOutOfBounds(usize),
+    #[fail(display = "No value provided at index {}", _0)]
     NoValue(usize),
-    Parse(usize, String, Box<dyn Error + Send + 'static>),
+
+    #[fail(display = "The value '{}' at index {} could not be parsed: {}", _1, _0, _2)]
+    Parse(usize, String, #[cause] Box<dyn Fail>),
 }
 
 /// Type for errors that occur during cache access
-#[derive(Debug)]
-pub enum CacheError<E>
-where
-    E: Error + Send + 'static,
-{
+#[derive(Debug, Fail)]
+pub enum CacheError<E: Fail> {
     /// The cache chose not to store the provided value
+    #[fail(display = "The cache refused to store the provided value")]
     NoStore,
 
     /// The value requested is not cached
+    #[fail(display = "The requested value was not cached")]
     CacheMiss,
 
     /// An error caused by the underlying cache implementation occurred
-    Custom(E),
+    #[fail(display = "A cache-specific error occured: {}", _0)]
+    Custom(#[cause] E),
 }
 
 /// Type for errors that occur when interacting with the API
-#[derive(Debug)]
-pub enum ApiError<E>
-where
-    E: Error + Send + 'static,
-{
+#[derive(Debug, Fail)]
+pub enum ApiError<E: Fail> {
     /// The API server returned a 500 INTERNAL SERVER ERROR response
+    #[fail(display = "Internal Server Error")]
     InternalServerError,
 
     /// The request resulted in no data
     ///
     /// This can either be a 404 response, or an otherwise empty response, like
     /// RobTop's `-1` responses
+    #[fail(display = "The request completed successfully, but no data was provided")]
     NoData,
 
     /// The response had an unexpected format
+    #[fail(display = "Parsing of the response failed")]
     UnexpectedFormat,
 
     /// The request data was malformed
     ///
     /// This variant is only intended to be used while constructing data from
     /// [RawObject](model/structs.RawObject.html)s
-    MalformedData(ValueError),
+    #[fail(display = "Processing the response data failed: {}", _0)]
+    MalformedData(#[cause] ValueError),
 
     /// An error caused by the underlying api client implementation occured
-    Custom(E),
+    #[fail(display = "An API client specific error occurate: {}", _0)]
+    Custom(#[cause] E),
 }
 
-#[derive(Debug)]
-pub enum GdcfError<A, C>
-where
-    A: Error + Send + 'static,
-    C: Error + Send + 'static,
-{
-    Cache(CacheError<C>),
-    Api(ApiError<A>),
+#[derive(Debug, Fail)]
+pub enum GdcfError<A: Fail, C: Fail> {
+    #[fail(display = "{}", _0)]
+    Cache(#[cause] CacheError<C>),
 
+    #[fail(display = "{}", _0)]
+    Api(#[cause] ApiError<A>),
+
+    #[fail(display = "Neither cache-lookup, nor API response yielded any result")]
     NoContent,
 }
 
-impl Display for ValueError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            ValueError::IndexOutOfBounds(idx) => write!(f, "Index {} was out of bounds", idx),
-            ValueError::NoValue(idx) => write!(f, "No value provided at index {}", idx),
-            ValueError::Parse(idx, ref string, ref err) => write!(f, "Failed to parse value at index {} ('{}'): {}", idx, string, err),
-        }
-    }
-}
-
-impl<E> Display for CacheError<E>
-where
-    E: Error + Send,
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            CacheError::CacheMiss => write!(f, "The requested item isn't cached"),
-            CacheError::NoStore => write!(f, "The cache refused to store the provided data"),
-            CacheError::Custom(ref inner) => write!(f, "{}", inner),
-        }
-    }
-}
-
-impl<E> Display for ApiError<E>
-where
-    E: Error + Send,
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            ApiError::InternalServerError => write!(f, "Internal server error"),
-            ApiError::NoData => write!(f, "The response contained no data"),
-            ApiError::UnexpectedFormat => write!(f, "The response format was unexpected"),
-            ApiError::MalformedData(ref inner) => write!(f, "Malformed response data: {}", inner),
-            ApiError::Custom(ref inner) => write!(f, "{}", inner),
-        }
-    }
-}
-
-impl<A, C> Display for GdcfError<A, C>
-where
-    A: Error + Send,
-    C: Error + Send,
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            GdcfError::Cache(ref inner) => write!(f, "{}", inner),
-            GdcfError::Api(ref inner) => write!(f, "{}", inner),
-            GdcfError::NoContent => write!(f, "Request was successful, yet yielded no actual data"),
-        }
-    }
-}
-
-impl Error for ValueError {}
-
-impl<E> Error for CacheError<E> where E: Error + Send {}
-
-impl<E> Error for ApiError<E> where E: Error + Send {}
-
-impl<A, C> Error for GdcfError<A, C>
-where
-    A: Error + Send,
-    C: Error + Send,
-{
-}
-
-impl<E> From<ValueError> for ApiError<E>
-where
-    E: Error + Send + 'static,
-{
+impl<E: Fail> From<ValueError> for ApiError<E> {
     fn from(inner: ValueError) -> Self {
         ApiError::MalformedData(inner)
     }
 }
 
-impl<A, C> From<ValueError> for GdcfError<A, C>
-where
-    A: Error + Send,
-    C: Error + Send,
+impl<A: Fail, C: Fail> From<ValueError> for GdcfError<A, C>
 {
     fn from(inner: ValueError) -> Self {
         GdcfError::Api(inner.into())
     }
 }
 
-impl<A, C> From<ApiError<A>> for GdcfError<A, C>
-where
-    A: Error + Send,
-    C: Error + Send,
-{
+impl<A: Fail, C: Fail> From<ApiError<A>> for GdcfError<A, C> {
     fn from(inner: ApiError<A>) -> Self {
         GdcfError::Api(inner)
     }
 }
 
-impl<A, C> From<CacheError<C>> for GdcfError<A, C>
-where
-    A: Error + Send,
-    C: Error + Send,
-{
+impl<A: Fail, C: Fail> From<CacheError<C>> for GdcfError<A, C> {
     fn from(inner: CacheError<C>) -> Self {
         GdcfError::Cache(inner)
     }

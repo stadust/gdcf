@@ -7,12 +7,12 @@ use api::{
 
 use api::request::user::UserRequest;
 use error::ApiError;
-use std::error::Error;
+use failure::Fail;
 
 pub type ApiFuture<E> = Box<dyn Future<Item = ProcessedResponse, Error = ApiError<E>> + Send + 'static>;
 
 pub trait ApiClient: Sized + Sync + Send + 'static {
-    type Err: Error + Send + 'static;
+    type Err: Fail;
 
     fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;
     fn levels(&self, req: LevelsRequest) -> ApiFuture<Self::Err>;
