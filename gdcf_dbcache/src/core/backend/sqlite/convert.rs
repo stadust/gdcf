@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use core::{
     backend::{
         sqlite::{Sqlite, SqliteTypes},
@@ -6,6 +5,7 @@ use core::{
     },
     AsSql, FromSql,
 };
+use gdcf::chrono::NaiveDateTime;
 use rusqlite::{
     types::{FromSql as SqliteFromSql, FromSqlError, ToSql as SqliteToSql, ToSqlOutput, Value, ValueRef},
     Error as SqliteError,

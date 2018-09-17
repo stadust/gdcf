@@ -242,7 +242,6 @@ dependencies = [
 name = "gdcf_dbcache"
 version = "0.1.0"
 dependencies = [
- "chrono 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdcf 0.1.0",
  "joinery 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use core::{
     backend::{
         pg::{Pg, PgTypes},
@@ -6,6 +5,7 @@ use core::{
     },
     AsSql, FromSql,
 };
+use gdcf::chrono::NaiveDateTime;
 use postgres::types::{FromSql as FromPgSql, IsNull, ToSql as ToPgSql, Type};
 use std::{
     error::Error as StdError,

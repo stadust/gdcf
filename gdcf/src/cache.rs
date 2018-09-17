@@ -1,10 +1,13 @@
 use api::request::{user::UserRequest, LevelRequest, LevelsRequest};
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use error::CacheError;
 use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
 use std::error::Error;
 
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+
 pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
+
+// TODO: more fine-grained cache-expiry control
 
 pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;

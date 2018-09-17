@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 #[cfg(feature = "sqlite")]
@@ -9,7 +8,7 @@ use core::{
     statement::{Preparation, Prepare},
     FromSql, QueryPart, SqlExpr,
 };
-use gdcf::cache::CachedObject;
+use gdcf::{cache::CachedObject, chrono::NaiveDateTime};
 
 pub mod level;
 pub mod song;

@@ -107,7 +107,7 @@
 //! tokio::run(future);
 //! ```
 extern crate base64;
-extern crate chrono;
+extern crate chrono as chrono_crate;
 extern crate futures;
 #[macro_use]
 extern crate gdcf_derive;
@@ -139,7 +139,6 @@ use std::{
     mem,
     sync::{Arc, Mutex, MutexGuard},
 };
-//use model::Creator;
 
 #[macro_use]
 mod macros;
@@ -151,6 +150,9 @@ pub mod error;
 mod exchange;
 pub mod model;
 
+pub mod chrono {
+    pub use chrono_crate::{DateTime, Duration, NaiveDateTime, Utc};
+}
 // TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
 // a User
 

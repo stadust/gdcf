@@ -15,7 +15,6 @@
 
 //trace_macros!(true);
 
-extern crate chrono;
 extern crate gdcf;
 #[macro_use]
 extern crate log;

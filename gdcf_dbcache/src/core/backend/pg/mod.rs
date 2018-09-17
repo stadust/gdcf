@@ -1,6 +1,6 @@
 use super::Error;
-use chrono::NaiveDateTime;
 use core::{backend::Database, query::select::Row, AsSql};
+use gdcf::chrono::NaiveDateTime;
 use postgres::{types::ToSql as ToPgSql, Connection, Error as PgError, TlsMode};
 
 mod convert;

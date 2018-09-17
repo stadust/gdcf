@@ -1,4 +1,3 @@
-use chrono::{Duration, Utc};
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 #[cfg(feature = "sqlite")]
@@ -10,6 +9,7 @@ use core::{
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, Lookup},
+    chrono::{Duration, Utc},
     error::CacheError,
     model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
 };
