@@ -278,7 +278,7 @@ macro_rules! cache {
             }
 
             fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
-                let select = User::select_from(&profile::table).filter(profile::user_id.eq(req.user));
+                let select = User::select_from(&profile::table).filter(profile::account_id.eq(req.user));
 
                 self.config.backend.query_one(&select).map_err(convert_error)
             }
