@@ -51,11 +51,11 @@ macro_rules! gdcf {
                 if cache.is_expired(&cached) {
                     info!("Cache entry for request {} is expired!", $request);
 
-                    GdcfFuture::outdated(cached.extract(), Either::A::<_, FutureResult<_, _>>($future_closure()))
+                    GdcfFuture::outdated(cached, Either::A::<_, FutureResult<_, _>>($future_closure()))
                 } else {
                     info!("Cached entry for request {} is up-to-date!", $request);
 
-                    GdcfFuture::up_to_date(cached.extract())
+                    GdcfFuture::up_to_date(cached)
                 },
 
             Err(err) =>

@@ -75,8 +75,7 @@ impl<E: Fail> From<ValueError> for ApiError<E> {
     }
 }
 
-impl<A: Fail, C: Fail> From<ValueError> for GdcfError<A, C>
-{
+impl<A: Fail, C: Fail> From<ValueError> for GdcfError<A, C> {
     fn from(inner: ValueError) -> Self {
         GdcfError::Api(inner.into())
     }

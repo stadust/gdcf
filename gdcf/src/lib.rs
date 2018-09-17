@@ -128,8 +128,9 @@ use api::{
     request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
     ApiClient,
 };
-use cache::Cache;
+use cache::{Cache, CachedObject};
 use error::{ApiError, CacheError, GdcfError};
+use failure::Fail;
 use futures::{
     future::{result, Either, FutureResult},
     task, Async, Future, Stream,
@@ -139,7 +140,6 @@ use std::{
     mem,
     sync::{Arc, Mutex, MutexGuard},
 };
-use failure::Fail;
 
 #[macro_use]
 mod macros;
@@ -283,9 +283,9 @@ where
                 inner: None,
             } =>
             // In this case, we have the level cached and up-to-date
-                match cached.base.custom_song {
+                match cached.inner().base.custom_song {
                     // Level uses a main song, we dont need to do anything apart from changing the generic type
-                    None => GdcfFuture::up_to_date(exchange::level_song(cached, None)),
+                    None => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_song(inner, None))),
 
                     // Level uses a custom song.
                     Some(custom_song_id) => {
@@ -295,10 +295,12 @@ where
 
                         match lookup {
                             // The custom song is cached, replace the ID with actual song object and change generic type
-                            Ok(song) => GdcfFuture::up_to_date(exchange::level_song(cached, Some(song.extract()))),
+                            Ok(song) => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_song(inner, Some(song.extract())))),
 
                             // The custom song isn't cached, make a request that's sure to put it into the cache, then perform the exchange
                             Err(CacheError::CacheMiss) => {
+                                let cached = cached.extract();
+
                                 warn!("The level requested was cached, but not its song, performing a request to retrieve it!");
 
                                 GdcfFuture::absent(
@@ -323,11 +325,11 @@ where
                     Some(cached) =>
                     // If we have it cached, we need to update the cached value either with its custom song from the cache, if that exists.
                     // If it doesn't, we will end up creating a future that does not contain any cached object.
-                        match cached.base.custom_song {
-                            None => Some(exchange::level_song(cached, None)),
+                        match cached.inner().base.custom_song {
+                            None => Some(cached.map(|inner| exchange::level_song(inner, None))),
                             Some(custom_song_id) =>
                                 match self.cache().lookup_song(custom_song_id) {
-                                    Ok(song) => Some(exchange::level_song(cached, Some(song.extract()))),
+                                    Ok(song) => Some(cached.map(|inner| exchange::level_song(inner, Some(song.extract())))),
 
                                     Err(CacheError::CacheMiss) => None,
 
@@ -420,7 +422,7 @@ where
 
         let cached = match cached {
             Some(cached) =>
-                match processor(cached) {
+                match cached.try_map(processor.clone()) {
                     Ok(cached) => Some(cached),
                     Err(err) => return GdcfFuture::error(err),
                 },
@@ -468,7 +470,7 @@ where
 
         let cached = match cached {
             Some(cached) =>
-                match processor(cached) {
+                match cached.try_map(processor.clone()) {
                     Ok(cached) => Some(cached),
                     Err(err) => return GdcfFuture::error(err),
                 },
@@ -495,10 +497,12 @@ where
                 cached: Some(cached),
                 inner: None,
             } =>
-                match self.cache().lookup_creator(cached.base.creator) {
-                    Ok(creator) => GdcfFuture::up_to_date(exchange::level_user(cached, creator.extract())),
+                match self.cache().lookup_creator(cached.inner().base.creator) {
+                    Ok(creator) => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_user(inner, creator.extract()))),
 
-                    Err(CacheError::CacheMiss) =>
+                    Err(CacheError::CacheMiss) => {
+                        let cached = cached.extract();
+
                         GdcfFuture::absent(
                             self.levels::<u64, u64>(LevelsRequest::default().with_id(cached.base.level_id))
                                 .and_then(move |_| {
@@ -512,7 +516,8 @@ where
                                         Err(err) => Err(GdcfError::Cache(err)),
                                     }
                                 }),
-                        ),
+                        )
+                    },
 
                     Err(err) => GdcfFuture::error(GdcfError::Cache(err)),
                 },
@@ -520,8 +525,8 @@ where
             GdcfFuture { cached, inner: Some(f) } => {
                 let cached = match cached {
                     Some(cached) =>
-                        match self.cache().lookup_creator(cached.base.creator) {
-                            Ok(creator) => Some(exchange::level_user(cached, creator.extract())),
+                        match self.cache().lookup_creator(cached.inner().base.creator) {
+                            Ok(creator) => Some(cached.map(|inner|exchange::level_user(inner, creator.extract()))),
 
                             Err(CacheError::CacheMiss) => None, /* NOTE: here we cannot decide whether the creator isn't cached, or
                                                                   * whether his GD account was deleted. We go with the conversative
@@ -696,15 +701,14 @@ where
 }
 
 #[allow(missing_debug_implementations)]
-pub struct GdcfFuture<T, E: Fail>
-{
+pub struct GdcfFuture<T, E: Fail> {
     // invariant: at least one of the fields is not `None`
-    pub cached: Option<T>,
+    pub cached: Option<CachedObject<T>>,
     pub inner: Option<Box<dyn Future<Item = T, Error = E> + Send + 'static>>,
 }
 
 impl<T, E: Fail> GdcfFuture<T, E> {
-    fn new<F>(cached: Option<T>, f: Option<F>) -> GdcfFuture<T, E>
+    fn new<F>(cached: Option<CachedObject<T>>, f: Option<F>) -> GdcfFuture<T, E>
     where
         F: Future<Item = T, Error = E> + Send + 'static,
     {
@@ -717,14 +721,14 @@ impl<T, E: Fail> GdcfFuture<T, E> {
         }
     }
 
-    fn up_to_date(object: T) -> GdcfFuture<T, E> {
+    fn up_to_date(object: CachedObject<T>) -> GdcfFuture<T, E> {
         GdcfFuture {
             cached: Some(object),
             inner: None,
         }
     }
 
-    fn outdated<F>(object: T, f: F) -> GdcfFuture<T,E>
+    fn outdated<F>(object: CachedObject<T>, f: F) -> GdcfFuture<T, E>
     where
         F: Future<Item = T, Error = E> + Send + 'static,
     {
@@ -745,20 +749,19 @@ impl<T, E: Fail> GdcfFuture<T, E> {
         GdcfFuture::new(None, Some(result(Err(error.into()))))
     }
 
-    pub fn cached(&self) -> &Option<T> {
+    pub fn cached(&self) -> &Option<CachedObject<T>> {
         &self.cached
     }
 }
 
-impl<T, E: Fail> Future for GdcfFuture<T, E>
-{
+impl<T, E: Fail> Future for GdcfFuture<T, E> {
     type Error = E;
     type Item = T;
 
     fn poll(&mut self) -> Result<Async<T>, E> {
         match self.inner {
             Some(ref mut fut) => fut.poll(),
-            None => Ok(Async::Ready(self.cached.take().unwrap())),
+            None => Ok(Async::Ready(self.cached.take().unwrap().extract())),
         }
     }
 }
@@ -783,8 +786,8 @@ where
     A: ApiClient,
     C: Cache,
 {
-    type Item = T;
     type Error = GdcfError<A::Err, C::Err>;
+    type Item = T;
 
     fn poll(&mut self) -> Result<Async<Option<T>>, GdcfError<A::Err, C::Err>> {
         match self.current_request.poll() {

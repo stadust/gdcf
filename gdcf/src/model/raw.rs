@@ -1,6 +1,6 @@
 use error::ValueError;
-use std::{iter, str::FromStr};
 use failure::Fail;
+use std::{iter, str::FromStr};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Value {

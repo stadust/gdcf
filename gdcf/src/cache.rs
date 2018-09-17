@@ -66,7 +66,41 @@ impl<T> CachedObject<T> {
         self.obj
     }
 
-    pub fn cached(&self) -> &T {
+    pub fn inner(&self) -> &T {
         &self.obj
+    }
+
+    pub(crate) fn map<R, F>(self, f: F) -> CachedObject<R>
+    where
+        F: FnOnce(T) -> R,
+    {
+        let CachedObject {
+            first_cached_at,
+            last_cached_at,
+            obj,
+        } = self;
+
+        CachedObject {
+            first_cached_at,
+            last_cached_at,
+            obj: f(obj),
+        }
+    }
+
+    pub(crate) fn try_map<R, F, E>(self, f: F) -> Result<CachedObject<R>, E>
+    where
+        F: FnOnce(T) -> Result<R, E>,
+    {
+        let CachedObject {
+            first_cached_at,
+            last_cached_at,
+            obj,
+        } = self;
+
+        Ok(CachedObject {
+            first_cached_at,
+            last_cached_at,
+            obj: f(obj)?,
+        })
     }
 }
