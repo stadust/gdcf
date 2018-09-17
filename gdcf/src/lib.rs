@@ -783,8 +783,8 @@ where
     A: ApiClient,
     C: Cache,
 {
-    type Error = GdcfError<A::Err, C::Err>;
     type Item = T;
+    type Error = GdcfError<A::Err, C::Err>;
 
     fn poll(&mut self) -> Result<Async<Option<T>>, GdcfError<A::Err, C::Err>> {
         match self.current_request.poll() {
