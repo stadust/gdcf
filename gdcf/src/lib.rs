@@ -150,9 +150,6 @@ pub mod error;
 mod exchange;
 pub mod model;
 
-/*pub mod chrono {
-    pub use chrono_crate::{DateTime, Duration, NaiveDateTime, Utc};
-}*/
 // TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
 // a User
 
@@ -181,7 +178,7 @@ where
     A: ApiClient + 'static,
     C: Cache + 'static,
 {
-    client: Arc<Mutex<A>>,
+    client: Arc<A>,
     cache: Arc<Mutex<C>>,
 }
 
@@ -210,7 +207,7 @@ where
             self, request, lookup_user, || {
                 let cache = self.cache.clone();
 
-                self.client().user(request)
+                self.client.user(request)
                     .map_err(GdcfError::Api)
                     .and_then(collect_one!(cache, User))
             }
@@ -230,7 +227,7 @@ where
             self, request, lookup_level, || {
                 let cache = self.cache.clone();
 
-                self.client().level(request)
+                self.client.level(request)
                     .map_err(GdcfError::Api)
                     .and_then(collect_one!(cache, Level))
             }
@@ -250,7 +247,7 @@ where
             self, request, lookup_partial_levels, || {
                 let cache = self.cache.clone();
 
-                self.client().levels(request.clone())
+                self.client.levels(request.clone())
                     .map_err(GdcfError::Api)
                     .and_then(collect_many!(request, cache, store_partial_levels, PartialLevel))
             }
@@ -604,12 +601,12 @@ where
 
 impl<A, C> Gdcf<A, C>
 where
-    A: ApiClient + 'static,
+    A: ApiClient,
     C: Cache + 'static,
 {
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
         Gdcf {
-            client: Arc::new(Mutex::new(client)),
+            client: Arc::new(client),
             cache: Arc::new(Mutex::new(cache)),
         }
     }
@@ -618,8 +615,8 @@ where
         self.cache.lock().unwrap()
     }
 
-    pub fn client(&self) -> MutexGuard<A> {
-        self.client.lock().unwrap()
+    pub fn client(&self) -> Arc<A> {
+        self.client.clone()
     }
 
     /// Processes the given [`LevelRequest`]
