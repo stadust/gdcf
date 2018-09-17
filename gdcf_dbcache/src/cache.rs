@@ -1,7 +1,7 @@
 #[cfg(feature = "pg")]
-use core::backend::pg::Pg;
+pub use core::backend::pg::Pg;
 #[cfg(feature = "sqlite")]
-use core::backend::sqlite::Sqlite;
+pub use core::backend::sqlite::Sqlite;
 use core::{
     backend::{Database, Error},
     query::{delete::Delete, insert::Insertable, select::Queryable, Insert, Query, Select},
