@@ -1,6 +1,3 @@
-#![feature(trace_macros)]
-#![feature(macro_at_most_once_rep)]
-#![feature(proc_macro_gen)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,
@@ -12,8 +9,6 @@
     unused_imports,
     unused_parens
 )]
-
-//trace_macros!(true);
 
 extern crate gdcf;
 #[macro_use]
