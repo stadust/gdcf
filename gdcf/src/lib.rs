@@ -1,4 +1,3 @@
-#![feature(box_syntax)]
 #![feature(never_type)]
 #![feature(try_from)]
 #![deny(
@@ -102,7 +101,8 @@
 //!         }
 //!
 //!         Ok(())
-//!     }).map_err(|error| eprintln!("Something went wrong! {:?}", error));
+//!     })
+//!     .map_err(|error| eprintln!("Something went wrong! {:?}", error));
 //!
 //! tokio::run(future);
 //! ```
@@ -526,12 +526,11 @@ where
                 let cached = match cached {
                     Some(cached) =>
                         match self.cache().lookup_creator(cached.inner().base.creator) {
-                            Ok(creator) => Some(cached.map(|inner|exchange::level_user(inner, creator.extract()))),
+                            Ok(creator) => Some(cached.map(|inner| exchange::level_user(inner, creator.extract()))),
 
-                            Err(CacheError::CacheMiss) => None, /* NOTE: here we cannot decide whether the creator isn't cached, or
-                                                                  * whether his GD account was deleted. We go with the conversative
-                                                                  * option and assume it wasn't cached. */
-
+                            Err(CacheError::CacheMiss) => None, /* NOTE: here we cannot decide whether the creator isn't cached, or */
+                            // whether his GD account was deleted. We go with the conversative
+                            // option and assume it wasn't cached.
                             Err(err) => return GdcfFuture::error(GdcfError::Cache(err)),
                         },
 
