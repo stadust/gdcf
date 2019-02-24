@@ -47,6 +47,16 @@ impl Display for Creator {
     }
 }
 
+impl Creator {
+    pub fn deleted(id: u64) -> Creator {
+        Creator {
+            user_id: id,
+            name: "<DELETED>".to_string(),
+            account_id: None,
+        }
+    }
+}
+
 /// Struct representing a Geometry Dash User
 ///
 /// ## GD Internals:

@@ -524,7 +524,13 @@ where
                                     match lookup {
                                         Ok(creator) => Ok(exchange::level_user(cached, creator.extract())),
 
-                                        Err(CacheError::CacheMiss) => Ok(exchange::level_user(cached, DELETED.clone())),
+                                        Err(CacheError::CacheMiss) => {
+                                            let creator = Creator::deleted(cached.base.creator);
+
+                                            gdcf.cache().store_object(&creator.clone().into())?;
+
+                                            Ok(exchange::level_user(cached, creator))
+                                        },
 
                                         Err(err) => Err(GdcfError::Cache(err)),
                                     }
@@ -574,7 +580,13 @@ where
                                             match lookup {
                                                 Ok(creator) => Ok(exchange::level_user(level, creator.extract())),
 
-                                                Err(CacheError::CacheMiss) => Ok(exchange::level_user(level, DELETED.clone())),
+                                                Err(CacheError::CacheMiss) => {
+                                                    let creator = Creator::deleted(level.base.creator);
+
+                                                    gdcf.cache().store_object(&creator.clone().into())?;
+
+                                                    Ok(exchange::level_user(level, creator))
+                                                },
 
                                                 Err(err) => Err(GdcfError::Cache(err)),
                                             }
