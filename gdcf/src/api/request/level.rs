@@ -2,8 +2,6 @@
 
 use api::request::{BaseRequest, PaginatableRequest, Request};
 use model::{DemonRating, LevelLength, LevelRating};
-#[cfg(feature = "deser")]
-use serde::{Deserialize, Serialize, Serializer};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},

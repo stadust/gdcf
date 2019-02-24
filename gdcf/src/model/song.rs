@@ -3,6 +3,8 @@
 use convert;
 use error::ValueError;
 use model::{de, raw::RawObject};
+#[cfg(feature = "deser")]
+use serde::{Deserialize, Serialize, Serializer};
 use std::{
     convert::TryFrom,
     fmt::{Display, Error, Formatter},

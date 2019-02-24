@@ -3,6 +3,8 @@
 use convert;
 use error::ValueError;
 use model::{de, raw::RawObject, GameVersion, MainSong};
+#[cfg(feature = "deser")]
+use serde::{Deserialize, Serialize, Serializer};
 use std::{
     convert::TryFrom,
     fmt::{Display, Error, Formatter},
@@ -231,9 +233,10 @@ pub enum Password {
 /// The following indices aren't used by the Geometry Dash servers: `11`, `16`,
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
+#[cfg_attr(feature = "deser", derive(Serialize))] // TODO: a Deserialize impl will have to be custom-written due to the &'static MainSong reference
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct PartialLevel<#[raw_type("u64")] Song, #[raw_type("u64")] User>
+// FIXME: the raw_type attribute breaks serde for some reason. Find an alternative
 where
     Song: PartialEq,
     User: PartialEq,
@@ -436,7 +439,7 @@ where
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
 #[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "deser", derive(Serialize))]
 pub struct Level<#[raw_type("u64")] Song, #[raw_type("u64")] User>
 where
     Song: PartialEq,

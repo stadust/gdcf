@@ -21,8 +21,6 @@ extern crate postgres;
 extern crate rusqlite;
 extern crate seahash;
 extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 
 #[macro_use]
 mod core;
