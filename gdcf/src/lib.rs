@@ -8,7 +8,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    unused_imports,
+    //unused_imports,
     unused_parens
 )]
 
@@ -487,6 +487,8 @@ where
     C: Cache,
 {
     fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, Creator>, GdcfError<A::Err, C::Err>> {
+        info!("Processing request {} with 'Creator' as User type", request);
+
         // Note that the creator of a level cannot change. We can always use the user ID cached with the
         // level (if existing).
         let raw: GdcfFuture<Level<u64, u64>, _> = self.process_request(request);
@@ -496,11 +498,22 @@ where
             GdcfFuture {
                 cached: Some(cached),
                 inner: None,
-            } =>
-                match self.cache().lookup_creator(cached.inner().base.creator) {
-                    Ok(creator) => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_user(inner, creator.extract()))),
+            } => {
+                let lookup = self.cache().lookup_creator(cached.inner().base.creator);
+
+                match lookup {
+                    Ok(creator) => {
+                        info!("Level {} up-to-date, returning cached version!", cached.inner());
+
+                        GdcfFuture::up_to_date(cached.map(|inner| exchange::level_user(inner, creator.extract())))
+                    },
 
                     Err(CacheError::CacheMiss) => {
+                        warn!(
+                            "Level {} was up-to-date, but creator is missing from cache. Constructing LevelsRequest to retrieve creator",
+                            cached.inner()
+                        );
+
                         let cached = cached.extract();
 
                         GdcfFuture::absent(
@@ -520,7 +533,8 @@ where
                     },
 
                     Err(err) => GdcfFuture::error(GdcfError::Cache(err)),
-                },
+                }
+            },
 
             GdcfFuture { cached, inner: Some(f) } => {
                 let cached = match cached {
@@ -536,6 +550,12 @@ where
 
                     None => None,
                 };
+
+                if let Some(ref level) = cached {
+                    info!("Cache entry is {}", level.inner());
+                } else {
+                    warn!("Cache entry for request missing");
+                }
 
                 GdcfFuture::new(
                     cached,
