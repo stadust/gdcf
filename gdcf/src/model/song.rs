@@ -10,6 +10,20 @@ use std::{
     fmt::{Display, Error, Formatter},
 };
 
+lazy_static! {
+    pub static ref SERVER_SIDED_DATA_INCONSISTENCY_ERROR: NewgroundsSong = NewgroundsSong {
+        song_id: 0,
+        name: String::new(),
+        index_3: 0,
+        artist: String::new(),
+        filesize: 0f64,
+        index_6: None,
+        index_7: None,
+        index_8: String::new(),
+        link: String::new(),
+    };
+}
+
 /// Struct representing Geometry Dash's main songs.
 ///
 /// This data is not provided by the API and needs to be manually kept up to

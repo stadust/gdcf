@@ -135,7 +135,7 @@ use futures::{
     future::{result, Either, FutureResult},
     task, Async, Future, Stream,
 };
-use model::{user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
+use model::{song::SERVER_SIDED_DATA_INCONSISTENCY_ERROR, user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
 use std::{
     mem,
     sync::{Arc, Mutex, MutexGuard},
@@ -406,7 +406,8 @@ where
                         match cache.lookup_song(custom_song_id) {
                             Ok(song) => exchange::partial_level_song(partial_level, Some(song.extract())),
 
-                            Err(CacheError::CacheMiss) => unreachable!(),
+                            Err(CacheError::CacheMiss) =>
+                                exchange::partial_level_song(partial_level, Some(SERVER_SIDED_DATA_INCONSISTENCY_ERROR.clone())),
 
                             Err(err) => return Err(err.into()),
                         },
