@@ -31,7 +31,9 @@ pub(super) fn main_song(raw_obj: &RawObject) -> Result<Option<&'static MainSong>
 }
 
 pub(super) fn description(value: &str) -> Result<Option<String>, DecodeError> {
-    convert::to::b64_decoded_string(value).map(Option::Some)
+    // I have decided that level descriptions are so broken that we simply ignore it if they fail to
+    // parase
+    convert::to::b64_decoded_string(value).map(Option::Some).or(Ok(None))
 }
 
 pub(super) fn default_to_none<T>(value: &str) -> Result<Option<T>, <T as FromStr>::Err>
