@@ -66,14 +66,14 @@ pub struct NewgroundsSong {
     #[raw_data(index = 2)]
     pub name: String,
 
-    #[raw_data(index = 3)]
+    #[raw_data(index = 3, default)]
     pub index_3: u64,
 
     /// The artist of this [`NewgroundsSong`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `4`
-    #[raw_data(index = 4)]
+    #[raw_data(index = 4, default)]
     pub artist: String,
 
     /// The filesize of this [`NewgroundsSong`], in megabytes
