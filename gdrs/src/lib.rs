@@ -1,5 +1,4 @@
 #![feature(pattern)]
-#![feature(try_from)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,

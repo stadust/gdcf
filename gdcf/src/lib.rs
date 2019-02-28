@@ -1,5 +1,4 @@
 #![feature(never_type)]
-#![feature(try_from)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,
