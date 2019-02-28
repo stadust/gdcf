@@ -11,7 +11,7 @@ use failure::Fail;
 
 pub type ApiFuture<E> = Box<dyn Future<Item = ProcessedResponse, Error = ApiError<E>> + Send + 'static>;
 
-pub trait ApiClient: Sized + Sync + Send + 'static {
+pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
     type Err: Fail;
 
     fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;

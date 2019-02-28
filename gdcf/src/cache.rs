@@ -13,7 +13,7 @@ pub trait CacheConfig {
     fn invalidate_after(&self) -> Duration;
 }
 
-pub trait Cache: Clone + Send + Sync {
+pub trait Cache: Clone + Send + Sync + 'static {
     type Config: CacheConfig;
     type Err: Fail;
 

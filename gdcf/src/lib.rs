@@ -1,4 +1,5 @@
 #![feature(never_type)]
+#![feature(const_string_new)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,
@@ -112,8 +113,6 @@ extern crate futures;
 extern crate gdcf_derive;
 extern crate joinery;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate log;
 extern crate percent_encoding;
 #[cfg(feature = "deser")]
@@ -135,7 +134,7 @@ use futures::{
     task, Async, Future, Stream,
 };
 use model::{song::SERVER_SIDED_DATA_INCONSISTENCY_ERROR, user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
-use std::{mem, sync::Arc};
+use std::mem;
 
 #[macro_use]
 mod macros;
@@ -173,9 +172,9 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
 pub struct Gdcf<A, C>
 where
     A: ApiClient,
-    C: Cache + 'static,
+    C: Cache,
 {
-    client: Arc<A>,
+    client: A,
     cache: C,
 }
 
@@ -637,17 +636,14 @@ where
     C: Cache,
 {
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
-        Gdcf {
-            client: Arc::new(client),
-            cache,
-        }
+        Gdcf { client, cache }
     }
 
     pub fn cache(&self) -> C {
         self.cache.clone()
     }
 
-    pub fn client(&self) -> Arc<A> {
+    pub fn client(&self) -> A {
         self.client.clone()
     }
 

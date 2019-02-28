@@ -65,7 +65,7 @@ pub enum Req {
     UserRequest(UserRequest),
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct BoomlingsClient {
     client: Client<HttpConnector>,
 }
