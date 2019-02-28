@@ -18,7 +18,6 @@ use schema::{
     song::{self, newgrounds_song},
     user::{self, creator, profile},
 };
-use std::path::Path;
 use util;
 
 #[derive(Debug)]
@@ -48,6 +47,9 @@ impl DatabaseCacheConfig<Pg> {
         DatabaseCacheConfig::new(Pg::new(url, TlsMode::None))
     }
 }
+
+#[cfg(feature = "sqlite")]
+use std::path::Path;
 
 #[cfg(feature = "sqlite")]
 impl DatabaseCacheConfig<Sqlite> {
@@ -173,6 +175,7 @@ macro_rules! cache {
             }
         }
 
+        #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
             /// Retrieves every partial level stored in the database
             pub fn all_partial_levels(&self) -> Result<Vec<PartialLevel<u64, u64>>, <Self as Cache>::Err> {
