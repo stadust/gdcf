@@ -8,6 +8,7 @@ seahash = "^3.0.5"
 joinery = "1.0.0"
 failure = "0.1.2"
 failure_derive = "0.1.2"
+r2d2 = "0.8.3"
 
 [dependencies.rusqlite]
 version = "^0.13.0"
@@ -19,6 +20,10 @@ version = "^0.15.2"
 optional = true
 features = ["with-chrono"]
 
+[dependencies.r2d2_postgres]
+version = "^0.14.0"
+optional = true
+
 [dependencies.gdcf]
 path = "../gdcf"
 
@@ -26,8 +31,8 @@ path = "../gdcf"
 path = "../pm_gdcf_dbcache"
 
 [features]
-default = ["sqlite", "pg"]
+default = ["pg"]
 
-pg = ["postgres"]
+pg = ["postgres", "r2d2_postgres"]
 mysql = []
 sqlite = ["rusqlite"]

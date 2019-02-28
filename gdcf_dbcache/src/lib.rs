@@ -15,12 +15,17 @@ extern crate gdcf;
 extern crate log;
 extern crate joinery;
 extern crate pm_gdcf_dbcache;
+extern crate r2d2;
+#[cfg(feature = "pg")]
+extern crate r2d2_postgres;
 #[cfg(feature = "pg")]
 extern crate postgres;
 #[cfg(feature = "sqlite")]
 extern crate rusqlite;
 extern crate seahash;
 extern crate failure;
+
+
 
 #[macro_use]
 mod core;

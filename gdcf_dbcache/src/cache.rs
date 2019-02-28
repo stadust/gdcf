@@ -41,10 +41,10 @@ impl<DB: Database> DatabaseCacheConfig<DB> {
 
 #[cfg(feature = "pg")]
 impl DatabaseCacheConfig<Pg> {
-    pub fn postgres_config(url: &str) -> DatabaseCacheConfig<Pg> {
-        use postgres::TlsMode;
+    pub fn postgres_config(url: &str) -> Result<DatabaseCacheConfig<Pg>, Error<Pg>> {
+        use r2d2_postgres::TlsMode;
 
-        DatabaseCacheConfig::new(Pg::new(url, TlsMode::None))
+        Ok(DatabaseCacheConfig::new(Pg::new(url, TlsMode::None)?))
     }
 }
 

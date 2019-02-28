@@ -8,6 +8,8 @@ use model::{
 };
 use std::{num::ParseIntError, str::FromStr};
 
+// TODO: these things that don't return option
+
 pub(super) fn level_rating(raw_obj: &RawObject) -> Result<LevelRating, ValueError> {
     let is_demon = raw_obj.get_with_or(17, int_to_bool, false)?;
     let is_auto = raw_obj.get_with_or(25, int_to_bool, false)?;

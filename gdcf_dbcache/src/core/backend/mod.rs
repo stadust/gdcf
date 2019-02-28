@@ -33,6 +33,9 @@ pub enum Error<DB: Database + 'static> {
     #[fail(display = "Error in the underlying database layer")]
     Database(#[cause] DB::Error),
 
+    #[fail(display = "Connection pool error")]
+    R2D2(#[cause] r2d2::Error),
+
     /// Many database specific errros
     #[fail(display = "Somehow, multiple errors happened in the underlying database layer")]
     MultipleDatabase(Vec<DB::Error>),
@@ -162,5 +165,11 @@ pub trait Database: Debug + Sized {
 impl<DB: Database> From<Vec<DB::Error>> for Error<DB> {
     fn from(errs: Vec<DB::Error>) -> Self {
         Error::MultipleDatabase(errs)
+    }
+}
+
+impl<DB: Database> From<r2d2::Error> for Error<DB> {
+    fn from(error: r2d2::Error) -> Self {
+        Error::R2D2(error)
     }
 }

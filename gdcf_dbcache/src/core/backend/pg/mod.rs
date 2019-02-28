@@ -1,14 +1,16 @@
 use super::Error;
 use core::{backend::Database, query::select::Row, AsSql};
 use gdcf::chrono::NaiveDateTime;
-use postgres::{types::ToSql as ToPgSql, Connection, Error as PgError, TlsMode};
+use postgres::{types::ToSql as ToPgSql, Error as PgError};
+use r2d2_postgres::{TlsMode, PostgresConnectionManager};
+use r2d2::Pool;
 
 mod convert;
 mod query;
 
 #[derive(Debug)]
 pub struct Pg {
-    connection: Connection,
+    pool: Pool<PostgresConnectionManager>,
 }
 
 #[derive(Debug)]
@@ -26,10 +28,12 @@ pub enum PgTypes {
 }
 
 impl Pg {
-    pub fn new(url: &str, tls: TlsMode) -> Pg {
-        Pg {
-            connection: Connection::connect(url, tls).unwrap(),
-        }
+    pub fn new(url: &str, tls: TlsMode) -> Result<Pg, Error<Pg>> {
+        let manager = PostgresConnectionManager::new(url, tls)?;
+
+        Ok(Pg {
+            pool: Pool::new(manager).unwrap()
+        })
     }
 }
 
@@ -42,10 +46,12 @@ impl Database for Pg {
     }
 
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Pg>> {
+        let connection = self.pool.get()?;
+
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
-        self.connection.execute(&statement, &values[..])?;
+        connection.execute(&statement, &values[..])?;
         Ok(())
     }
 
@@ -53,12 +59,14 @@ impl Database for Pg {
     where
         Self: Sized,
     {
+        let connection = self.pool.get()?;
+
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         let mut rows = Vec::new();
 
-        for row in self.connection.query(&statement, &values)?.iter() {
+        for row in connection.query(&statement, &values)?.iter() {
             let mut values = Vec::new();
 
             for i in 0..row.len() {
