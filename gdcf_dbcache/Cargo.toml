@@ -10,11 +10,6 @@ failure = "0.1.2"
 failure_derive = "0.1.2"
 r2d2 = "0.8.3"
 
-[dependencies.rusqlite]
-version = "^0.13.0"
-optional = true
-features = ["bundled"]
-
 [dependencies.postgres]
 version = "^0.15.2"
 optional = true
@@ -24,6 +19,15 @@ features = ["with-chrono"]
 version = "^0.14.0"
 optional = true
 
+[dependencies.r2d2_sqlite]
+version = "^0.8.0"
+optional = true
+
+[dependencies.rusqlite]
+version = "^0.16.0"
+optional = true
+features = ["bundled"]
+
 [dependencies.gdcf]
 path = "../gdcf"
 
@@ -31,8 +35,8 @@ path = "../gdcf"
 path = "../pm_gdcf_dbcache"
 
 [features]
-default = ["pg"]
+default = ["pg", "sqlite"]
 
 pg = ["postgres", "r2d2_postgres"]
 mysql = []
-sqlite = ["rusqlite"]
+sqlite = ["rusqlite", "r2d2_sqlite"]

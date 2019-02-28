@@ -53,12 +53,12 @@ use std::path::Path;
 
 #[cfg(feature = "sqlite")]
 impl DatabaseCacheConfig<Sqlite> {
-    pub fn sqlite_memory_config() -> DatabaseCacheConfig<Sqlite> {
-        DatabaseCacheConfig::new(Sqlite::memory())
+    pub fn sqlite_memory_config() -> Result<DatabaseCacheConfig<Sqlite>, Error<Sqlite>> {
+        Ok(DatabaseCacheConfig::new(Sqlite::memory()?))
     }
 
-    pub fn sqlite_config<P: AsRef<Path>>(path: P) -> DatabaseCacheConfig<Sqlite> {
-        DatabaseCacheConfig::new(Sqlite::path(path))
+    pub fn sqlite_config<P: AsRef<Path>>(path: P) -> Result<DatabaseCacheConfig<Sqlite>, Error<Sqlite>> {
+        Ok(DatabaseCacheConfig::new(Sqlite::path(path)?))
     }
 }
 

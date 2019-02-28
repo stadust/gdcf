@@ -4,28 +4,34 @@ use core::{
     AsSql,
 };
 use resulter::Resulter;
-use rusqlite::{types::ToSql, Connection, Error as DbError};
+use rusqlite::{types::ToSql, Error as DbError};
 use std::path::Path;
+use r2d2_sqlite::SqliteConnectionManager;
+use r2d2::Pool;
 
 mod convert;
 mod query;
 
 #[derive(Debug)]
 pub struct Sqlite {
-    connection: Connection,
+    pool: Pool<SqliteConnectionManager>,
 }
 
 impl Sqlite {
-    pub(crate) fn memory() -> Sqlite {
-        Sqlite {
-            connection: Connection::open_in_memory().expect("Failure to create in-memory sqlite database"),
-        }
+    pub(crate) fn memory() -> Result<Sqlite, Error<Sqlite>> {
+        let manager = SqliteConnectionManager::memory();
+
+        Ok(Sqlite {
+            pool: Pool::new(manager)?
+        })
     }
 
-    pub(crate) fn path<P: AsRef<Path>>(path: P) -> Sqlite {
-        Sqlite {
-            connection: Connection::open(path).expect("Yeah, that didn't work"),
-        }
+    pub(crate) fn path<P: AsRef<Path>>(path: P) -> Result<Sqlite, Error<Sqlite>> {
+        let manager = SqliteConnectionManager::file(path);
+
+        Ok(Sqlite {
+            pool: Pool::new(manager)?
+        })
     }
 }
 
@@ -47,10 +53,12 @@ impl Database for Sqlite {
     }
 
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Sqlite>> {
+        let connection = self.pool.get()?;
+
         let comp = params.into_iter().map(|param| param.as_sql()).collect::<Vec<_>>();
         let values = comp.iter().map(|v| v as &dyn ToSql).collect::<Vec<_>>();
 
-        self.connection.execute(&statement, &values[..])?;
+        connection.execute(&statement, &values[..])?;
         Ok(())
     }
 
@@ -58,10 +66,12 @@ impl Database for Sqlite {
     where
         Self: Sized,
     {
+        let connection = self.pool.get()?;
+
         let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToSql).collect();
 
-        let mut stmt = self.connection.prepare(&statement)?;
+        let mut stmt = connection.prepare(&statement)?;
 
         let rows: Result<_, Vec<DbError>> = stmt
             .query_map(&values[..], |row| {

@@ -22,6 +22,8 @@ extern crate r2d2_postgres;
 extern crate postgres;
 #[cfg(feature = "sqlite")]
 extern crate rusqlite;
+#[cfg(feature = "sqlite")]
+extern crate r2d2_sqlite;
 extern crate seahash;
 extern crate failure;
 
