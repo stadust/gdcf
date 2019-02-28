@@ -152,6 +152,9 @@ impl Action for ApiRequestAction {
                             },
                             Err(_) => Err(ApiError::UnexpectedFormat),
                         }
+                    }).map_err(|err| {
+                        error!("Error processing request: {}", err);
+                        err
                     })
             });
 
