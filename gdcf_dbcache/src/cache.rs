@@ -20,7 +20,7 @@ use schema::{
 };
 use util;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseCacheConfig<DB: Database> {
     backend: DB,
     invalidate_after: Duration,
@@ -68,7 +68,7 @@ impl<DB: Database + 'static> CacheConfig for DatabaseCacheConfig<DB> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseCache<DB: Database> {
     config: DatabaseCacheConfig<DB>,
 }

@@ -1,11 +1,10 @@
 macro_rules! collect_one {
     ($cache: expr, $variant: ident) => {
         move |response| {
-            let mut cache = $cache.lock().unwrap();
             let mut result = None;
 
             for obj in response {
-                cache.store_object(&obj)?;
+                $cache.store_object(&obj)?;
 
                 if let GDObject::$variant(level) = obj {
                     result = Some(level)
@@ -20,11 +19,10 @@ macro_rules! collect_one {
 macro_rules! collect_many {
     ($request: expr, $cache: expr, $bulk_store: ident, $variant: ident) => {
         move |response| {
-            let mut cache = $cache.lock().unwrap();
             let mut result = Vec::new();
 
             for obj in response {
-                cache.store_object(&obj)?;
+                $cache.store_object(&obj)?;
 
                 if let GDObject::$variant(level) = obj {
                     result.push(level)
@@ -32,7 +30,7 @@ macro_rules! collect_many {
             }
 
             if !result.is_empty() {
-                cache.$bulk_store(&$request, &result)?;
+                $cache.$bulk_store(&$request, &result)?;
 
                 Ok(result)
             } else {

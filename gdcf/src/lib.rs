@@ -135,10 +135,7 @@ use futures::{
     task, Async, Future, Stream,
 };
 use model::{song::SERVER_SIDED_DATA_INCONSISTENCY_ERROR, user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
-use std::{
-    mem,
-    sync::{Arc, Mutex, MutexGuard},
-};
+use std::{mem, sync::Arc};
 
 #[macro_use]
 mod macros;
@@ -179,7 +176,7 @@ where
     C: Cache + 'static,
 {
     client: Arc<A>,
-    cache: Arc<Mutex<C>>,
+    cache: C,
 }
 
 impl<A, C> Clone for Gdcf<A, C>
@@ -205,7 +202,7 @@ where
 
         gdcf! {
             self, request, lookup_user, || {
-                let cache = self.cache.clone();
+                let mut cache = self.cache();
 
                 self.client.user(request)
                     .map_err(GdcfError::Api)
@@ -225,7 +222,7 @@ where
 
         gdcf! {
             self, request, lookup_level, || {
-                let cache = self.cache.clone();
+                let mut cache = self.cache();
 
                 self.client.level(request)
                     .map_err(GdcfError::Api)
@@ -245,7 +242,7 @@ where
 
         gdcf! {
             self, request, lookup_partial_levels, || {
-                let cache = self.cache.clone();
+                let mut cache = self.cache();
 
                 self.client.levels(request.clone())
                     .map_err(GdcfError::Api)
@@ -396,7 +393,6 @@ where
         let cache = self.cache.clone();
 
         let processor = move |levels: Vec<PartialLevel<u64, User>>| {
-            let cache = cache.lock().unwrap();
             let mut vec = Vec::new();
 
             for partial_level in levels {
@@ -445,7 +441,6 @@ where
         let cache = self.cache.clone();
 
         let processor = move |levels: Vec<PartialLevel<u64, u64>>| {
-            let cache = cache.lock().unwrap();
             let mut vec = Vec::new();
 
             for partial_level in levels {
@@ -639,17 +634,17 @@ where
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
-    C: Cache + 'static,
+    C: Cache,
 {
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
         Gdcf {
             client: Arc::new(client),
-            cache: Arc::new(Mutex::new(cache)),
+            cache,
         }
     }
 
-    pub fn cache(&self) -> MutexGuard<C> {
-        self.cache.lock().unwrap()
+    pub fn cache(&self) -> C {
+        self.cache.clone()
     }
 
     pub fn client(&self) -> Arc<A> {

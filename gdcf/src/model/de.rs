@@ -1,4 +1,3 @@
-use base64::DecodeError;
 use convert;
 use error::ValueError;
 use model::{

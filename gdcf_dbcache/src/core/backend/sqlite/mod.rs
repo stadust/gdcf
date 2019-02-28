@@ -12,7 +12,7 @@ use r2d2::Pool;
 mod convert;
 mod query;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sqlite {
     pool: Pool<SqliteConnectionManager>,
 }
