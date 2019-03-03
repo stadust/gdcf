@@ -121,6 +121,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate failure;
+extern crate flate2;
 
 use api::{
     request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},

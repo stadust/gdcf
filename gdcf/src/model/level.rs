@@ -2,12 +2,15 @@
 
 use convert;
 use error::ValueError;
+use flate2::read::GzDecoder;
 use model::{de, raw::RawObject, GameVersion, MainSong};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
     convert::TryFrom,
     fmt::{Display, Error, Formatter},
+    io::Read,
+    num::ParseFloatError,
 };
 
 /// Enum representing the possible level lengths known to GDCF
@@ -450,7 +453,7 @@ where
     pub base: PartialLevel<Song, User>,
 
     /// The raw level data. Note that GDCF performs the base64 decoding, though
-    /// not the `DEFLATE` decompression, since he base64 decoded version of
+    /// not the `DEFLATE` decompression, since he compressed version of
     /// the level data requires the least amount of space.
     ///
     /// ## GD Internals:
@@ -488,6 +491,49 @@ where
     /// According to the GDPS source, this is a value called `extraString`
     #[raw_data(index = 36, default)]
     pub index_36: String,
+}
+
+// The following code has been contributed by cos8o! Thank you!
+
+#[derive(Debug)]
+pub struct LevelData(String);
+
+impl<S: PartialEq, U: PartialEq> Level<S, U> {
+    pub fn decompress_data(&self) -> std::io::Result<LevelData> {
+        let mut s = String::new();
+        let mut d = GzDecoder::new(&self.level_data[..]);
+
+        d.read_to_string(&mut s)?;
+
+        Ok(LevelData(s))
+    }
+}
+
+impl LevelData {
+    pub fn objects(&self) -> Vec<&str> {
+        self.0.split(';').skip(1).collect()
+    }
+
+    pub fn object_count(&self) -> usize {
+        self.objects().len()
+    }
+
+    pub fn furthest_object_x(&self) -> f32 {
+        self.objects().iter().filter_map(|&s| object_x(s).ok()).fold(0.0, f32::max)
+    }
+}
+
+fn object_x(object: &str) -> Result<f32, ParseFloatError> {
+    let mut iter = object.split(',');
+
+    match iter.position(|v| v == "2") {
+        Some(idx) if idx % 2 == 0 =>
+            match iter.next() {
+                Some(v) => v.parse(),
+                None => Ok(0.0),
+            },
+        _ => Ok(0.0),
+    }
 }
 
 impl<Song, User> Display for PartialLevel<Song, User>
