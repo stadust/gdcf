@@ -10,6 +10,7 @@ serde = "^1.0"
 serde_derive = "^1.0"
 log = "^0.4.0"
 tokio-retry = "^0.2.0"
+joinery = "1.0.0"
 
 [dependencies.gdcf]
 path = "../gdcf"

@@ -1,5 +1,5 @@
 use crate::{
-    util::{into_option, SelfZip},
+    util::{decode_url, into_option},
     Parse,
 };
 use gdcf::{error::ValueError, model::NewgroundsSong};
@@ -14,6 +14,6 @@ parser! {
         index_6(index = 6, with = into_option, default),
         index_7(index = 7, with = into_option, default),
         index_8(index = 8),
-        link(index = 10, parse = gdcf::convert::to::decoded_url),
+        link(index = 10, parse = decode_url),
     }
 }

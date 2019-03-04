@@ -1,12 +1,13 @@
 use crate::{
-    util::{default_to_none, int_to_bool, SelfZip},
+    util::{b64_decode_bytes, b64_decode_string, default_to_none, int_to_bool, xor_decrypt},
     Parse,
 };
+use base64::DecodeError;
 use gdcf::{
     error::ValueError,
     model::{
         song::{MainSong, MAIN_SONGS, UNKNOWN},
-        Level, LevelRating, PartialLevel,
+        Level, LevelRating, PartialLevel, Password,
     },
 };
 
@@ -31,7 +32,29 @@ pub fn process_song(main_song: usize, custom_song: &Option<u64>) -> Option<&'sta
 pub fn parse_description(value: &str) -> Option<String> {
     // I have decided that level descriptions are so broken that we simply ignore it if they fail to
     // parase
-    gdcf::convert::to::b64_decoded_string(value).ok()
+    b64_decode_string(value).ok()
+}
+
+/// Attempts to parse the given `str` into a [`Password`]
+///
+/// # Errors
+/// If the given string isn't `"0"` and also isn't valid URL-safe base64, a
+/// [`DecodeError`] is returned
+pub fn level_password(encrypted: &str) -> Result<Password, DecodeError> {
+    match encrypted {
+        "0" => Ok(Password::NoCopy),
+        pass => {
+            let decoded = b64_decode_string(pass)?;
+            let mut decrypted = xor_decrypt(&decoded, "26364");
+
+            if decrypted.len() == 1 {
+                Ok(Password::FreeCopy)
+            } else {
+                decrypted.remove(0);
+                Ok(Password::PasswordCopy(decrypted))
+            }
+        },
+    }
 }
 
 parser! {
@@ -69,8 +92,8 @@ parser! {
 parser! {
     Level<u64, u64> => {
         base(delegate),
-        level_data(index = 4, parse = gdcf::convert::to::b64_decoded_bytes),
-        password(index = 27, parse = gdcf::convert::to::level_password),
+        level_data(index = 4, parse = b64_decode_bytes),
+        password(index = 27, parse = level_password),
         time_since_upload(index = 28),
         time_since_update(index = 29),
         index_36(index = 36, default),

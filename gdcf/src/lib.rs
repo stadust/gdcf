@@ -106,13 +106,10 @@
 //!
 //! tokio::run(future);
 //! ```
-extern crate base64;
 pub extern crate chrono;
 extern crate futures;
-extern crate joinery;
 #[macro_use]
 extern crate log;
-extern crate percent_encoding;
 #[cfg(feature = "deser")]
 extern crate serde;
 #[cfg(feature = "deser")]
