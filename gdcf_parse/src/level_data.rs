@@ -1,6 +1,6 @@
 use self::{
-    metadata::{ObjectMetadata, PortalMetadata, PortalType},
-    speed::Speed,
+    metadata::{ObjectMetadata, PortalMetadata},
+    portal::{PortalType, Speed},
 };
 use crate::{util::SelfZipExt, Parse};
 use flate2::read::GzDecoder;
@@ -9,7 +9,7 @@ use std::{error::Error, io::Read, time::Duration};
 
 pub mod ids;
 pub mod metadata;
-pub mod speed;
+pub mod portal;
 
 #[derive(Debug)]
 pub struct LevelData(String);
@@ -55,8 +55,23 @@ impl LevelData {
         })
     }
 
-    pub fn furthest_object_x(&self) -> f32 {
-        self.parsed_objects().map(|obj| obj.x).fold(0.0, f32::max)
+    pub fn starting_speed(&self) -> Speed {
+        match self.0.split(';').nth(0) {
+            Some(segment) =>
+                match segment.split(',').self_zip().find(|(key, _)| key == &"kA4") {
+                    Some((_, value)) =>
+                        match value.parse() {
+                            Ok(0) => Speed::Slow,
+                            Ok(1) => Speed::Normal,
+                            Ok(2) => Speed::Medium,
+                            Ok(3) => Speed::Fast,
+                            Ok(4) => Speed::VeryFast,
+                            _ => Speed::Invalid,
+                        },
+                    _ => Speed::Invalid,
+                },
+            _ => Speed::Invalid,
+        }
     }
 
     pub fn level_length(&self) -> Duration {
@@ -77,7 +92,7 @@ impl LevelData {
 
         portals.sort_unstable_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
 
-        let seconds = speed::get_seconds_from_x_pos(furthest_x, Speed::Normal, &portals);
+        let seconds = portal::get_seconds_from_x_pos(furthest_x, self.starting_speed(), &portals);
 
         Duration::from_secs(seconds.round() as u64)
     }

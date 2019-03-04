@@ -1,5 +1,5 @@
 use crate::{
-    level_data::{ids, speed::Speed},
+    level_data::{ids, portal::PortalType},
     util::{int_to_bool, parse},
     Parse,
 };
@@ -11,30 +11,10 @@ pub enum ObjectMetadata {
     Portal(PortalMetadata),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PortalMetadata {
     pub checked: bool,
     pub portal_type: PortalType,
-}
-
-#[derive(Debug)]
-pub enum PortalType {
-    Nonsense,
-    Speed(Speed),
-    // .. all the other portals ..
-}
-
-impl PortalType {
-    pub fn from_id(id: u16) -> PortalType {
-        match id {
-            ids::SLOW_PORTAL => PortalType::Speed(Speed::Slow),
-            ids::NORMAL_PORTAL => PortalType::Speed(Speed::Normal),
-            ids::MEDIUM_PORTAL => PortalType::Speed(Speed::Medium),
-            ids::FAST_PORTAL => PortalType::Speed(Speed::Fast),
-            ids::VERY_FAST_PORTAL => PortalType::Speed(Speed::VeryFast),
-            _ => PortalType::Nonsense,
-        }
-    }
 }
 
 impl Parse for ObjectMetadata {
