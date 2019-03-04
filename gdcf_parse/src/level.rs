@@ -4,7 +4,7 @@ use crate::{
     util::{default_to_none, int_to_bool, parse_description, process_difficulty, process_song, SelfZip},
     Parse,
 };
-use gdcf::model::PartialLevel;
+use gdcf::model::{Level, PartialLevel};
 
 parser! {
     PartialLevel<u64, u64> => {
@@ -36,4 +36,15 @@ parser! {
     rating(index = 9),
     is_demon(index = 17, with = int_to_bool),
     is_auto(index = 25, with = int_to_bool),
+}
+
+parser! {
+    Level<u64, u64> => {
+        base(delegate),
+        level_data(index = 4, parse = gdcf::convert::to::b64_decoded_bytes),
+        password(index = 27, parse = gdcf::convert::to::level_password),
+        time_since_upload(index = 28),
+        time_since_update(index = 29),
+        index_36(index = 36, default),
+    }
 }

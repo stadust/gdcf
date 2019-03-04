@@ -1,13 +1,13 @@
 macro_rules! __parsing {
     (@ $value: expr, index = $idx: expr, parse = $func: path) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse($idx, $value, err)),
+            Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
             Ok(v) => v,
         }
     };
     (@ $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse($idx, $value, err)),
+            Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
             Ok(v) => v,
         }
     };
@@ -71,40 +71,16 @@ macro_rules! __unwrap {
 }
 
 macro_rules! parser {
-    ($struct_name: ty => {$($tokens:tt)*}, $($tokens2:tt)*) => {
-        parser!(@ $struct_name [] [] [] [$($tokens)*] [$($tokens2)*]);
+    ($struct_name: ty => {$($tokens:tt)*}$(, $($tokens2:tt)*)?) => {
+        parser!(@ $struct_name [] [] [] [$($tokens)*] [$($($tokens2)*)?]);
     };
 
-    /*(@@ $iter: ident, ($delegate:path, $df: ident) [$($crap:tt)*] $field_name: ident($($data: tt)*), $($tokens:tt)*) => {
-        parser!(@@ iter, ($delegate, $df) [$field_name($($data)*), $($crap)*] $($tokens)*)
-    };
-
-    (@@ $iter: ident, ($delegate: path, $delegate_field: ident) [$($field_name: ident($($tokens:tt)*),)*]) => {{
-        $(
-            let mut $field_name = None;
-        )*
-
-        let closure = |idx: &'a str, value: &'a str| -> Result<(), ValueError<'a>> {
-            match idx {
-                $(
-                    __index!($($tokens)*) => $field_name = Some(__parsing!(@ value, $($tokens)*)),
-                )*
-            }
-        }
-
-        Ok(Self {
-            $delegate_field: $delegate($iter, closure),
-            $(
-                $field_name: __unwrap!($field_name($($tokens)*)),
-            )*
-        })
-    }};
-
-    (@ $iter: ident [$($fn: ident($($ts:tt)*)),*] $field_name: ident(delegate = $delegation: path), $($tokens:tt)*) => {
-        parser!(@@ $iter, ($delegation, $field_name) [$($fn($($ts)*),)*] $($tokens)*)
-    };*/
     (@ $struct_name: ty [$($crap:tt)*] [] [$($crap3:tt)*] [$field_name: ident(custom $($data: tt)*), $($tokens:tt)*] [$($rest:tt)*]) => {
         parser!(@ $struct_name [$($crap)*] [] [$($crap3)*, $field_name(custom $($data)*)] [$($tokens)*] [$($rest)*]);
+    };
+
+    (@ $struct_name: ty [$($crap:tt)*] [] [$($crap3:tt)*] [$field_name: ident(delegate), $($tokens:tt)*] [$($rest:tt)*]) => {
+        parser!(@@ $struct_name, $field_name [$($crap)*] [] [$($crap3)*] [$($tokens)*] [$($rest)*]);
     };
 
     (@ $struct_name: ty [$($crap:tt)*] [] [$($crap3:tt)*] [$field_name: ident($($data: tt)*), $($tokens:tt)*] [$($rest:tt)*]) => {
@@ -168,27 +144,73 @@ macro_rules! parser {
         }
     };
 
-    /*(@ $iter: ident [$($crap:tt)*] $field_name: ident($($data: tt)*), $($tokens:tt)*) => {
-        parser!(@ $iter [$field_name($($data)*), $($crap)*] $($tokens)*)
+    (@@ $struct_name: ty, $delegated: ident [$($crap:tt)*] [] [$($crap3:tt)*] [$field_name: ident(custom $($data: tt)*), $($tokens:tt)*] [$($rest:tt)*]) => {
+        parser!(@@ $struct_name, $delegated [$($crap)*] [] [$($crap3)*, $field_name(custom $($data)*)] [$($tokens)*] [$($rest)*]);
     };
 
-    (@ $iter: ident [$($field_name: ident($($tokens:tt)*),)*]) => {{
-        $(
-            let mut $field_name = None;
-        )*
+    (@@ $struct_name: ty, $delegated: ident [$($crap:tt)*] [] [$($crap3:tt)*] [$field_name: ident($($data: tt)*), $($tokens:tt)*] [$($rest:tt)*]) => {
+        parser!(@@ $struct_name, $delegated [$($crap)*, $field_name($($data)*)] [] [$($crap3)*] [$($tokens)*] [$($rest)*]);
+    };
 
-        for (idx, value) in $iter {
-            match idx {
+    (@@ $struct_name: ty, $delegated: ident [$($crap:tt)*] [$($crap2:tt)*] [$($crap3:tt)*] [] [$field_name: ident($($data: tt)*), $($rest:tt)*]) => {
+        parser!(@@ $struct_name, $delegated [$($crap)*] [$($crap2)*, $field_name($($data)*)] [$($crap3)*] [] [$($rest)*]);
+    };
+
+    (@@ $struct_name: ty, $delegated: ident
+        [$(, $field_name: ident($($tokens:tt)*))*]
+        [$(, $helper_field: ident($($tokens2:tt)*))*]
+        [$(, $custom_field: ident(custom = $func: path, depends_on = [$($field: expr),*]))*]
+        [] []
+    ) => {
+        impl Parse for $struct_name {
+            #[inline]
+            fn parse<'a, I, F>(iter: SelfZip<I>, mut f: F) -> Result<Self, ValueError<'a>>
+            where
+                I: Iterator<Item = &'a str>,
+                F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
+            {
                 $(
-                    __index!($($tokens)*) => $field_name = Some(__parsing!(@ value, $($tokens)*)),
+                    let mut $field_name = None;
                 )*
+
+                $(
+                    let mut $helper_field = None;
+                )*
+
+                let closure = |idx: &'a str, value: &'a str| -> Result<(), ValueError<'a>> {
+                    match idx {
+                        $(
+                            __index!($($tokens)*) => $field_name = Some(__parsing!(@ value, $($tokens)*)),
+                        )*
+                        $(
+                            __index!($($tokens2)*) => $helper_field = Some(__parsing!(@ value, $($tokens2)*)),
+                        )*
+                        _ => f(idx, value)?
+                    }
+
+                    Ok(())
+                };
+
+                let $delegated = Parse::parse(iter, closure)?;
+
+                $(
+                    let $field_name = __unwrap!($field_name($($tokens)*));
+                )*
+
+                $(
+                    let $helper_field = __unwrap!($helper_field($($tokens2)*));
+                )*
+
+                Ok(Self {
+                    $delegated,
+                    $(
+                        $field_name,
+                    )*
+                    $(
+                        $custom_field: $func($($field,)*),
+                    )*
+                })
             }
         }
-
-        Ok(Self {
-            $(
-                $field_name: __unwrap!($field_name($($tokens)*)),
-            )*
-        })
-    }}*/
+    };
 }
