@@ -1,14 +1,8 @@
 //! Module containing all models releated to Songs
 
-use convert;
-use error::ValueError;
-use model::{de, raw::RawObject};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Error, Formatter},
-};
+use std::fmt::{Display, Error, Formatter};
 
 pub const SERVER_SIDED_DATA_INCONSISTENCY_ERROR: NewgroundsSong = NewgroundsSong {
     song_id: 0,
@@ -47,55 +41,46 @@ pub struct MainSong {
 ///
 /// ### Unused indices:
 /// The following indices aren't used by the Geometry Dash servers: `9`
-#[derive(Debug, FromRawObject, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
 pub struct NewgroundsSong {
     /// The newgrounds id of this [`NewgroundsSong`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `1`
-    #[raw_data(index = 1)]
     pub song_id: u64,
 
     /// The name of this [`NewgroundsSong`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `2`
-    #[raw_data(index = 2)]
     pub name: String,
 
-    #[raw_data(index = 3, default)]
     pub index_3: u64,
 
     /// The artist of this [`NewgroundsSong`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `4`
-    #[raw_data(index = 4, default)]
     pub artist: String,
 
     /// The filesize of this [`NewgroundsSong`], in megabytes
     ///
     /// ## GD Internals:
     /// This value is provided at index `5`
-    #[raw_data(index = 5)]
     pub filesize: f64,
 
-    #[raw_data(index = 6, deserialize_with = "de::into_option", default)]
     pub index_6: Option<String>,
 
     // Index 6 has unknown usage
-    #[raw_data(index = 7, deserialize_with = "de::into_option", default)]
     pub index_7: Option<String>,
 
-    #[raw_data(index = 8)]
     pub index_8: String,
 
     /// The direct `audio.ngfiles.com` download link for this [`NewgroundsSong`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `10`, and is percent encoded.
-    #[raw_data(index = 10, deserialize_with = "convert::to::decoded_url")]
     pub link: String,
 }
 
@@ -139,7 +124,6 @@ pub const MAIN_SONGS: [MainSong; 21] = [
 ///
 /// When resolving a main song by its ID, but you pass a wrong ID, or
 /// GDCF hasn't updated to include the new song yet, you will receive this object
-#[allow(missing_debug_implementations)]
 pub const UNKNOWN: MainSong = MainSong::new(
     0xFF,
     "The song was added after the release of GDCF you're using",

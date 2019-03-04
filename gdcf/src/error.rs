@@ -2,13 +2,21 @@
 
 use failure::Fail;
 
-#[derive(Debug, Fail)]
-pub enum ValueError {
-    #[fail(display = "No value provided at index {}", _0)]
+#[derive(Debug)]
+pub enum ValueError<'a> {
     NoValue(usize),
+    Parse(usize, &'a str, Box<dyn Fail>),
+}
 
-    #[fail(display = "The value '{}' at index {} could not be parsed: {}", _1, _0, _2)]
-    Parse(usize, String, #[cause] Box<dyn Fail>),
+impl std::error::Error for ValueError<'_> {}
+
+impl std::fmt::Display for ValueError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ValueError::NoValue(idx) => write!(f, "No value provided at index {}", idx),
+            ValueError::Parse(idx, value, cause) => write!(f, "The value '{}' at index {} could not be parsed: {}", value, idx, cause),
+        }
+    }
 }
 
 /// Type for errors that occur during cache access
@@ -49,8 +57,11 @@ pub enum ApiError<E: Fail> {
     ///
     /// This variant is only intended to be used while constructing data from
     /// [RawObject](model/structs.RawObject.html)s
-    #[fail(display = "Processing the response data failed: {}", _0)]
-    MalformedData(#[cause] ValueError),
+    #[fail(display = "Processing the response data failed at index {}: {}", _0, _1)]
+    MalformedData(usize, #[cause] Box<dyn Fail>),
+
+    #[fail(display = "Required data at index {} missing", _0)]
+    MissingData(usize),
 
     /// An error caused by the underlying api client implementation occured
     #[fail(display = "An API client specific error occurate: {}", _0)]
@@ -69,18 +80,6 @@ pub enum GdcfError<A: Fail, C: Fail> {
     NoContent,
 }
 
-impl<E: Fail> From<ValueError> for ApiError<E> {
-    fn from(inner: ValueError) -> Self {
-        ApiError::MalformedData(inner)
-    }
-}
-
-impl<A: Fail, C: Fail> From<ValueError> for GdcfError<A, C> {
-    fn from(inner: ValueError) -> Self {
-        GdcfError::Api(inner.into())
-    }
-}
-
 impl<A: Fail, C: Fail> From<ApiError<A>> for GdcfError<A, C> {
     fn from(inner: ApiError<A>) -> Self {
         GdcfError::Api(inner)
@@ -90,5 +89,20 @@ impl<A: Fail, C: Fail> From<ApiError<A>> for GdcfError<A, C> {
 impl<A: Fail, C: Fail> From<CacheError<C>> for GdcfError<A, C> {
     fn from(inner: CacheError<C>) -> Self {
         GdcfError::Cache(inner)
+    }
+}
+
+impl<'a, F: Fail> From<ValueError<'a>> for ApiError<F> {
+    fn from(inner: ValueError) -> Self {
+        match inner {
+            ValueError::NoValue(idx) => ApiError::MissingData(idx),
+            ValueError::Parse(idx, _, err) => ApiError::MalformedData(idx, err),
+        }
+    }
+}
+
+impl<'a, A: Fail, C: Fail> From<ValueError<'a>> for GdcfError<A, C> {
+    fn from(inner: ValueError) -> Self {
+        GdcfError::Api(inner.into())
     }
 }

@@ -109,8 +109,6 @@
 extern crate base64;
 pub extern crate chrono;
 extern crate futures;
-#[macro_use]
-extern crate gdcf_derive;
 extern crate joinery;
 #[macro_use]
 extern crate log;
@@ -121,7 +119,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate failure;
-extern crate flate2;
 
 use api::{
     request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},

@@ -1,9 +1,38 @@
 use crate::{
-    error::ValueError,
-    util::{default_to_none, int_to_bool, parse_description, process_difficulty, process_song, SelfZip},
+    util::{default_to_none, int_to_bool, SelfZip},
     Parse,
 };
-use gdcf::model::{Level, PartialLevel};
+use gdcf::{
+    error::ValueError,
+    model::{
+        song::{MainSong, MAIN_SONGS, UNKNOWN},
+        Level, LevelRating, PartialLevel,
+    },
+};
+
+pub fn process_difficulty(rating: i32, is_auto: bool, is_demon: bool) -> LevelRating {
+    if is_demon {
+        LevelRating::Demon(rating.into())
+    } else if is_auto {
+        LevelRating::Auto
+    } else {
+        rating.into()
+    }
+}
+
+pub fn process_song(main_song: usize, custom_song: &Option<u64>) -> Option<&'static MainSong> {
+    if custom_song.is_none() {
+        Some(MAIN_SONGS.get(main_song).unwrap_or(&UNKNOWN))
+    } else {
+        None
+    }
+}
+
+pub fn parse_description(value: &str) -> Option<String> {
+    // I have decided that level descriptions are so broken that we simply ignore it if they fail to
+    // parase
+    gdcf::convert::to::b64_decoded_string(value).ok()
+}
 
 parser! {
     PartialLevel<u64, u64> => {

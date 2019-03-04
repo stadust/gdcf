@@ -13,3 +13,6 @@ tokio-retry = "^0.2.0"
 
 [dependencies.gdcf]
 path = "../gdcf"
+
+[dependencies.gdcf_parse]
+path = "../gdcf_parse"

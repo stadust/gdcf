@@ -1,20 +1,18 @@
-/*#![feature(trace_macros)]
+//! Crate containing parsers for various Geometry Dash related data
+//!
+//! This crate is based on work by mgostIH and cos8o
 
-trace_macros!(true);*/
-
-use crate::{
-    error::ValueError,
-    util::{SelfZip, SelfZipExt},
-};
+use crate::util::{SelfZip, SelfZipExt};
 use flate2::read::GzDecoder;
-use gdcf::model::level::Level;
+use gdcf::{error::ValueError, model::level::Level};
 use std::{error::Error, io::Read, str::FromStr};
 
-pub mod error;
 pub mod util;
 #[macro_use]
 pub mod macros;
 pub mod level;
+pub mod song;
+pub mod user;
 
 #[derive(Debug)]
 pub struct LevelData(String);
@@ -98,21 +96,32 @@ fn parse_object(object: &str) -> Result<LevelObject, Box<dyn Error>> {
     })
 }
 
+const INDICES: [&str; 50] = [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",
+    "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46",
+    "47", "48", "49", "50",
+];
+
 pub trait Parse: Sized {
-    fn parse<'a, I, F>(iter: SelfZip<I>, f: F) -> Result<Self, ValueError<'a>>
+    fn parse<'a, I, F>(iter: I, f: F) -> Result<Self, ValueError<'a>>
     where
-        I: Iterator<Item = &'a str>,
+        I: Iterator<Item = (&'a str, &'a str)>,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
 
     fn parse_iter<'a>(iter: impl Iterator<Item = &'a str>) -> Result<Self, ValueError<'a>> {
         Self::parse(iter.self_zip(), |_, _| Ok(()))
     }
+
+    fn parse_unindexed<'a>(iter: impl Iterator<Item = &'a str>) -> Result<Self, ValueError<'a>> {
+        // well this is a stupid solution
+        Self::parse(INDICES.into_iter().cloned().zip(iter), |_, _| Ok(()))
+    }
 }
 
-pub fn parse<'a, T>(idx: usize, value: &'a str) -> Result<Option<T>, ValueError<'a>>
+pub fn parse<T>(idx: usize, value: &str) -> Result<Option<T>, ValueError>
 where
     T: FromStr,
-    T::Err: Error + 'static,
+    T::Err: Error + Send + Sync + 'static,
 {
     if value == "" {
         return Ok(None)

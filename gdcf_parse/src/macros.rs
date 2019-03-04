@@ -102,9 +102,9 @@ macro_rules! parser {
     ) => {
         impl Parse for $struct_name {
             #[inline]
-            fn parse<'a, I, F>(iter: SelfZip<I>, mut f: F) -> Result<Self, ValueError<'a>>
+            fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
-                I: Iterator<Item = &'a str>,
+                I: Iterator<Item = (&'a str, &'a str)>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::parse;
@@ -169,9 +169,9 @@ macro_rules! parser {
     ) => {
         impl Parse for $struct_name {
             #[inline]
-            fn parse<'a, I, F>(iter: SelfZip<I>, mut f: F) -> Result<Self, ValueError<'a>>
+            fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
-                I: Iterator<Item = &'a str>,
+                I: Iterator<Item = (&'a str, &'a str)>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::parse;

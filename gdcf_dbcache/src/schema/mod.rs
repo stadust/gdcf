@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 #[cfg(feature = "pg")]
 use core::backend::pg::Pg;
 #[cfg(feature = "sqlite")]

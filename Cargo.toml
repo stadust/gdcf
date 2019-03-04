@@ -3,7 +3,6 @@ members = [
     "gdcf",
     "gdrs",
     "gdcf_dbcache",
-    "gdcf_derive",
     "gdcf_parse",
     "pm_gdcf_dbcache"
 ]

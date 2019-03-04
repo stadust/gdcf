@@ -21,6 +21,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_urlencoded;
 extern crate tokio_retry;
+extern crate gdcf_parse;
 
 use futures::{future::Executor, Future, Stream};
 use gdcf::{

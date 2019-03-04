@@ -20,9 +20,7 @@ pub use self::{
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{self, Display, Formatter};
 
-mod de;
 pub mod level;
-pub mod raw;
 pub mod song;
 pub mod user;
 

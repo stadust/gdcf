@@ -1,17 +1,9 @@
 //! Module containing all models related to Geometry Dash levels
 
-use convert;
-use error::ValueError;
-use flate2::read::GzDecoder;
-use model::{de, raw::RawObject, GameVersion, MainSong};
+use model::{GameVersion, MainSong};
 #[cfg(feature = "deser")]
 use serde::{Deserialize, Serialize, Serializer};
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Error, Formatter},
-    io::Read,
-    num::ParseFloatError,
-};
+use std::fmt::{Display, Error, Formatter};
 
 /// Enum representing the possible level lengths known to GDCF
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -237,8 +229,8 @@ pub enum Password {
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
 #[cfg_attr(feature = "deser", derive(Serialize))] // TODO: a Deserialize impl will have to be custom-written due to the &'static MainSong reference
-#[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
-pub struct PartialLevel<#[raw_type("u64")] Song, #[raw_type("u64")] User>
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct PartialLevel<Song, User>
 // FIXME: the raw_type attribute breaks serde for some reason. Find an alternative
 where
     Song: PartialEq,
@@ -248,14 +240,12 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `1`.
-    #[raw_data(index = 1)]
     pub level_id: u64,
 
     /// The [`Level`]'s name
     ///
     /// ## GD Internals:
     /// This value is provided at index `2`.
-    #[raw_data(index = 2)]
     pub name: String,
 
     /// The [`Level`]'s description. Is [`None`] if the creator didn't put any
@@ -263,7 +253,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `3` and encoded using urlsafe base 64.
-    #[raw_data(index = 3, deserialize_with = "de::description", default)]
     pub description: Option<String>,
 
     /// The [`PartialLevel`]'s version. The version get incremented every time
@@ -271,14 +260,12 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `5`.
-    #[raw_data(index = 5)]
     pub version: u32,
 
     /// The ID of the [`Level`]'s creator
     ///
     /// ## GD Internals:
     /// This value is provided at index `6`.
-    #[raw_data(index = 6)]
     pub creator: User,
 
     /// The difficulty of this [`PartialLevel`]
@@ -291,14 +278,12 @@ where
     ///
     /// If index 25 is set to true, the level is an auto level and the value at
     /// index 9 is some nonsense, in which case it is ignored.
-    #[raw_data(custom = "de::level_rating")]
     pub difficulty: LevelRating,
 
     /// The amount of downloads
     ///
     /// ## GD Internals:
     /// This value is provided at index `10`
-    #[raw_data(index = 10)]
     pub downloads: u32,
 
     /// The [`MainSong`] the level uses, if any.
@@ -309,21 +294,18 @@ where
     /// without that information, a value of `0` for
     /// this field could either mean the level uses `Stereo Madness` or no
     /// main song.
-    #[raw_data(custom = "de::main_song")]
     pub main_song: Option<&'static MainSong>,
 
     /// The gd version the request was uploaded/last updated in.
     ///
     /// ## GD Internals:
     /// This value is provided at index `13`
-    #[raw_data(index = 13)]
     pub gd_version: GameVersion,
 
     /// The amount of likes this [`PartialLevel`] has received
     ///
     /// ## GD Internals:
     /// This value is provided at index `14`
-    #[raw_data(index = 14)]
     pub likes: i32,
 
     /// The length of this [`PartialLevel`]
@@ -331,21 +313,18 @@ where
     /// ## GD Internals:
     /// This value is provided as an integer representation of the
     /// [`LevelLength`] struct at index `15`
-    #[raw_data(index = 15)]
     pub length: LevelLength,
 
     /// The amount of stars completion of this [`PartialLevel`] awards
     ///
     /// ## GD Internals:
     /// This value is provided at index `18`
-    #[raw_data(index = 18)]
     pub stars: u8,
 
     /// This [`PartialLevel`]s featured state
     ///
     /// ## GD Internals:
     /// This value is provided at index `19`
-    #[raw_data(index = 19)]
     pub featured: Featured,
 
     /// The ID of the level this [`PartialLevel`] is a copy of, or [`None`], if
@@ -353,7 +332,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `30`
-    #[raw_data(index = 30, deserialize_with = "de::default_to_none")]
     pub copy_of: Option<u64>,
 
     /// The id of the newgrounds song this [`PartialLevel`] uses, or [`None`]
@@ -362,14 +340,12 @@ where
     /// ## GD Internals:
     /// This value is provided at index `35`, and a value of `0` means, that no
     /// custom song is used.
-    #[raw_data(index = 35, deserialize_with = "de::default_to_none")]
     pub custom_song: Option<Song>,
 
     /// The amount of coints in this [`PartialLevel`]
     ///
     /// ## GD Internals:
     /// This value is provided at index `37`
-    #[raw_data(index = 37)]
     pub coin_amount: u8,
 
     /// Value indicating whether the user coins (if present) in this
@@ -377,7 +353,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `38`, as an integer
-    #[raw_data(index = 38, deserialize_with = "de::int_to_bool")]
     pub coins_verified: bool,
 
     /// The amount of stars the level creator has requested when uploading this
@@ -386,14 +361,12 @@ where
     /// ## GD Internals:
     /// This value is provided at index `39`, and a value of `0` means no stars
     /// were requested
-    #[raw_data(index = 39, deserialize_with = "de::default_to_none")]
     pub stars_requested: Option<u8>,
 
     /// Value indicating whether this [`PartialLevel`] is epic
     ///
     /// ## GD Internals:
     /// This value is provided at index `42`, as an integer
-    #[raw_data(index = 42, deserialize_with = "de::int_to_bool")]
     pub is_epic: bool,
 
     // TODO: figure this value out
@@ -402,7 +375,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `43` and seems to be an integer
-    #[raw_data(index = 43)]
     pub index_43: String,
 
     /// The amount of objects in this [`PartialLevel`]
@@ -410,7 +382,6 @@ where
     /// ## GD Internals:
     /// This value is provided at index `45`, although only for levels uploaded
     /// in version 2.1 or later. For all older levels this is always `0`
-    #[raw_data(index = 45)]
     pub object_amount: u32,
 
     /// According to the GDPS source this is always `1`, although that is
@@ -418,7 +389,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `46` and seems to be an integer
-    #[raw_data(index = 46, default)]
     pub index_46: String,
 
     /// According to the GDPS source, this is always `2`, although that is
@@ -426,7 +396,6 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `47` and seems to be an integer
-    #[raw_data(index = 47, default)]
     pub index_47: String,
 }
 
@@ -441,25 +410,25 @@ where
 /// The following indices aren't used by the Geometry Dash servers: `11`, `16`,
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
-#[derive(Debug, FromRawObject, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "deser", derive(Serialize))]
-pub struct Level<#[raw_type("u64")] Song, #[raw_type("u64")] User>
+pub struct Level<Song, User>
 where
     Song: PartialEq,
     User: PartialEq,
 {
     /// The [`PartialLevel`] this [`Level`] instance supplements
-    #[raw_data(flatten)]
     pub base: PartialLevel<Song, User>,
 
     /// The raw level data. Note that GDCF performs the base64 decoding, though
     /// not the `DEFLATE` decompression, since he compressed version of
     /// the level data requires the least amount of space.
     ///
+    /// Use the ['gdcf_parse`] crate if you want to process this data.
+    ///
     /// ## GD Internals:
     /// This value is provided at index `4`, and is urlsafe base64 encoded and
     /// `DEFLATE` compressed
-    #[raw_data(index = 4, deserialize_with = "convert::to::b64_decoded_bytes")]
     pub level_data: Vec<u8>,
 
     /// The level's password
@@ -471,69 +440,22 @@ where
     /// using robtop's XOR routine using key `26364`. If the "decrypted"
     /// value is `"1"`, the level is free to
     /// copy. Otherwise the decrypted value is the level password.
-    #[raw_data(index = 27, deserialize_with = "convert::to::level_password")]
     pub password: Password,
 
     /// The time passed since the `Level` was uploaded
     ///
     /// ## GD Internals:
     /// This value is provided at index `28`
-    #[raw_data(index = 28)]
     pub time_since_upload: String,
 
     /// The time passed since this [`Level`] was last updated
     ///
     /// ## GD Internals:
     /// This value is provided at index `29`
-    #[raw_data(index = 29)]
     pub time_since_update: String,
 
     /// According to the GDPS source, this is a value called `extraString`
-    #[raw_data(index = 36, default)]
     pub index_36: String,
-}
-
-// The following code has been contributed by cos8o! Thank you!
-
-#[derive(Debug)]
-pub struct LevelData(String);
-
-impl<S: PartialEq, U: PartialEq> Level<S, U> {
-    pub fn decompress_data(&self) -> std::io::Result<LevelData> {
-        let mut s = String::new();
-        let mut d = GzDecoder::new(&self.level_data[..]);
-
-        d.read_to_string(&mut s)?;
-
-        Ok(LevelData(s))
-    }
-}
-
-impl LevelData {
-    pub fn objects(&self) -> Vec<&str> {
-        self.0.split(';').skip(1).collect()
-    }
-
-    pub fn object_count(&self) -> usize {
-        self.objects().len()
-    }
-
-    pub fn furthest_object_x(&self) -> f32 {
-        self.objects().iter().filter_map(|&s| object_x(s).ok()).fold(0.0, f32::max)
-    }
-}
-
-fn object_x(object: &str) -> Result<f32, ParseFloatError> {
-    let mut iter = object.split(',');
-
-    match iter.position(|v| v == "2") {
-        Some(idx) if idx % 2 == 0 =>
-            match iter.next() {
-                Some(v) => v.parse(),
-                None => Ok(0.0),
-            },
-        _ => Ok(0.0),
-    }
 }
 
 impl<Song, User> Display for PartialLevel<Song, User>
