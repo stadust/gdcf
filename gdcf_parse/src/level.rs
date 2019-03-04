@@ -1,6 +1,5 @@
 use crate::{
     error::ValueError,
-    parse,
     util::{default_to_none, int_to_bool, parse_description, process_difficulty, process_song, SelfZip},
     Parse,
 };
@@ -34,8 +33,8 @@ parser! {
     },
     main_song_id(index = 12, default),
     rating(index = 9),
-    is_demon(index = 17, with = int_to_bool),
-    is_auto(index = 25, with = int_to_bool),
+    is_demon(index = 17, with = int_to_bool, default),
+    is_auto(index = 25, with = int_to_bool, default),
 }
 
 parser! {

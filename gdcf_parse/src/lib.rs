@@ -8,7 +8,7 @@ use crate::{
 };
 use flate2::read::GzDecoder;
 use gdcf::model::level::Level;
-use std::{error::Error, io::Read, num::ParseFloatError, str::FromStr};
+use std::{error::Error, io::Read, str::FromStr};
 
 pub mod error;
 pub mod util;
@@ -104,22 +104,22 @@ pub trait Parse: Sized {
         I: Iterator<Item = &'a str>,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
 
-    fn parse_iter<'a, I>(iter: SelfZip<I>) -> Result<Self, ValueError<'a>>
-    where
-        I: Iterator<Item = &'a str>,
-    {
-        Self::parse(iter, |_, _| Ok(()))
+    fn parse_iter<'a>(iter: impl Iterator<Item = &'a str>) -> Result<Self, ValueError<'a>> {
+        Self::parse(iter.self_zip(), |_, _| Ok(()))
     }
 }
 
-pub fn parse<'a, T>(idx: usize, value: &'a str) -> Result<T, ValueError<'a>>
+pub fn parse<'a, T>(idx: usize, value: &'a str) -> Result<Option<T>, ValueError<'a>>
 where
     T: FromStr,
     T::Err: Error + 'static,
 {
     if value == "" {
-        return Err(ValueError::NoValue(idx))
+        return Ok(None)
     }
 
-    value.parse().map_err(|error| ValueError::Parse(idx, value, Box::new(error)))
+    value
+        .parse()
+        .map(Some)
+        .map_err(|error| ValueError::Parse(idx, value, Box::new(error)))
 }

@@ -1,4 +1,4 @@
-use std::{error::Error, str::FromStr};
+use std::error::Error;
 
 #[derive(Debug)]
 pub enum ValueError<'a> {

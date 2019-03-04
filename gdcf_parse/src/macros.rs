@@ -2,30 +2,30 @@ macro_rules! __parsing {
     (@ $value: expr, index = $idx: expr, parse = $func: path) => {
         match $func($value) {
             Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
-            Ok(v) => v,
+            Ok(v) => Some(v),
         }
     };
     (@ $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {
         match $func($value) {
             Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
-            Ok(v) => v,
+            Ok(v) => Some(v),
         }
     };
 
     (@ $value: expr, index = $idx: expr, with = $func: path) => {
-        $func(parse($idx, $value)?)
+        parse($idx, $value)?.map($func)
     };
 
     (@ $value: expr, index = $idx: expr, with = $func: path, $($also_tokens:tt)*) => {
-        $func(parse($idx, $value)?)
+        parse($idx, $value)?.map($func)
     };
 
     (@ $value: expr, index = $idx: expr, parse_infallible = $func: path) => {
-        $func($value)
+        Some($func($value))
     };
 
     (@ $value: expr, index = $idx: expr, parse_infallible = $func: path, $($also_tokens:tt)*) => {
-        $func($value)
+        Some($func($value))
     };
 
     (@ $value: expr, index = $idx: expr, $($also_tokens:tt)*) => {
@@ -60,14 +60,17 @@ macro_rules! __unwrap {
         $field_name.unwrap_or_self($default_func)
     };
 
-    // FIXME: this
-    ($field_name: ident(index = $idx: expr, $thing: ident = $a: expr, $($crap:tt)*)) => {
-        __unwrap!($field_name(index = $idx, $($crap)*))
+    ($field_name: ident(index = $idx: expr, with = $p: path $(, $($crap:tt)*)?)) => {
+        __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident(index = $idx: expr, $($crap:tt)*)) => {
-        $field_name.ok_or(ValueError::NoValue($idx))?
-    }
+    ($field_name: ident(index = $idx: expr, parse_infallible = $p: path $(, $($crap:tt)*)?)) => {
+        __unwrap!($field_name(index = $idx $(, $($crap)*)?))
+    };
+
+    ($field_name: ident(index = $idx: expr, parse = $p: path $(, $($crap:tt)*)?)) => {
+        __unwrap!($field_name(index = $idx $(, $($crap)*)?))
+    };
 }
 
 macro_rules! parser {
@@ -104,6 +107,8 @@ macro_rules! parser {
                 I: Iterator<Item = &'a str>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
+                use $crate::parse;
+
                 $(
                     let mut $field_name = None;
                 )*
@@ -115,10 +120,10 @@ macro_rules! parser {
                 for (idx, value) in iter {
                     match idx {
                         $(
-                            __index!($($tokens)*) => $field_name = Some(__parsing!(@ value, $($tokens)*)),
+                            __index!($($tokens)*) => $field_name = __parsing!(@ value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => $helper_field = Some(__parsing!(@ value, $($tokens2)*)),
+                            __index!($($tokens2)*) => $helper_field = __parsing!(@ value, $($tokens2)*),
                         )*
                         _ => f(idx, value)?
                     }
@@ -169,6 +174,8 @@ macro_rules! parser {
                 I: Iterator<Item = &'a str>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
+                use $crate::parse;
+
                 $(
                     let mut $field_name = None;
                 )*
@@ -180,10 +187,10 @@ macro_rules! parser {
                 let closure = |idx: &'a str, value: &'a str| -> Result<(), ValueError<'a>> {
                     match idx {
                         $(
-                            __index!($($tokens)*) => $field_name = Some(__parsing!(@ value, $($tokens)*)),
+                            __index!($($tokens)*) => $field_name = __parsing!(@ value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => $helper_field = Some(__parsing!(@ value, $($tokens2)*)),
+                            __index!($($tokens2)*) => $helper_field = __parsing!(@ value, $($tokens2)*),
                         )*
                         _ => f(idx, value)?
                     }
