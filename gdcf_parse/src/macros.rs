@@ -107,7 +107,7 @@ macro_rules! parser {
                 I: Iterator<Item = (&'a str, &'a str)>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
-                use $crate::parse;
+                use $crate::util::parse;
 
                 $(
                     let mut $field_name = None;
@@ -174,7 +174,7 @@ macro_rules! parser {
                 I: Iterator<Item = (&'a str, &'a str)>,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
-                use $crate::parse;
+                use $crate::util::parse;
 
                 $(
                     let mut $field_name = None;

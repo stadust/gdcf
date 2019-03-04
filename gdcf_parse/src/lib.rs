@@ -2,10 +2,10 @@
 //!
 //! This crate is based on work by mgostIH and cos8o
 
-use crate::util::{SelfZip, SelfZipExt};
+use crate::util::SelfZipExt;
 use flate2::read::GzDecoder;
 use gdcf::{error::ValueError, model::level::Level};
-use std::{error::Error, io::Read, str::FromStr};
+use std::{error::Error, io::Read};
 
 pub mod util;
 #[macro_use]
@@ -116,19 +116,4 @@ pub trait Parse: Sized {
         // well this is a stupid solution
         Self::parse(INDICES.into_iter().cloned().zip(iter), |_, _| Ok(()))
     }
-}
-
-pub fn parse<T>(idx: usize, value: &str) -> Result<Option<T>, ValueError>
-where
-    T: FromStr,
-    T::Err: Error + Send + Sync + 'static,
-{
-    if value == "" {
-        return Ok(None)
-    }
-
-    value
-        .parse()
-        .map(Some)
-        .map_err(|error| ValueError::Parse(idx, value, Box::new(error)))
 }

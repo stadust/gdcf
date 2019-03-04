@@ -1,6 +1,10 @@
 use base64::{DecodeError, URL_SAFE};
+use gdcf::error::ValueError;
 use percent_encoding::percent_decode;
-use std::str::{FromStr, Utf8Error};
+use std::{
+    error::Error,
+    str::{FromStr, Utf8Error},
+};
 
 pub struct SelfZip<I> {
     iter: I,
@@ -92,4 +96,19 @@ pub fn xor_decrypt(encrypted: &str, key: &str) -> String {
         .zip(key.bytes().cycle())
         .map(|(enc_byte, key_byte)| (enc_byte ^ key_byte) as char)
         .collect()
+}
+
+pub fn parse<T>(idx: usize, value: &str) -> Result<Option<T>, ValueError>
+where
+    T: FromStr,
+    T::Err: Error + Send + Sync + 'static,
+{
+    if value == "" {
+        return Ok(None)
+    }
+
+    value
+        .parse()
+        .map(Some)
+        .map_err(|error| ValueError::Parse(idx, value, Box::new(error)))
 }
