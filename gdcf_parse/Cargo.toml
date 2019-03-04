@@ -1,0 +1,11 @@
+[package]
+name = "gdcf_parse"
+version = "0.1.0"
+authors = ["stadust <43299462+stadust@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+flate2 = "1.0.6"
+
+[dependencies.gdcf]
+path = "../gdcf"

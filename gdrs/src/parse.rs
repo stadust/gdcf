@@ -79,18 +79,13 @@ where
     P: Pattern<'a>,
     A: TryFrom<RawObject, Error = ValueError> + Into<GDObject>,
 {
-    let mut iter = fragment.split(seperator);
+    let mut iter = fragment.split(seperator).robtop_zip();
     let mut raw_obj = RawObject::new();
 
-    while let Some(idx) = iter.next() {
+    while let Some((idx, value)) = iter.next() {
         let idx = match idx.parse() {
             Err(_) => return Err(ApiError::UnexpectedFormat),
             Ok(idx) => idx,
-        };
-
-        let value = match iter.next() {
-            Some(value) => value,
-            None => return Err(ApiError::UnexpectedFormat),
         };
 
         raw_obj.set(idx, value.into());
@@ -100,3 +95,29 @@ where
 
     Ok(object.into())
 }
+
+struct RobtopZip<I> {
+    iter: I,
+}
+
+impl<I: Iterator> Iterator for RobtopZip<I> {
+    type Item = (I::Item, I::Item);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.iter.next(), self.iter.next()) {
+            (Some(a), Some(b)) => Some((a, b)),
+            _ => None,
+        }
+    }
+}
+
+trait RobtopIterExt: Iterator {
+    fn robtop_zip(self) -> RobtopZip<Self>
+    where
+        Self: Sized,
+    {
+        RobtopZip { iter: self }
+    }
+}
+
+impl<I> RobtopIterExt for I where I: Iterator {}

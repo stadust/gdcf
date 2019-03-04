@@ -139,7 +139,8 @@ impl Action for ApiRequestAction {
                     StatusCode::NOT_FOUND => Err(ApiError::NoData),
                     _ => Ok(resp),
                 }
-            }).and_then(move |resp| {
+            })
+            .and_then(move |resp| {
                 resp.into_body()
                     .concat2()
                     .map_err(ApiError::Custom)
@@ -152,7 +153,8 @@ impl Action for ApiRequestAction {
                             },
                             Err(_) => Err(ApiError::UnexpectedFormat),
                         }
-                    }).map_err(|err| {
+                    })
+                    .map_err(|err| {
                         error!("Error processing request: {}", err);
                         err
                     })
