@@ -1,7 +1,7 @@
 use crate::{
     error::ValueError,
     parse,
-    util::{default_to_none, int_to_bool, process_description, process_difficulty, process_song, SelfZip},
+    util::{default_to_none, int_to_bool, parse_description, process_difficulty, process_song, SelfZip},
     Parse,
 };
 use gdcf::model::PartialLevel;
@@ -10,7 +10,7 @@ parser! {
     PartialLevel<u64, u64> => {
         level_id(index = 1),
         name(index = 2),
-        description(index = 3, with2 = process_description, default),
+        description(index = 3, parse_infallible = parse_description, default),
         version(index = 5),
         creator(index = 6),
         difficulty(custom = process_difficulty, depends_on = [rating, is_auto, is_demon]),

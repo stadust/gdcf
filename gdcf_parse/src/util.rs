@@ -49,7 +49,7 @@ pub fn process_song(main_song: usize, custom_song: &Option<u64>) -> Option<&'sta
     }
 }
 
-pub fn process_description(value: &str) -> Option<String> {
+pub fn parse_description(value: &str) -> Option<String> {
     // I have decided that level descriptions are so broken that we simply ignore it if they fail to
     // parase
     gdcf::convert::to::b64_decoded_string(value).ok()

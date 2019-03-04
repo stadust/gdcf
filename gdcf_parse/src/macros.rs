@@ -20,11 +20,11 @@ macro_rules! __parsing {
         $func(parse($idx, $value)?)
     };
 
-    (@ $value: expr, index = $idx: expr, with2 = $func: path) => {
+    (@ $value: expr, index = $idx: expr, parse_infallible = $func: path) => {
         $func($value)
     };
 
-    (@ $value: expr, index = $idx: expr, with2 = $func: path, $($also_tokens:tt)*) => {
+    (@ $value: expr, index = $idx: expr, parse_infallible = $func: path, $($also_tokens:tt)*) => {
         $func($value)
     };
 
