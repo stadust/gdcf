@@ -134,26 +134,4 @@ where
     }
 }
 
-pub struct MapOks<I, F, B, T, E>
-where
-    I: Iterator<Item = Result<T, E>>,
-    F: FnMut(T) -> B,
-{
-    iter: I,
-    map: F,
-}
-
-impl<I, F, B, T, E> Iterator for MapOks
-where
-    I: Iterator<Item = Result<T, E>>,
-    F: FnMut(T) -> B,
-{
-    fn next(&mut self) -> Option<Result<B, E>> {
-        match self.iter.next() {
-            Some(result) => result.map(self.map),
-            None => None,
-        }
-    }
-}
-
 impl<T, E, I> Resulter for I where I: Iterator<Item = Result<T, E>> {}
