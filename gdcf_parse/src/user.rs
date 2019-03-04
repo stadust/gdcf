@@ -1,5 +1,5 @@
 use crate::{
-    util::{default_to_none, int_to_bool, SelfZip},
+    util::{default_to_none, int_to_bool},
     Parse,
 };
 use gdcf::{

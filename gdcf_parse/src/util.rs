@@ -6,6 +6,7 @@ use std::{
     str::{FromStr, Utf8Error},
 };
 
+#[derive(Debug, Clone)]
 pub struct SelfZip<I> {
     iter: I,
 }

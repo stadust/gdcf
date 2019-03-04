@@ -104,7 +104,7 @@ macro_rules! parser {
             #[inline]
             fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
-                I: Iterator<Item = (&'a str, &'a str)>,
+                I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
@@ -117,13 +117,17 @@ macro_rules! parser {
                     let mut $helper_field = None;
                 )*
 
-                for (idx, value) in iter {
+                for (idx, value) in iter.into_iter() {
                     match idx {
                         $(
                             __index!($($tokens)*) => $field_name = __parsing!(@ value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => $helper_field = __parsing!(@ value, $($tokens2)*),
+                            __index!($($tokens2)*) => {
+                                $helper_field = __parsing!(@ value, $($tokens2)*);
+
+                                f(idx, value)?
+                            },
                         )*
                         _ => f(idx, value)?
                     }
@@ -171,7 +175,7 @@ macro_rules! parser {
             #[inline]
             fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
-                I: Iterator<Item = (&'a str, &'a str)>,
+                I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
@@ -190,7 +194,11 @@ macro_rules! parser {
                             __index!($($tokens)*) => $field_name = __parsing!(@ value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => $helper_field = __parsing!(@ value, $($tokens2)*),
+                            __index!($($tokens2)*) => {
+                                $helper_field = __parsing!(@ value, $($tokens2)*);
+
+                                f(idx, value)?
+                            },
                         )*
                         _ => f(idx, value)?
                     }
