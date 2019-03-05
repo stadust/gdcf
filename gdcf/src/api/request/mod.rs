@@ -55,12 +55,12 @@ pub struct BaseRequest {
     ///
     /// ## GD Internals:
     /// Settings this field to an incorrect value will cause the request to fail
-    pub secret: String,
+    pub secret: &'static str,
 }
 
 impl BaseRequest {
     /// Constructs a new `BaseRequest` with the given values.
-    pub fn new(game_version: GameVersion, binary_version: GameVersion, secret: String) -> BaseRequest {
+    pub const fn new(game_version: GameVersion, binary_version: GameVersion, secret: &'static str) -> BaseRequest {
         BaseRequest {
             game_version,
             binary_version,
@@ -70,11 +70,11 @@ impl BaseRequest {
 
     /// Constructs a `BaseRequest` instance that has all its fields set to the
     /// same values a Geometry Dash 2.1 client would use
-    pub fn gd_21() -> BaseRequest {
+    pub const fn gd_21() -> BaseRequest {
         BaseRequest::new(
             GameVersion::Version { major: 2, minor: 1 },
             GameVersion::Version { major: 3, minor: 3 },
-            "Wmfd2893gb7".into(),
+            "Wmfd2893gb7",
         )
     }
 }

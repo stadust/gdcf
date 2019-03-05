@@ -167,7 +167,7 @@ impl Default for CompletionFilter {
 impl CompletionFilter {
     /// Constructs a [`CompletionFilter`] that'll restrict the search to the
     /// list of provided ids
-    pub fn completed(completed: Vec<u64>) -> CompletionFilter {
+    pub const fn completed(completed: Vec<u64>) -> CompletionFilter {
         CompletionFilter::List {
             ids: completed,
             include: true,
@@ -176,7 +176,7 @@ impl CompletionFilter {
 
     /// Constructs a [`CompletionFilter`] that'll exclude the list of given ids
     /// from the search
-    pub fn uncompleted(completed: Vec<u64>) -> CompletionFilter {
+    pub const fn uncompleted(completed: Vec<u64>) -> CompletionFilter {
         CompletionFilter::List {
             ids: completed,
             include: false,
@@ -289,7 +289,7 @@ pub enum LevelRequestType {
     /// This variant is represented by the value `2` in requests
     MostLiked,
 
-    /// Request to retrieve the list of trending levels
+    /// Request to retrieve the list of treI which I understood more aboutnding levels
     ///
     /// ## GD Internals:
     /// This variant is represented by the value `3` in requests
@@ -364,11 +364,20 @@ pub enum SongFilter {
 }
 
 impl SearchFilters {
-    pub fn new() -> SearchFilters {
-        SearchFilters::default()
+    pub const fn new() -> SearchFilters {
+        SearchFilters {
+            completion: CompletionFilter::None,
+            featured: false,
+            original: false,
+            two_player: false,
+            coins: false,
+            epic: false,
+            rated: false,
+            song: None,
+        }
     }
 
-    pub fn rated(mut self) -> SearchFilters {
+    pub const fn rated(mut self) -> SearchFilters {
         self.rated = true;
         self
     }
@@ -383,58 +392,58 @@ impl SearchFilters {
         self
     }
 
-    pub fn featured(mut self) -> SearchFilters {
+    pub const fn featured(mut self) -> SearchFilters {
         self.featured = true;
         self
     }
 
-    pub fn original(mut self) -> SearchFilters {
+    pub const fn original(mut self) -> SearchFilters {
         self.original = true;
         self
     }
 
-    pub fn two_player(mut self) -> SearchFilters {
+    pub const fn two_player(mut self) -> SearchFilters {
         self.two_player = true;
         self
     }
 
-    pub fn coins(mut self) -> SearchFilters {
+    pub const fn coins(mut self) -> SearchFilters {
         self.coins = true;
         self
     }
 
-    pub fn epic(mut self) -> SearchFilters {
+    pub const fn epic(mut self) -> SearchFilters {
         self.epic = true;
         self
     }
 
-    pub fn main_song(mut self, id: u8) -> SearchFilters {
+    pub const fn main_song(mut self, id: u8) -> SearchFilters {
         self.song = Some(SongFilter::Main(id));
         self
     }
 
-    pub fn custom_song(mut self, id: u64) -> SearchFilters {
+    pub const fn custom_song(mut self, id: u64) -> SearchFilters {
         self.song = Some(SongFilter::Custom(id));
         self
     }
 }
 
 impl LevelRequest {
-    setter! {
+    const_setter! {
         /// Sets the [`BaseRequest`] to be used
         ///
         /// Allows builder-style creation of requests
         base[with_base]: BaseRequest
     }
 
-    setter! {
+    const_setter! {
         /// Sets the value of the `inc` field
         ///
         /// Allows builder-style creation of requests
         inc: bool
     }
 
-    setter! {
+    const_setter! {
         /// Sets the value of the `extra` field
         ///
         /// Allows builder-style creation of requests
@@ -446,9 +455,9 @@ impl LevelRequest {
     /// Uses a default [`BaseRequest`], and sets the
     /// `inc` field to `true` and `extra` to `false`, as are the default
     /// values set the by the Geometry Dash Client
-    pub fn new(level_id: u64) -> LevelRequest {
+    pub const fn new(level_id: u64) -> LevelRequest {
         LevelRequest {
-            base: BaseRequest::default(),
+            base: BaseRequest::gd_21(),
             level_id,
             inc: true,
             extra: false,
@@ -457,15 +466,16 @@ impl LevelRequest {
 }
 
 impl LevelsRequest {
-    setter!(with_base, base, BaseRequest);
+    const_setter!(with_base, base, BaseRequest);
 
+    // idk why this one can't be const
     setter!(filter, search_filters, SearchFilters);
 
-    setter!(page, u32);
+    const_setter!(page, u32);
 
-    setter!(total, i32);
+    const_setter!(total, i32);
 
-    setter!(request_type, LevelRequestType);
+    const_setter!(request_type, LevelRequestType);
 
     pub fn search(mut self, search_string: String) -> Self {
         self.search_string = search_string;
@@ -487,7 +497,7 @@ impl LevelsRequest {
         self
     }
 
-    pub fn demon(mut self, demon_rating: DemonRating) -> Self {
+    pub const fn demon(mut self, demon_rating: DemonRating) -> Self {
         self.demon_rating = Some(demon_rating);
         self
     }

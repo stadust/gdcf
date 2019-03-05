@@ -39,7 +39,7 @@ pub trait Parse: Sized {
         })
     }
 
-    fn parse_str<'a>(input: &'a str, delimiter: char) -> Result<Self, ValueError<'a>> {
+    fn parse_str(input: &str, delimiter: char) -> Result<Self, ValueError> {
         Self::parse_iter(input.split(delimiter))
     }
 
@@ -47,7 +47,7 @@ pub trait Parse: Sized {
         Self::parse_iter(input.split(delimiter))
     }
 
-    fn parse_unindexed_str<'a>(input: &'a str, delimiter: char) -> Result<Self, ValueError<'a>> {
+    fn parse_unindexed_str(input: &str, delimiter: char) -> Result<Self, ValueError> {
         Self::parse_unindexed_iter(input.split(delimiter))
     }
 

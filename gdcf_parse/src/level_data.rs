@@ -88,7 +88,7 @@ impl LevelData {
             furthest_x = f32::max(furthest_x, object.x);
         }
 
-        portals.sort_unstable_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
+        portals.sort_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
 
         let seconds = portal::get_seconds_from_x_pos(furthest_x, self.starting_speed()?, &portals);
 

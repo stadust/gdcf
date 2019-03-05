@@ -18,7 +18,7 @@ pub fn vec<T: Into<i32> + Copy>(list: &[T]) -> String {
     if list.is_empty() {
         String::from("-")
     } else {
-        list.into_iter().map(|v| T::into(*v)).join_with(",").to_string()
+        list.iter().map(|v| T::into(*v)).join_with(",").to_string()
     }
 }
 
@@ -26,7 +26,7 @@ pub fn vec<T: Into<i32> + Copy>(list: &[T]) -> String {
 /// false` and `1`otherwise.
 ///
 /// This can be seen as the inverse to [`bool`](::convert::to::bool)
-pub fn bool(value: bool) -> u8 {
+pub const fn bool(value: bool) -> u8 {
     value as u8
 }
 

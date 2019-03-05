@@ -46,7 +46,7 @@ where
 
 /// Converts the given `u8` into a `bool` by returning `true` if `value !=
 /// 0`, and `false` otherwise
-pub fn int_to_bool(value: u8) -> bool {
+pub const fn int_to_bool(value: u8) -> bool {
     value != 0
 }
 

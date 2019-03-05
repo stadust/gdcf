@@ -13,5 +13,5 @@ pub struct BaseRequestRem {
 
     #[serde(rename = "binaryVersion", serialize_with = "ser::game_version")]
     pub binary_version: GameVersion,
-    pub secret: String,
+    pub secret: &'static str,
 }

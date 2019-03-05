@@ -23,7 +23,7 @@ pub struct UserRequest {
 }
 
 impl UserRequest {
-    pub fn new(user_id: u64) -> UserRequest {
+    pub const fn new(user_id: u64) -> UserRequest {
         UserRequest {
             base: BaseRequest::gd_21(),
             user: user_id,
