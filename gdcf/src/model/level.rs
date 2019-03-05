@@ -427,6 +427,7 @@ where
     /// ## GD Internals:
     /// This value is provided at index `4`, and is urlsafe base64 encoded and
     /// `DEFLATE` compressed
+    #[cfg_attr(feature = "serde_support", serde(serialize_with = "base64_encode"))]
     pub level_data: Vec<u8>,
 
     /// The level's password
@@ -477,7 +478,9 @@ where
 }
 
 #[cfg(feature = "serde_support")]
-use serde::{Deserialize, Deserializer};
+use base64::{encode_config, URL_SAFE};
+#[cfg(feature = "serde_support")]
+use serde::{Deserialize, Deserializer, Serializer};
 
 #[cfg(feature = "serde_support")]
 fn deserialize_main_song<'de, D>(deserializer: D) -> Result<Option<&'static MainSong>, D::Error>
@@ -485,4 +488,12 @@ where
     D: Deserializer<'de>,
 {
     Ok(Option::<u8>::deserialize(deserializer)?.map(From::from))
+}
+
+#[cfg(feature = "serde_support")]
+fn base64_encode<S>(level_data: &[u8], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.collect_str(&encode_config(level_data, URL_SAFE))
 }
