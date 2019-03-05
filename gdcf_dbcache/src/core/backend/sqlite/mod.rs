@@ -3,11 +3,11 @@ use core::{
     query::select::Row,
     AsSql,
 };
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 use resulter::Resulter;
 use rusqlite::{types::ToSql, Error as DbError};
 use std::path::Path;
-use r2d2_sqlite::SqliteConnectionManager;
-use r2d2::Pool;
 
 mod convert;
 mod query;
@@ -21,17 +21,13 @@ impl Sqlite {
     pub(crate) fn memory() -> Result<Sqlite, Error<Sqlite>> {
         let manager = SqliteConnectionManager::memory();
 
-        Ok(Sqlite {
-            pool: Pool::new(manager)?
-        })
+        Ok(Sqlite { pool: Pool::new(manager)? })
     }
 
     pub(crate) fn path<P: AsRef<Path>>(path: P) -> Result<Sqlite, Error<Sqlite>> {
         let manager = SqliteConnectionManager::file(path);
 
-        Ok(Sqlite {
-            pool: Pool::new(manager)?
-        })
+        Ok(Sqlite { pool: Pool::new(manager)? })
     }
 }
 
@@ -55,7 +51,7 @@ impl Database for Sqlite {
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Sqlite>> {
         let connection = self.pool.get()?;
 
-        let comp = params.into_iter().map(|param| param.as_sql()).collect::<Vec<_>>();
+        let comp = params.iter().map(|param| param.as_sql()).collect::<Vec<_>>();
         let values = comp.iter().map(|v| v as &dyn ToSql).collect::<Vec<_>>();
 
         connection.execute(&statement, &values[..])?;
@@ -68,7 +64,7 @@ impl Database for Sqlite {
     {
         let connection = self.pool.get()?;
 
-        let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
+        let comp: Vec<_> = params.iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToSql).collect();
 
         let mut stmt = connection.prepare(&statement)?;
@@ -86,7 +82,8 @@ impl Database for Sqlite {
                 }
 
                 Ok(Row::new(values))
-            })?.flatten_results()
+            })?
+            .flatten_results()
             .collect2();
 
         Ok(rows?)

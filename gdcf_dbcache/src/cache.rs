@@ -211,7 +211,8 @@ macro_rules! cache {
                         &partial_levels::cached_at::first_cached_at,
                         &partial_levels::cached_at::last_cached_at,
                     ],
-                ).filter(partial_levels::cached_at::request_hash.eq(h));
+                )
+                .filter(partial_levels::cached_at::request_hash.eq(h));
 
                 let row = self.config.backend.query_one_row(&select).map_err(convert_error)?;
 
@@ -293,7 +294,6 @@ macro_rules! cache {
                     GDObject::Level(lvl) => self.store_level(lvl),
                     GDObject::Creator(creator) => self.store_creator(creator),
                     GDObject::User(user) => self.store_user(user),
-                    _ => unimplemented!(),
                 }
             }
         }

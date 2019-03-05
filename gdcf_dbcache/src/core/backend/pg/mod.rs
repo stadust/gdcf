@@ -2,8 +2,8 @@ use super::Error;
 use core::{backend::Database, query::select::Row, AsSql};
 use gdcf::chrono::NaiveDateTime;
 use postgres::{types::ToSql as ToPgSql, Error as PgError};
-use r2d2_postgres::{TlsMode, PostgresConnectionManager};
 use r2d2::Pool;
+use r2d2_postgres::{PostgresConnectionManager, TlsMode};
 
 mod convert;
 mod query;
@@ -32,7 +32,7 @@ impl Pg {
         let manager = PostgresConnectionManager::new(url, tls)?;
 
         Ok(Pg {
-            pool: Pool::new(manager).unwrap()
+            pool: Pool::new(manager).unwrap(),
         })
     }
 }
@@ -48,7 +48,7 @@ impl Database for Pg {
     fn execute_raw(&self, statement: String, params: &[&dyn AsSql<Self>]) -> Result<(), Error<Pg>> {
         let connection = self.pool.get()?;
 
-        let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
+        let comp: Vec<_> = params.iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         connection.execute(&statement, &values[..])?;
@@ -61,7 +61,7 @@ impl Database for Pg {
     {
         let connection = self.pool.get()?;
 
-        let comp: Vec<_> = params.into_iter().map(|param| param.as_sql()).collect();
+        let comp: Vec<_> = params.iter().map(|param| param.as_sql()).collect();
         let values: Vec<_> = comp.iter().map(|v| v as &dyn ToPgSql).collect();
 
         let mut rows = Vec::new();

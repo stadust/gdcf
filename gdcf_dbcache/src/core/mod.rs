@@ -43,14 +43,3 @@ pub trait QueryPart<DB: Database>: Debug {
 // we cannot do that. So every backend needs to do the above two impl
 // specialized to itself.
 pub trait SqlExpr<DB: Database>: QueryPart<DB> {}
-
-#[derive(Debug)]
-pub struct RawSql(pub &'static str);
-
-impl<DB: Database> QueryPart<DB> for RawSql {
-    fn to_sql(&self) -> Preparation<DB> {
-        Preparation::<DB>::default().with_static(self.0)
-    }
-}
-
-impl<DB: Database> SqlExpr<DB> for RawSql {}

@@ -114,7 +114,7 @@ impl<'a> Insert<'a, Pg> {
                     "ON CONFLICT ({}) DO UPDATE SET {}",
                     target.iter().map(|f| f.name()).join_with(","),
                     self.values()
-                        .into_iter()
+                        .iter()
                         .map(|f| format!("{0}=EXCLUDED.{0}", f.field.name()))
                         .join_with(",")
                 ),
@@ -138,7 +138,8 @@ impl<'a> QueryPart<Pg> for Insert<'a, Pg> {
             pv = match set_field.value {
                 FieldValue::Default => pv.with_static("DEFAULT"),
                 FieldValue::Value(v) => pv.with(v.to_sql()),
-            }.with_static(",");
+            }
+            .with_static(",");
         }
 
         p.0.pop();
