@@ -1,6 +1,6 @@
 //! Module ontianing request definitions for retrieving users
 
-use api::request::{BaseRequest, Request};
+use api::request::{BaseRequest, Request, GD_21};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -10,7 +10,7 @@ use std::{
 ///
 /// In the geometry Dash API, this endpoint is used to download player profiles from the servers by
 /// their account IDs
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct UserRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -23,9 +23,11 @@ pub struct UserRequest {
 }
 
 impl UserRequest {
+    const_setter!(with_base, base, BaseRequest);
+
     pub const fn new(user_id: u64) -> UserRequest {
         UserRequest {
-            base: BaseRequest::gd_21(),
+            base: GD_21,
             user: user_id,
         }
     }

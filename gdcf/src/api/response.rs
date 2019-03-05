@@ -5,7 +5,7 @@ use std::{
     slice::Iter,
     vec::IntoIter,
 };
-
+// FIXME: remove this crap
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProcessedResponse {
     One(GDObject),

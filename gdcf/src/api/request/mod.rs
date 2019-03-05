@@ -25,12 +25,20 @@ use std::{fmt::Display, hash::Hash};
 pub mod level;
 pub mod user;
 
+/// A `BaseRequest` instance that has all its fields set to the
+/// same values a Geometry Dash 2.1 client would use
+pub const GD_21: BaseRequest = BaseRequest::new(
+    GameVersion::Version { major: 2, minor: 1 },
+    GameVersion::Version { major: 3, minor: 3 },
+    "Wmfd2893gb7",
+);
+
 /// Base data included in every request made
 ///
 /// The fields in this struct are only relevant when making a request to the
 /// `boomlings` servers. When using GDCF with a custom Geometry Dash API, they
 /// can safely be ignored.
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq)]
 pub struct BaseRequest {
     /// The version of the game client we're pretending to be
     ///
@@ -67,21 +75,11 @@ impl BaseRequest {
             secret,
         }
     }
-
-    /// Constructs a `BaseRequest` instance that has all its fields set to the
-    /// same values a Geometry Dash 2.1 client would use
-    pub const fn gd_21() -> BaseRequest {
-        BaseRequest::new(
-            GameVersion::Version { major: 2, minor: 1 },
-            GameVersion::Version { major: 3, minor: 3 },
-            "Wmfd2893gb7",
-        )
-    }
 }
 
 impl Default for BaseRequest {
     fn default() -> Self {
-        BaseRequest::gd_21()
+        GD_21
     }
 }
 

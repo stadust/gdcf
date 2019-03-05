@@ -118,7 +118,8 @@ impl Create {
         });
 
         streams.push(
-            format!("pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB> where")
+            "pub fn create<'a, DB: Database + 'a>() -> Create<'a, DB> where"
+                .to_string()
                 .parse()
                 .unwrap(),
         );
@@ -140,7 +141,8 @@ impl Create {
                         constraints.push(c);
                         true
                     }
-                }).map(Constraint::where_constraint)
+                })
+                .map(Constraint::where_constraint)
                 .chain(
                     self.columns
                         .iter()
@@ -152,13 +154,15 @@ impl Create {
                                 types.push(c.to_string());
                                 true
                             }
-                        }).map(|c| {
+                        })
+                        .map(|c| {
                             stream! {
                                 c,
                                 ": Type<DB>".parse().unwrap()
                             }
                         }),
-                ).intersperse(",".parse().unwrap())
+                )
+                .intersperse(",".parse().unwrap())
                 .collect(),
         );
 
@@ -174,7 +178,8 @@ impl Create {
                             ".constraint".parse().unwrap(),
                             TokenTree::Group(Group::new(Delimiter::Parenthesis, cons.generate())).into()
                         }
-                    }).collect();
+                    })
+                    .collect();
                 let inner = Group::new(
                     Delimiter::Brace,
                     stream! {
@@ -203,16 +208,18 @@ impl Create {
                     ".with_column".parse().unwrap(),
                     TokenTree::Group(args).into()
                 }
-            }).collect();
+            })
+            .collect();
 
         streams.push(
             TokenTree::Group(Group::new(
                 Delimiter::Brace,
                 stream! {
-                    format!("table.create()").parse().unwrap(),
+                    "table.create()".to_string().parse().unwrap(),
                     body
                 },
-            )).into(),
+            ))
+            .into(),
         );
 
         TokenStream::from_iter(streams)
@@ -231,12 +238,12 @@ impl Constraint {
                     ty.clone(),
                     ": SqlExpr<DB>".parse().unwrap()
                 }, /*"DefaultConstraint<'a, DB>: Constraint<DB> + 'static".parse().unwrap()*//*stream! {
-                "DefaultConstraint<'a, DB, ".parse().unwrap(),
-                ty.clone(),
-                ">: Constraint<DB> + 'static,".parse().unwrap(),
-                ty.clone(),
-                ": SqlExpr<DB> + 'static".parse().unwrap()
-            }*/
+                       "DefaultConstraint<'a, DB, ".parse().unwrap(),
+                       ty.clone(),
+                       ">: Constraint<DB> + 'static,".parse().unwrap(),
+                       ty.clone(),
+                       ": SqlExpr<DB> + 'static".parse().unwrap()
+                   }*/
         }
     }
 

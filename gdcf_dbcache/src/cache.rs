@@ -234,7 +234,7 @@ macro_rules! cache {
             }
 
             fn store_partial_levels(
-                &mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64, u64>>,
+                &mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>],
             ) -> Result<(), CacheError<Self::Err>> {
                 let h = util::hash(req);
                 let ts = Utc::now().naive_utc();

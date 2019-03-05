@@ -20,7 +20,7 @@ pub trait Cache: Clone + Send + Sync + 'static {
     fn config(&self) -> &Self::Config;
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err>;
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &Vec<PartialLevel<u64, u64>>) -> Result<(), CacheError<Self::Err>>;
+    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>) -> Result<(), CacheError<Self::Err>>;
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err>;
     fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;

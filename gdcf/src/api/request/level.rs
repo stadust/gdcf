@@ -1,6 +1,6 @@
 //! Module containing request definitions for retrieving levels
 
-use api::request::{BaseRequest, PaginatableRequest, Request};
+use api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
 use model::{DemonRating, LevelLength, LevelRating};
 use std::{
     fmt::{Display, Error, Formatter},
@@ -12,7 +12,7 @@ use std::{
 /// In the Geometry Dash API, this endpoint is used to download a level from
 /// the servers and retrieve some additional information that isn't provided
 /// with the response to a [`LevelsRequest`]
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LevelRequest {
     /// The base request data
     pub base: BaseRequest,
@@ -267,7 +267,7 @@ pub struct SearchFilters {
 /// + Unused values: `8`, `9`, `14`
 /// + The values `15` and `17` are only used in Geometry Dash World and are the
 /// same as `0` ([`LevelRequestType::Search`]) and `6` ([`LevelRequestType::Featured`]) respectively
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Hash)]
 pub enum LevelRequestType {
     /// A search request.
     ///
@@ -357,7 +357,7 @@ pub enum LevelRequestType {
     HallOfFame,
 }
 
-#[derive(Debug, Copy, Clone, Hash)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum SongFilter {
     Main(u8),
     Custom(u64),
@@ -457,7 +457,7 @@ impl LevelRequest {
     /// values set the by the Geometry Dash Client
     pub const fn new(level_id: u64) -> LevelRequest {
         LevelRequest {
-            base: BaseRequest::gd_21(),
+            base: GD_21,
             level_id,
             inc: true,
             extra: false,

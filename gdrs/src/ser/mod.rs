@@ -51,14 +51,14 @@ where
     serializer.serialize_u8(*value as u8)
 }
 
-pub(super) fn length_vec<S>(values: &Vec<LevelLength>, serializer: S) -> Result<S::Ok, S::Error>
+pub(super) fn length_vec<S>(values: &[LevelLength], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     serializer.serialize_str(&vec(values))
 }
 
-pub(super) fn rating_vec<S>(values: &Vec<LevelRating>, serializer: S) -> Result<S::Ok, S::Error>
+pub(super) fn rating_vec<S>(values: &[LevelRating], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
