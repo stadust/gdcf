@@ -4,9 +4,13 @@ use model::{GameVersion, MainSong};
 use std::fmt::{Display, Error, Formatter};
 
 /// Enum representing the possible level lengths known to GDCF
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum LevelLength {
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
+    /// unrecognized value is passed
+    Unknown,
+
     /// Tiny
     ///
     /// ## GD Internals:
@@ -41,31 +45,15 @@ pub enum LevelLength {
     /// This variant is represented by the value `4` in both requests and
     /// responses
     ExtraLong,
-
-    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
-    /// unrecognized value is passed
-    Unknown,
 }
 
 /// Enum representing the possible level ratings
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum LevelRating {
-    /// Auto rating
-    ///
-    /// ## GD Internals:
-    /// This variant is represented by the value `-3` in requests, and not
-    /// included in responses.
-    Auto,
-
-    /// Demon rating.
-    ///
-    /// ## GD Internals:
-    /// This variant is represented by the value `-2` in requests. In
-    /// responses, you will have to first check the provided level is a
-    /// demon and then interpret the provided
-    /// `rating` value as a [`DemonRating`]
-    Demon(DemonRating),
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
+    /// unrecognized value is passed
+    Unknown,
 
     /// Not Available, sometimes referred to as `N/A` or `NA`
     ///
@@ -73,6 +61,13 @@ pub enum LevelRating {
     /// This variant is represented by the value `-1` in requests and by the
     /// value `0` in responses
     NotAvailable,
+
+    /// Auto rating
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `-3` in requests, and not
+    /// included in responses.
+    Auto,
 
     /// Easy rating
     ///
@@ -109,15 +104,24 @@ pub enum LevelRating {
     /// value `50` in responses
     Insane,
 
-    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
-    /// unrecognized value is passed
-    Unknown,
+    /// Demon rating.
+    ///
+    /// ## GD Internals:
+    /// This variant is represented by the value `-2` in requests. In
+    /// responses, you will have to first check the provided level is a
+    /// demon and then interpret the provided
+    /// `rating` value as a [`DemonRating`]
+    Demon(DemonRating),
 }
 
 /// Enum representing the possible demon difficulties
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum DemonRating {
+    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
+    /// unrecognized value is passed
+    Unknown,
+
     /// Easy demon
     ///
     /// ## GD Internals:
@@ -152,10 +156,6 @@ pub enum DemonRating {
     /// This variant is represented by the value `5` in requests and by the
     /// value `50` in responses
     Extreme,
-
-    /// Enum variant that's used by the [`From<i32>`](From) impl for when an
-    /// unrecognized value is passed
-    Unknown,
 }
 
 /// Enum representing a levels featured state
