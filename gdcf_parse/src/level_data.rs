@@ -5,7 +5,7 @@ use self::{
 use crate::{util::SelfZipExt, Parse};
 use flate2::read::GzDecoder;
 use gdcf::{error::ValueError, model::Level};
-use std::{error::Error, io::Read, time::Duration};
+use std::{io::Read, time::Duration};
 
 pub mod ids;
 pub mod metadata;

@@ -1,13 +1,11 @@
 //! Module containing all models related to Geometry Dash levels
 
 use model::{GameVersion, MainSong};
-#[cfg(feature = "deser")]
-use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Display, Error, Formatter};
 
 /// Enum representing the possible level lengths known to GDCF
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum LevelLength {
     /// Tiny
     ///
@@ -51,7 +49,7 @@ pub enum LevelLength {
 
 /// Enum representing the possible level ratings
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum LevelRating {
     /// Auto rating
     ///
@@ -118,7 +116,7 @@ pub enum LevelRating {
 
 /// Enum representing the possible demon difficulties
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum DemonRating {
     /// Easy demon
     ///
@@ -162,7 +160,7 @@ pub enum DemonRating {
 
 /// Enum representing a levels featured state
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum Featured {
     /// The level isn't featured, and has never been featured before
     NotFeatured,
@@ -181,7 +179,7 @@ pub enum Featured {
 
 /// Enum representing a level's copy status
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub enum Password {
     /// The level isn't copyable (which I see the irony of, considering we
     /// literally have a copy of it in the GDCF database. shush.)
@@ -228,10 +226,9 @@ pub enum Password {
 /// The following indices aren't used by the Geometry Dash servers: `11`, `16`,
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
-#[cfg_attr(feature = "deser", derive(Serialize))] // TODO: a Deserialize impl will have to be custom-written due to the &'static MainSong reference
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PartialLevel<Song, User>
-// FIXME: the raw_type attribute breaks serde for some reason. Find an alternative
 where
     Song: PartialEq,
     User: PartialEq,
@@ -294,6 +291,7 @@ where
     /// without that information, a value of `0` for
     /// this field could either mean the level uses `Stereo Madness` or no
     /// main song.
+    #[cfg_attr(feature = "serde_support", serde(deserialize_with = "deserialize_main_song"))]
     pub main_song: Option<&'static MainSong>,
 
     /// The gd version the request was uploaded/last updated in.
@@ -411,7 +409,7 @@ where
 /// `17`, `20`, `21`, `22`, `23`, `24`, `26`, `31`, `32`, `33`, `34`, `40`,
 /// `41`, `44`
 #[derive(Debug, Eq, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize))]
 pub struct Level<Song, User>
 where
     Song: PartialEq,
@@ -476,4 +474,15 @@ where
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }
+}
+
+#[cfg(feature = "serde_support")]
+use serde::{Deserialize, Deserializer};
+
+#[cfg(feature = "serde_support")]
+fn deserialize_main_song<'de, D>(deserializer: D) -> Result<Option<&'static MainSong>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<u8>::deserialize(deserializer)?.map(From::from))
 }

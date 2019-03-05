@@ -1,7 +1,5 @@
 //! Module containing all models releated to Songs
 
-#[cfg(feature = "deser")]
-use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Display, Error, Formatter};
 
 pub const SERVER_SIDED_DATA_INCONSISTENCY_ERROR: NewgroundsSong = NewgroundsSong {
@@ -21,7 +19,7 @@ pub const SERVER_SIDED_DATA_INCONSISTENCY_ERROR: NewgroundsSong = NewgroundsSong
 /// This data is not provided by the API and needs to be manually kept up to
 /// date
 #[derive(Debug, Eq, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct MainSong {
     /// The ID of this [`MainSong`]
     pub main_song_id: u8,
@@ -42,7 +40,7 @@ pub struct MainSong {
 /// ### Unused indices:
 /// The following indices aren't used by the Geometry Dash servers: `9`
 #[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct NewgroundsSong {
     /// The newgrounds id of this [`NewgroundsSong`]
     ///
@@ -95,7 +93,6 @@ impl MainSong {
 }
 
 /// All current [`MainSong`]s, as of Geometry Dash 2.1
-#[allow(missing_debug_implementations)]
 pub const MAIN_SONGS: [MainSong; 21] = [
     MainSong::new(0, "Stereo Madness", "ForeverBound"),
     MainSong::new(1, "Back on Track", "DJVI"),

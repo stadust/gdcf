@@ -20,6 +20,7 @@ pub const DELETED: Creator = Creator {
 /// These objects aren't indexed in the response. The indexes used here are based on the order in
 /// which the fields appear in the response
 #[derive(Debug, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct Creator {
     /// The [`Creator`]'s unique user ID
     pub user_id: u64,
@@ -56,7 +57,7 @@ impl Creator {
 /// The following indices aren't used by the Geometry Dash servers: `5`, `6`, `7`, `9`, `12`, `14`,
 /// `15`, `27`, `32`, `33`, `34`, `35`, `36`, `37`, `38`, `39`, `40`, `41`, `42`, `47`
 #[derive(Debug, Eq, PartialEq, Clone)]
-#[cfg_attr(feature = "deser", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct User {
     /// The [`User`]'s name
     ///

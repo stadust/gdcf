@@ -18,7 +18,7 @@ pub struct PortalMetadata {
 }
 
 impl Parse for ObjectMetadata {
-    fn parse<'a, I, F>(mut iter: I, mut f: F) -> Result<Self, ValueError<'a>>
+    fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
     where
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>,

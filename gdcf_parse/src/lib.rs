@@ -28,7 +28,7 @@ pub trait Parse: Sized {
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
 
     fn parse_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
-        Self::parse(iter.self_zip(), |idx, val| Ok(()))
+        Self::parse(iter.self_zip(), |_, _| Ok(())) // TODO: warnings about unused indices
     }
 
     fn parse_unindexed_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {

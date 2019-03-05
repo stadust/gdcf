@@ -110,9 +110,9 @@ pub extern crate chrono;
 extern crate futures;
 #[macro_use]
 extern crate log;
-#[cfg(feature = "deser")]
+#[cfg(feature = "serde_support")]
 extern crate serde;
-#[cfg(feature = "deser")]
+#[cfg(feature = "serde_support")]
 #[macro_use]
 extern crate serde_derive;
 extern crate failure;
