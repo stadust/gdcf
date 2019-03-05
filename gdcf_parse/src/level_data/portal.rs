@@ -44,13 +44,6 @@ impl PortalType {
 }
 
 pub fn get_seconds_from_x_pos(pos: f32, start_speed: Speed, portals: &[(f32, Speed)]) -> f32 {
-    println!(
-        "The level is {} blocks long and starts in speed {:?}. It has {} enabled speed portals",
-        pos,
-        start_speed,
-        portals.len()
-    );
-
     let mut speed: f32 = start_speed.into();
 
     if portals.is_empty() {
@@ -61,12 +54,8 @@ pub fn get_seconds_from_x_pos(pos: f32, start_speed: Speed, portals: &[(f32, Spe
     let mut total_time = 0.0;
 
     for (x, portal_speed) in portals {
-        println!("Speed portal {:?} at position {}", portal_speed, x);
-
         // distance between last portal and this one
         let current_segment = x - last_obj_pos;
-
-        println!("The previous portal thus spans {} blocks", current_segment);
 
         // break if we're past the position we want to calculate the position to
         if pos <= current_segment {
