@@ -1,9 +1,11 @@
 //! Crate containing parsers for various Geometry Dash related data
 //!
 //! This crate is based on work by mgostIH and cos8o
+#![feature(pattern)]
 
 use crate::util::SelfZipExt;
 use gdcf::error::ValueError;
+use std::str::pattern::Pattern;
 
 pub mod util;
 #[macro_use]
@@ -29,8 +31,24 @@ pub trait Parse: Sized {
         Self::parse(iter.self_zip(), |idx, val| Ok(()))
     }
 
-    fn parse_unindexed<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
+    fn parse_unindexed_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
         // well this is a stupid solution
         Self::parse(INDICES.iter().cloned().zip(iter), |_, _| Ok(()))
+    }
+
+    fn parse_str<'a, P>(input: &'a str, delimiter: P) -> Result<Self, ValueError<'a>>
+    where
+        P: Pattern<'a> + Clone,
+        P::Searcher: Clone,
+    {
+        Self::parse_iter(input.split(delimiter))
+    }
+
+    fn parse_unindexed_str<'a, P>(input: &'a str, delimiter: P) -> Result<Self, ValueError<'a>>
+    where
+        P: Pattern<'a> + Clone,
+        P::Searcher: Clone,
+    {
+        Self::parse_unindexed_iter(input.split(delimiter))
     }
 }
