@@ -1,15 +1,13 @@
 use futures::Future;
 
-use api::{
-    request::{LevelRequest, LevelsRequest},
-    response::ProcessedResponse,
-};
+use api::request::{LevelRequest, LevelsRequest};
+use model::GDObject;
 
 use api::request::user::UserRequest;
 use error::ApiError;
 use failure::Fail;
 
-pub type ApiFuture<E> = Box<dyn Future<Item = ProcessedResponse, Error = ApiError<E>> + Send + 'static>;
+pub type ApiFuture<E> = Box<dyn Future<Item = Vec<GDObject>, Error = ApiError<E>> + Send + 'static>;
 
 pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
     type Err: Fail;

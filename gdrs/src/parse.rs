@@ -1,23 +1,22 @@
 use gdcf::{
-    api::response::ProcessedResponse,
     error::ApiError,
-    model::{Creator, Level, NewgroundsSong, PartialLevel, User},
+    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
 };
 use gdcf_parse::Parse;
 use hyper::Error;
 
-pub fn level(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
+pub fn level(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
     check_resp!(body);
 
     let mut sections = body.split('#');
 
     match sections.next() {
-        Some(section) => Ok(ProcessedResponse::One(Level::parse_iter(section.split(':'))?.into())),
+        Some(section) => Ok(vec![Level::parse_iter(section.split(':'))?.into()]),
         None => Err(ApiError::UnexpectedFormat),
     }
 }
 
-pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
+pub fn levels(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
     check_resp!(body);
 
     let mut result = Vec::new();
@@ -49,11 +48,11 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
         }
     }
 
-    Ok(ProcessedResponse::Many(result))
+    Ok(result)
 }
 
-pub fn user(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
+pub fn user(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
     check_resp!(body);
 
-    Ok(ProcessedResponse::One(User::parse_str(body, ':')?.into()))
+    Ok(vec![User::parse_str(body, ':')?.into()])
 }

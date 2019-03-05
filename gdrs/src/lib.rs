@@ -31,10 +31,10 @@ use gdcf::{
             level::{LevelRequest, LevelsRequest},
             user::UserRequest,
         },
-        response::ProcessedResponse,
         ApiClient,
     },
     error::ApiError,
+    model::GDObject,
 };
 use hyper::{
     client::{Builder, HttpConnector},
@@ -102,7 +102,7 @@ struct ApiRequestAction {
     client: Client<HttpConnector>,
     endpoint: &'static str,
     request: Req,
-    parser: fn(&str) -> Result<ProcessedResponse, ApiError<Error>>,
+    parser: fn(&str) -> Result<Vec<GDObject>, ApiError<Error>>,
 }
 
 struct ApiRetryCondition;
@@ -122,7 +122,7 @@ impl Condition<ApiError<Error>> for ApiRetryCondition {
 impl Action for ApiRequestAction {
     type Error = ApiError<Error>;
     type Future = ApiFuture<Error>;
-    type Item = ProcessedResponse;
+    type Item = Vec<GDObject>;
 
     fn run(&mut self) -> ApiFuture<Error> {
         let req = make_request(self.endpoint, &self.request);
