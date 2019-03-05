@@ -5,7 +5,7 @@ use crate::{
 };
 use gdcf::error::ValueError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ObjectMetadata {
     None,
     Portal(PortalMetadata),
@@ -24,8 +24,8 @@ impl Parse for ObjectMetadata {
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>,
     {
         let id = match iter.clone().find(|(idx, _)| idx == &"1") {
-            Some((_, id)) => parse(1, id)?.ok_or(ValueError::NoValue(1))?,
-            None => return Err(ValueError::NoValue(1)),
+            Some((idx, id)) => parse(idx, id)?.ok_or(ValueError::NoValue("1"))?,
+            None => return Err(ValueError::NoValue("1")),
         };
 
         match id {

@@ -1,23 +1,23 @@
 macro_rules! __parsing {
     (@ $value: expr, index = $idx: expr, parse = $func: path) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
             Ok(v) => Some(v),
         }
     };
     (@ $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse($idx, $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
             Ok(v) => Some(v),
         }
     };
 
     (@ $value: expr, index = $idx: expr, with = $func: path) => {
-        parse($idx, $value)?.map($func)
+        parse(stringify!($idx), $value)?.map($func)
     };
 
     (@ $value: expr, index = $idx: expr, with = $func: path, $($also_tokens:tt)*) => {
-        parse($idx, $value)?.map($func)
+        parse(stringify!($idx), $value)?.map($func)
     };
 
     (@ $value: expr, index = $idx: expr, parse_infallible = $func: path) => {
@@ -29,11 +29,11 @@ macro_rules! __parsing {
     };
 
     (@ $value: expr, index = $idx: expr, $($also_tokens:tt)*) => {
-        parse($idx, $value)?
+        parse(stringify!($idx), $value)?
     };
 
     (@ $value: expr, index = $idx: expr) => {
-        parse($idx, $value)?
+        parse(stringify!($idx), $value)?
     };
 }
 
@@ -49,7 +49,7 @@ macro_rules! __index {
 
 macro_rules! __unwrap {
     ($field_name: ident(index = $idx: expr)) => {
-        $field_name.ok_or(ValueError::NoValue($idx))?
+        $field_name.ok_or(ValueError::NoValue(stringify!($idx)))?
     };
 
     ($field_name: ident(index = $idx: expr, default)) => {
@@ -108,6 +108,8 @@ macro_rules! parser {
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
+
+                trace!("Parsing {}", stringify!($struct_name));
 
                 $(
                     let mut $field_name = None;
@@ -179,6 +181,8 @@ macro_rules! parser {
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
+
+                trace!("Parsing {}", stringify!($struct_name));
 
                 $(
                     let mut $field_name = None;

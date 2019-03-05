@@ -99,7 +99,7 @@ pub fn xor_decrypt(encrypted: &str, key: &str) -> String {
         .collect()
 }
 
-pub fn parse<T>(idx: usize, value: &str) -> Result<Option<T>, ValueError>
+pub fn parse<'a, T>(idx: &'a str, value: &'a str) -> Result<Option<T>, ValueError<'a>>
 where
     T: FromStr,
     T::Err: Error + Send + Sync + 'static,

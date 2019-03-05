@@ -7,6 +7,9 @@ use crate::util::SelfZipExt;
 use gdcf::error::ValueError;
 use std::str::pattern::Pattern;
 
+#[macro_use]
+extern crate log;
+
 pub mod util;
 #[macro_use]
 pub mod macros;
@@ -28,12 +31,14 @@ pub trait Parse: Sized {
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
 
     fn parse_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
-        Self::parse(iter.self_zip(), |_, _| Ok(())) // TODO: warnings about unused indices
+        Self::parse(iter.self_zip(), |i, v| Ok(warn!("Unused value '{}' at index '{}'", v, i)))
     }
 
     fn parse_unindexed_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
         // well this is a stupid solution
-        Self::parse(INDICES.iter().cloned().zip(iter), |_, _| Ok(()))
+        Self::parse(INDICES.iter().cloned().zip(iter), |i, v| {
+            Ok(warn!("Unused value '{}' at index '{}'", v, i))
+        })
     }
 
     fn parse_str<'a, P>(input: &'a str, delimiter: P) -> Result<Self, ValueError<'a>>

@@ -4,8 +4,8 @@ use failure::Fail;
 
 #[derive(Debug)]
 pub enum ValueError<'a> {
-    NoValue(usize),
-    Parse(usize, &'a str, Box<dyn Fail>),
+    NoValue(&'a str),
+    Parse(&'a str, &'a str, Box<dyn Fail>),
 }
 
 impl std::error::Error for ValueError<'_> {}
@@ -58,10 +58,10 @@ pub enum ApiError<E: Fail> {
     /// This variant is only intended to be used while constructing data from
     /// [RawObject](model/structs.RawObject.html)s
     #[fail(display = "Processing the response data failed at index {}: {}", _0, _1)]
-    MalformedData(usize, #[cause] Box<dyn Fail>),
+    MalformedData(String, String, #[cause] Box<dyn Fail>),
 
     #[fail(display = "Required data at index {} missing", _0)]
-    MissingData(usize),
+    MissingData(String),
 
     /// An error caused by the underlying api client implementation occured
     #[fail(display = "An API client specific error occurate: {}", _0)]
@@ -95,8 +95,8 @@ impl<A: Fail, C: Fail> From<CacheError<C>> for GdcfError<A, C> {
 impl<'a, F: Fail> From<ValueError<'a>> for ApiError<F> {
     fn from(inner: ValueError) -> Self {
         match inner {
-            ValueError::NoValue(idx) => ApiError::MissingData(idx),
-            ValueError::Parse(idx, _, err) => ApiError::MalformedData(idx, err),
+            ValueError::NoValue(idx) => ApiError::MissingData(idx.to_owned()),
+            ValueError::Parse(idx, value, err) => ApiError::MalformedData(idx.to_owned(), value.to_owned(), err),
         }
     }
 }

@@ -2,7 +2,7 @@ use self::{
     metadata::{ObjectMetadata, PortalMetadata},
     portal::{PortalType, Speed},
 };
-use crate::{util::SelfZipExt, Parse};
+use crate::Parse;
 use flate2::read::GzDecoder;
 use gdcf::{error::ValueError, model::Level};
 use std::{io::Read, time::Duration};
@@ -29,13 +29,19 @@ impl<S: PartialEq, U: PartialEq> LevelExt for Level<S, U> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LevelObject {
     pub id: u16,
     pub x: f32,
     pub y: f32,
     // ... other fields they all have ...
     pub metadata: ObjectMetadata,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct LevelMetadata {
+    starting_speed: Speed,
+    // ... other fields in the metadata section ...
 }
 
 impl LevelData {
@@ -49,32 +55,24 @@ impl LevelData {
 
     pub fn parsed_objects<'a>(&'a self) -> impl Iterator<Item = LevelObject> + 'a {
         self.objects().filter_map(|obj| {
-            LevelObject::parse_iter(obj.split(','))
-                .map_err(|err| println!("{} - {}", obj, err))
+            LevelObject::parse_str(obj, ',')
+                .map_err(|err| error!("Ignoring error during parsing of object {} - {}", obj, err))
                 .ok()
         })
     }
 
-    pub fn starting_speed(&self) -> Speed {
+    pub fn metadata(&self) -> Result<LevelMetadata, ValueError> {
         match self.0.split(';').nth(0) {
-            Some(segment) =>
-                match segment.split(',').self_zip().find(|(key, _)| key == &"kA4") {
-                    Some((_, value)) =>
-                        match value.parse() {
-                            Ok(0) => Speed::Slow,
-                            Ok(1) => Speed::Normal,
-                            Ok(2) => Speed::Medium,
-                            Ok(3) => Speed::Fast,
-                            Ok(4) => Speed::VeryFast,
-                            _ => Speed::Invalid,
-                        },
-                    _ => Speed::Invalid,
-                },
-            _ => Speed::Invalid,
+            None => Err(ValueError::NoValue("metadata")),
+            Some(s) => LevelMetadata::parse_str(s, ','),
         }
     }
 
-    pub fn level_length(&self) -> Duration {
+    pub fn starting_speed(&self) -> Result<Speed, ValueError> {
+        Ok(self.metadata()?.starting_speed)
+    }
+
+    pub fn level_length(&self) -> Result<Duration, ValueError> {
         let mut portals = Vec::new();
         let mut furthest_x = 0.0;
 
@@ -92,17 +90,47 @@ impl LevelData {
 
         portals.sort_unstable_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
 
-        let seconds = portal::get_seconds_from_x_pos(furthest_x, self.starting_speed(), &portals);
+        let seconds = portal::get_seconds_from_x_pos(furthest_x, self.starting_speed()?, &portals);
 
-        Duration::from_secs(seconds.round() as u64)
+        Ok(Duration::from_secs(seconds.round() as u64))
+    }
+
+    pub fn parse_fully(&self) -> Result<ParsedLevelData, ValueError> {
+        let all_objects = self
+            .objects()
+            .map(|obj| LevelObject::parse_str(obj, ','))
+            .collect::<Result<_, _>>()?;
+
+        Ok(ParsedLevelData(self.metadata()?, all_objects))
     }
 }
+
+pub struct ParsedLevelData(LevelMetadata, Vec<LevelObject>);
 
 parser! {
     LevelObject => {
         id(index = 1),
         x(index = 2),
         y(index = 3),
+        // ... all the other fields ...
         metadata(delegate),
+    }
+}
+
+fn parse_starting_speed(speed: u8) -> Speed {
+    match speed {
+        0 => Speed::Slow,
+        1 => Speed::Normal,
+        2 => Speed::Medium,
+        3 => Speed::Fast,
+        4 => Speed::VeryFast,
+        _ => Speed::Invalid,
+    }
+}
+
+parser! {
+    LevelMetadata => {
+        starting_speed(index = kA4, with = parse_starting_speed),
+        // ... all the other fields ...
     }
 }
