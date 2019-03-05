@@ -2,13 +2,16 @@
 
 use std::fmt::{Display, Error, Formatter};
 
+// FIXME: once const_string_new stabilized, turn this into a constant
 /// Special [`Creator`] value that will be returned whenever a creator's user account has been
 /// deleted (this is the case for some creators of very old levels that never registered)
-pub const DELETED: Creator = Creator {
-    user_id: 0,
-    name: String::new(),
-    account_id: None,
-};
+pub fn DELETED() -> Creator {
+    Creator {
+        user_id: 0,
+        name: String::new(),
+        account_id: None,
+    }
+}
 
 /// Struct representing a [`Level`](::model::level::Level)'s creator.
 ///

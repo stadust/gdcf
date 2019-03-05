@@ -34,8 +34,7 @@ pub fn iqtable(ts: TokenStream) -> TokenStream {
     stream! {
         tab.generate(),
         tab.gated_impl("pg", "pg", "Pg"),
-        tab.gated_impl("sqlite", "sqlite", "Sqlite"),
-        tab.gated_impl("mysql", "mysql", "Mysql")
+        tab.gated_impl("sqlite", "sqlite", "Sqlite")
     }
 }
 
@@ -46,8 +45,7 @@ pub fn itable(ts: TokenStream) -> TokenStream {
     stream! {
         tab.generate(),
         tab.gated_insertable_impl("pg", "pg", "Pg"),
-        tab.gated_insertable_impl("sqlite", "sqlite", "Sqlite"),
-        tab.gated_insertable_impl("mysql", "mysql", "Mysql")
+        tab.gated_insertable_impl("sqlite", "sqlite", "Sqlite")
     }
 }
 

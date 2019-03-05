@@ -1,5 +1,3 @@
-#![feature(never_type)]
-#![feature(const_string_new)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,
@@ -8,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    //unused_imports,
+    unused_imports,
     unused_parens
 )]
 
@@ -396,7 +394,7 @@ where
                             Ok(song) => exchange::partial_level_song(partial_level, Some(song.extract())),
 
                             Err(CacheError::CacheMiss) =>
-                                exchange::partial_level_song(partial_level, Some(SERVER_SIDED_DATA_INCONSISTENCY_ERROR)),
+                                exchange::partial_level_song(partial_level, Some(SERVER_SIDED_DATA_INCONSISTENCY_ERROR())),
 
                             Err(err) => return Err(err.into()),
                         },
@@ -448,7 +446,7 @@ where
                     // For very old levels where the players never registered, the accounts got lost somehow. LevelsRequest containing such
                     // levels don't contain any creator info about those levels. This again implies that the cache miss, which should be
                     // impossible, is such a case.
-                    Err(CacheError::CacheMiss) => exchange::partial_level_user(partial_level, DELETED),
+                    Err(CacheError::CacheMiss) => exchange::partial_level_user(partial_level, DELETED()),
 
                     Err(err) => return Err(err.into()),
                 })

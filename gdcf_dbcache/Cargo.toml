@@ -38,5 +38,4 @@ path = "../pm_gdcf_dbcache"
 default = ["pg"]
 
 pg = ["postgres", "r2d2_postgres"]
-mysql = []
 sqlite = ["rusqlite", "r2d2_sqlite"]

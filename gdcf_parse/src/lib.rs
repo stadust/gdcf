@@ -1,11 +1,9 @@
 //! Crate containing parsers for various Geometry Dash related data
 //!
 //! This crate is based on work by mgostIH and cos8o
-#![feature(pattern)]
 
 use crate::util::SelfZipExt;
 use gdcf::error::ValueError;
-use std::str::pattern::Pattern;
 
 #[macro_use]
 extern crate log;
@@ -41,19 +39,19 @@ pub trait Parse: Sized {
         })
     }
 
-    fn parse_str<'a, P>(input: &'a str, delimiter: P) -> Result<Self, ValueError<'a>>
-    where
-        P: Pattern<'a> + Clone,
-        P::Searcher: Clone,
-    {
+    fn parse_str<'a>(input: &'a str, delimiter: char) -> Result<Self, ValueError<'a>> {
         Self::parse_iter(input.split(delimiter))
     }
 
-    fn parse_unindexed_str<'a, P>(input: &'a str, delimiter: P) -> Result<Self, ValueError<'a>>
-    where
-        P: Pattern<'a> + Clone,
-        P::Searcher: Clone,
-    {
+    fn parse_str2<'a>(input: &'a str, delimiter: &'a str) -> Result<Self, ValueError<'a>> {
+        Self::parse_iter(input.split(delimiter))
+    }
+
+    fn parse_unindexed_str<'a>(input: &'a str, delimiter: char) -> Result<Self, ValueError<'a>> {
+        Self::parse_unindexed_iter(input.split(delimiter))
+    }
+
+    fn parse_unindexed_str2<'a>(input: &'a str, delimiter: &'a str) -> Result<Self, ValueError<'a>> {
         Self::parse_unindexed_iter(input.split(delimiter))
     }
 }

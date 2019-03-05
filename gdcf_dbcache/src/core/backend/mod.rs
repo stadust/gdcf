@@ -6,17 +6,13 @@ use core::{
     AsSql,
 };
 use failure::Fail;
-use std::fmt::Debug;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 #[cfg(feature = "pg")]
 pub mod pg;
 
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
-
-#[cfg(feature = "mysql")]
-pub mod mysql;
 
 mod util;
 

@@ -1,4 +1,3 @@
-#![feature(pattern)]
 #![deny(
     bare_trait_objects,
     missing_debug_implementations,
@@ -19,10 +18,10 @@ extern crate log;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_urlencoded;
-extern crate tokio_retry;
 extern crate gdcf_parse;
 extern crate joinery;
+extern crate serde_urlencoded;
+extern crate tokio_retry;
 
 use futures::{future::Executor, Future, Stream};
 use gdcf::{

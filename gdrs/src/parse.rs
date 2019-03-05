@@ -44,7 +44,7 @@ pub fn levels(body: &str) -> Result<ProcessedResponse, ApiError<Error>> {
         // No song fragment is fine with us
         if !section.is_empty() {
             for fragment in section.split("~:~") {
-                result.push(NewgroundsSong::parse_str(fragment, "~|~")?.into());
+                result.push(NewgroundsSong::parse_str2(fragment, "~|~")?.into());
             }
         }
     }
