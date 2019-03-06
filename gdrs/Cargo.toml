@@ -11,9 +11,14 @@ serde_derive = "^1.0"
 log = "^0.4.0"
 tokio-retry = "^0.2.0"
 joinery = "1.0.0"
+failure_derive = "0.1.5"
+failure = "0.1.5"
 
 [dependencies.gdcf]
 path = "../gdcf"
 
 [dependencies.gdcf_parse]
 path = "../gdcf_parse"
+
+[dependencies.gdcf_model]
+path = "../gdcf_model"

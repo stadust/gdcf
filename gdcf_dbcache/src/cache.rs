@@ -10,8 +10,12 @@ use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, Lookup},
     chrono::{Duration, Utc},
-    error::CacheError,
-    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
+    GDObject,
+};
+use gdcf_model::{
+    level::{Level, PartialLevel},
+    song::NewgroundsSong,
+    user::{Creator, User},
 };
 use schema::{
     level::{self, full_level, partial_level, partial_levels},
@@ -108,7 +112,7 @@ macro_rules! cache {
 
         #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
-            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing partial level {}", level);
 
                 let ts = Utc::now().naive_utc();
@@ -118,10 +122,9 @@ macro_rules! cache {
                     .with(partial_level::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&partial_level::level_id])
                     .execute(&self.config.backend)
-                    .map_err(convert_error)
             }
 
-            fn store_song(&self, song: &NewgroundsSong) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_song(&self, song: &NewgroundsSong) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing song {}", song);
 
                 let ts = Utc::now().naive_utc();
@@ -130,10 +133,9 @@ macro_rules! cache {
                     .with(newgrounds_song::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&newgrounds_song::song_id])
                     .execute(&self.config.backend)
-                    .map_err(convert_error)
             }
 
-            fn store_level(&self, level: &Level<u64, u64>) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_level(&self, level: &Level<u64, u64>) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing level {}", level);
 
                 let ts = Utc::now().naive_utc();
@@ -146,10 +148,9 @@ macro_rules! cache {
                     .with(full_level::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&full_level::level_id])
                     .execute(&self.config.backend)
-                    .map_err(convert_error)
             }
 
-            fn store_creator(&self, creator: &Creator) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_creator(&self, creator: &Creator) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing creator {}", creator);
 
                 let ts = Utc::now().naive_utc();
@@ -159,10 +160,9 @@ macro_rules! cache {
                     .with(creator::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&creator::user_id])
                     .execute(&self.config.backend)
-                    .map_err(convert_error)
             }
 
-            fn store_user(&self, user: &User) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_user(&self, user: &User) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing user {}", user);
 
                 let ts = Utc::now().naive_utc();
@@ -171,7 +171,6 @@ macro_rules! cache {
                     .with(profile::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&profile::user_id])
                     .execute(&self.config.backend)
-                    .map_err(convert_error)
             }
         }
 
@@ -214,11 +213,11 @@ macro_rules! cache {
                 )
                 .filter(partial_levels::cached_at::request_hash.eq(h));
 
-                let row = self.config.backend.query_one_row(&select).map_err(convert_error)?;
+                let row = self.config.backend.query_one_row(&select)?;
 
-                let first_cached_at = row.get(0).unwrap().map_err(convert_error)?;
+                let first_cached_at = row.get(0).unwrap()?;
 
-                let last_cached_at = row.get(1).unwrap().map_err(convert_error)?;
+                let last_cached_at = row.get(1).unwrap()?;
 
                 let select = Select::new(&partial_levels::table, Vec::new())
                     .select(partial_level::table.fields())
@@ -228,36 +227,31 @@ macro_rules! cache {
                         partial_levels::level_id.same_as(&partial_level::level_id),
                     );
 
-                let levels: Vec<PartialLevel<u64, u64>> = self.config.backend.query(&select).map_err(convert_error)?;
+                let levels: Vec<PartialLevel<u64, u64>> = self.config.backend.query(&select)?;
 
                 Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
             }
 
-            fn store_partial_levels(
-                &mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>],
-            ) -> Result<(), CacheError<Self::Err>> {
+            fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>]) -> Result<(), <Self as Cache>::Err> {
                 let h = util::hash(req);
                 let ts = Utc::now().naive_utc();
 
                 // TODO: wrap this into a transaction if I can figure out how to implement them
                 Delete::new(&partial_levels::table)
                     .if_met(partial_levels::request_hash.eq(h))
-                    .execute(&self.config.backend)
-                    .map_err(convert_error)?;
+                    .execute(&self.config.backend)?;
 
                 Insert::new(&partial_levels::cached_at::table, Vec::new())
                     .with(partial_levels::cached_at::last_cached_at.set(&ts))
                     .with(partial_levels::cached_at::request_hash.set(&h))
                     .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
-                    .execute(&self.config.backend)
-                    .map_err(convert_error)?;
+                    .execute(&self.config.backend)?;
 
                 for level in levels {
                     Insert::new(&partial_levels::table, Vec::new())
                         .with(partial_levels::request_hash.set(&h))
                         .with(partial_levels::level_id.set(&level.level_id))
-                        .execute(&self.config.backend)
-                        .map_err(convert_error)?;
+                        .execute(&self.config.backend)?;
                 }
 
                 Ok(())
@@ -266,28 +260,28 @@ macro_rules! cache {
             fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err> {
                 let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
 
-                self.config.backend.query_one(&select).map_err(convert_error)
+                self.config.backend.query_one(&select)
             }
 
             fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
                 let select = NewgroundsSong::select_from(&newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
 
-                self.config.backend.query_one(&select).map_err(convert_error) // for some reason I can use the question mark operator?????
+                self.config.backend.query_one(&select)
             }
 
             fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err> {
                 let select = Creator::select_from(&creator::table).filter(creator::user_id.eq(user_id));
 
-                self.config.backend.query_one(&select).map_err(convert_error)
+                self.config.backend.query_one(&select)
             }
 
             fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
                 let select = User::select_from(&profile::table).filter(profile::account_id.eq(req.user));
 
-                self.config.backend.query_one(&select).map_err(convert_error)
+                self.config.backend.query_one(&select)
             }
 
-            fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<<Self as Cache>::Err>> {
+            fn store_object(&mut self, obj: &GDObject) -> Result<(), <Self as Cache>::Err> {
                 match obj {
                     GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
                     GDObject::NewgroundsSong(song) => self.store_song(song),
@@ -302,10 +296,3 @@ macro_rules! cache {
 
 cache!("pg", Pg);
 cache!("sqlite", Sqlite);
-
-fn convert_error<DB: Database + 'static>(db_error: Error<DB>) -> CacheError<Error<DB>> {
-    match db_error {
-        Error::NoResult => CacheError::CacheMiss,
-        _ => CacheError::Custom(db_error),
-    }
-}

@@ -1,6 +1,6 @@
 pub(crate) mod creator {
     use core::backend::Error;
-    use gdcf::model::Creator;
+    use gdcf_model::user::Creator;
 
     use schema::NowAtUtc;
 
@@ -31,7 +31,7 @@ pub(crate) mod creator {
 
 pub(crate) mod profile {
     use core::backend::Error;
-    use gdcf::model::User;
+    use gdcf_model::user::User;
 
     use schema::NowAtUtc;
 

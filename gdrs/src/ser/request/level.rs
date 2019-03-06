@@ -1,10 +1,8 @@
-use gdcf::{
-    api::request::{
-        level::{LevelRequestType, LevelsRequest, SearchFilters},
-        BaseRequest, LevelRequest,
-    },
-    model::{DemonRating, LevelLength, LevelRating},
+use gdcf::api::request::{
+    level::{LevelRequestType, LevelsRequest, SearchFilters},
+    BaseRequest, LevelRequest,
 };
+use gdcf_model::level::{DemonRating, LevelLength, LevelRating};
 
 use super::BaseRequestRem;
 use ser;

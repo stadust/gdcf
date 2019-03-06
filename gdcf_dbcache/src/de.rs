@@ -2,9 +2,10 @@ use core::{
     backend::{Database, Error},
     FromSql,
 };
-use gdcf::model::{
-    level::{Featured, Password},
-    GameVersion, LevelLength, LevelRating, MainSong,
+use gdcf_model::{
+    level::{Featured, LevelLength, LevelRating, Password},
+    song::MainSong,
+    GameVersion,
 };
 
 impl<DB: Database> FromSql<DB> for LevelRating

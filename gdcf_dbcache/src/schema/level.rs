@@ -1,6 +1,6 @@
 pub(crate) mod partial_level {
     use core::backend::Error;
-    use gdcf::model::PartialLevel;
+    use gdcf_model::level::PartialLevel;
 
     use schema::NowAtUtc;
 
@@ -137,7 +137,7 @@ pub(crate) mod full_level {
             Select,
         },
     };
-    use gdcf::model::{Level, PartialLevel};
+    use gdcf_model::level::{Level, PartialLevel};
     use schema::NowAtUtc;
 
     itable! {

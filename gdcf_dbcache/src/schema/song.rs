@@ -1,6 +1,6 @@
 pub(crate) mod newgrounds_song {
     use core::backend::Error;
-    use gdcf::model::NewgroundsSong;
+    use gdcf_model::song::NewgroundsSong;
 
     use schema::NowAtUtc;
 

@@ -1,7 +1,8 @@
 use core::{backend::Database, AsSql};
-use gdcf::model::{
-    level::{Featured, Password},
-    GameVersion, LevelLength, LevelRating, MainSong,
+use gdcf_model::{
+    level::{Featured, LevelLength, LevelRating, Password},
+    song::MainSong,
+    GameVersion,
 };
 
 impl<DB: Database> AsSql<DB> for LevelRating

@@ -1,5 +1,5 @@
-use gdcf::{api::request::BaseRequest, model::GameVersion};
-
+use gdcf::api::request::BaseRequest;
+use gdcf_model::GameVersion;
 use ser;
 
 pub(super) mod level;

@@ -3,9 +3,10 @@ pub use self::request::{
     user::UserRequestRem,
     BaseRequestRem,
 };
-use gdcf::{
-    api::request::level::{CompletionFilter, LevelRequestType, SearchFilters, SongFilter},
-    model::{DemonRating, GameVersion, LevelLength, LevelRating},
+use gdcf::api::request::level::{CompletionFilter, LevelRequestType, SearchFilters, SongFilter};
+use gdcf_model::{
+    level::{DemonRating, LevelLength, LevelRating},
+    GameVersion,
 };
 use joinery::Joinable;
 use serde::{ser::SerializeMap, Serializer};

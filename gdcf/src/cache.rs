@@ -1,16 +1,16 @@
-use crate::GDObject;
-use api::request::{user::UserRequest, LevelRequest, LevelsRequest};
-use error::CacheError;
+use crate::{
+    api::request::{user::UserRequest, LevelRequest, LevelsRequest},
+    error::CacheError,
+    GDObject,
+};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
     user::{Creator, User},
 };
 
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use failure::Fail;
-
-pub type Lookup<T, E> = Result<CachedObject<T>, CacheError<E>>;
+pub type Lookup<T, E> = Result<CachedObject<T>, E>;
 
 // TODO: more fine-grained cache-expiry control
 
@@ -20,12 +20,12 @@ pub trait CacheConfig {
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type Config: CacheConfig;
-    type Err: Fail;
+    type Err: CacheError;
 
     fn config(&self) -> &Self::Config;
 
     fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err>;
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>]) -> Result<(), CacheError<Self::Err>>;
+    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>]) -> Result<(), Self::Err>;
 
     fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err>;
     fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;
@@ -33,7 +33,7 @@ pub trait Cache: Clone + Send + Sync + 'static {
     fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
     /// Stores an arbitrary [`GDObject`] in this [`Cache`]
-    fn store_object(&mut self, obj: &GDObject) -> Result<(), CacheError<Self::Err>>;
+    fn store_object(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
         let now = Utc::now();

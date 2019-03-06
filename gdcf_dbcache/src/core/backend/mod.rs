@@ -6,6 +6,7 @@ use core::{
     AsSql,
 };
 use failure::Fail;
+use gdcf::error::CacheError;
 use std::fmt::{Debug, Display};
 
 #[cfg(feature = "pg")]
@@ -47,6 +48,15 @@ pub enum Error<DB: Database + 'static> {
     /// The query passed to `query_one` yielded more than one row
     #[fail(display = "The query passed to 'query_one' yielded more than one row")]
     TooManyRows,
+}
+
+impl<DB: Database + 'static> CacheError for Error<DB> {
+    fn is_cache_miss(&self) -> bool {
+        match self {
+            Error::NoResult => true,
+            _ => false,
+        }
+    }
 }
 
 pub trait Database: Debug + Sized {

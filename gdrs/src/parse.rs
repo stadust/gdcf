@@ -1,11 +1,13 @@
-use gdcf::{
-    error::ApiError,
-    model::{Creator, GDObject, Level, NewgroundsSong, PartialLevel, User},
+use crate::error::ApiError;
+use gdcf::GDObject;
+use gdcf_model::{
+    level::{Level, PartialLevel},
+    song::NewgroundsSong,
+    user::{Creator, User},
 };
 use gdcf_parse::Parse;
-use hyper::Error;
 
-pub fn level(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
+pub fn level(body: &str) -> Result<Vec<GDObject>, ApiError> {
     check_resp!(body);
 
     let mut sections = body.split('#');
@@ -16,7 +18,7 @@ pub fn level(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
     }
 }
 
-pub fn levels(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
+pub fn levels(body: &str) -> Result<Vec<GDObject>, ApiError> {
     check_resp!(body);
 
     let mut result = Vec::new();
@@ -51,7 +53,7 @@ pub fn levels(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
     Ok(result)
 }
 
-pub fn user(body: &str) -> Result<Vec<GDObject>, ApiError<Error>> {
+pub fn user(body: &str) -> Result<Vec<GDObject>, ApiError> {
     check_resp!(body);
 
     Ok(vec![User::parse_str(body, ':')?.into()])

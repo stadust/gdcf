@@ -1,16 +1,15 @@
 use futures::Future;
 
-use crate::GDObject;
-use api::request::{LevelRequest, LevelsRequest};
+use crate::{
+    api::request::{user::UserRequest, LevelRequest, LevelsRequest},
+    error::ApiError,
+    GDObject,
+};
 
-use api::request::user::UserRequest;
-use error::ApiError;
-use failure::Fail;
-
-pub type ApiFuture<E> = Box<dyn Future<Item = Vec<GDObject>, Error = ApiError<E>> + Send + 'static>;
+pub type ApiFuture<E> = Box<dyn Future<Item = Vec<GDObject>, Error = E> + Send + 'static>;
 
 pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
-    type Err: Fail;
+    type Err: ApiError;
 
     fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;
     fn levels(&self, req: LevelsRequest) -> ApiFuture<Self::Err>;

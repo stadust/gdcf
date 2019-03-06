@@ -18,11 +18,16 @@ extern crate log;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate failure;
 extern crate gdcf_parse;
 extern crate joinery;
 extern crate serde_urlencoded;
 extern crate tokio_retry;
+#[macro_use]
+extern crate failure_derive;
+extern crate gdcf_model;
 
+use crate::error::ApiError;
 use futures::{future::Executor, Future, Stream};
 use gdcf::{
     api::{
@@ -33,13 +38,12 @@ use gdcf::{
         },
         ApiClient,
     },
-    error::ApiError,
-    model::GDObject,
+    GDObject,
 };
 use hyper::{
     client::{Builder, HttpConnector},
     header::HeaderValue,
-    Body, Client, Error, Method, Request, StatusCode,
+    Body, Client, Method, Request, StatusCode,
 };
 use ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem};
 use std::str;
@@ -50,6 +54,7 @@ use tokio_retry::{
 
 #[macro_use]
 mod macros;
+pub mod error;
 pub mod parse;
 mod ser;
 
@@ -89,7 +94,7 @@ impl BoomlingsClient {
 }
 
 impl ApiClient for BoomlingsClient {
-    type Err = Error;
+    type Err = ApiError;
 
     api_call!(level, LevelRequest, "downloadGJLevel22", parse::level);
 
@@ -102,13 +107,13 @@ struct ApiRequestAction {
     client: Client<HttpConnector>,
     endpoint: &'static str,
     request: Req,
-    parser: fn(&str) -> Result<Vec<GDObject>, ApiError<Error>>,
+    parser: fn(&str) -> Result<Vec<GDObject>, ApiError>,
 }
 
 struct ApiRetryCondition;
 
-impl Condition<ApiError<Error>> for ApiRetryCondition {
-    fn should_retry(&mut self, error: &ApiError<Error>) -> bool {
+impl Condition<ApiError> for ApiRetryCondition {
+    fn should_retry(&mut self, error: &ApiError) -> bool {
         match error {
             ApiError::Custom(_) => {
                 warn!("Encountered retryable error: {:?}", error);
@@ -120,11 +125,11 @@ impl Condition<ApiError<Error>> for ApiRetryCondition {
 }
 
 impl Action for ApiRequestAction {
-    type Error = ApiError<Error>;
-    type Future = ApiFuture<Error>;
+    type Error = ApiError;
+    type Future = ApiFuture<ApiError>;
     type Item = Vec<GDObject>;
 
-    fn run(&mut self) -> ApiFuture<Error> {
+    fn run(&mut self) -> ApiFuture<ApiError> {
         let req = make_request(self.endpoint, &self.request);
 
         let parser = self.parser;

@@ -4,7 +4,7 @@ macro_rules! collect_one {
             let mut result = None;
 
             for obj in response {
-                $cache.store_object(&obj)?;
+                $cache.store_object(&obj).map_err(GdcfError::Cache)?;
 
                 if let GDObject::$variant(level) = obj {
                     result = Some(level)
@@ -22,7 +22,7 @@ macro_rules! collect_many {
             let mut result = Vec::new();
 
             for obj in response {
-                $cache.store_object(&obj)?;
+                $cache.store_object(&obj).map_err(GdcfError::Cache)?;
 
                 if let GDObject::$variant(level) = obj {
                     result.push(level)
@@ -30,7 +30,7 @@ macro_rules! collect_many {
             }
 
             if !result.is_empty() {
-                $cache.$bulk_store(&$request, &result)?;
+                $cache.$bulk_store(&$request, &result).map_err(GdcfError::Cache)?;
 
                 Ok(result)
             } else {
@@ -49,22 +49,21 @@ macro_rules! gdcf {
                 if cache.is_expired(&cached) {
                     info!("Cache entry for request {} is expired!", $request);
 
-                    GdcfFuture::outdated(cached, Either::A::<_, FutureResult<_, _>>($future_closure()))
+                    GdcfFuture::outdated(cached, $future_closure())
                 } else {
                     info!("Cached entry for request {} is up-to-date!", $request);
 
                     GdcfFuture::up_to_date(cached)
                 },
 
-            Err(err) =>
-                GdcfFuture::absent(match err {
-                    CacheError::CacheMiss => {
-                        info!("No cache entry for request {}", $request);
+            Err(error) =>
+                if error.is_cache_miss() {
+                    info!("No cache entry for request {}", $request);
 
-                        Either::A($future_closure())
-                    },
-                    _ => Either::B(result(Err(GdcfError::Cache(err)))),
-                }),
+                    GdcfFuture::absent($future_closure())
+                } else {
+                    GdcfFuture::cache_error(error)
+                },
         }
     }};
 }

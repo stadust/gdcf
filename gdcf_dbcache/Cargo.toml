@@ -31,11 +31,14 @@ features = ["bundled"]
 [dependencies.gdcf]
 path = "../gdcf"
 
+[dependencies.gdcf_model]
+path = "../gdcf_model"
+
 [dependencies.pm_gdcf_dbcache]
 path = "../pm_gdcf_dbcache"
 
 [features]
-default = ["pg"]
+default = ["pg", "sqlite"]
 
 pg = ["postgres", "r2d2_postgres"]
 sqlite = ["rusqlite", "r2d2_sqlite"]
