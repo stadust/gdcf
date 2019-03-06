@@ -117,6 +117,9 @@ extern crate serde_derive;
 extern crate base64;
 extern crate failure;
 
+// TODO: it would be nice to be able to differentiate between cache-miss because the data doesn't
+// exist and cache-miss because the data simply wasn't requested yet
+
 use api::{
     request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
     ApiClient,

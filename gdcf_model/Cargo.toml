@@ -1,0 +1,21 @@
+[package]
+name = "gdcf_model"
+version = "0.1.0"
+authors = ["stadust <43299462+stadust@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+serde = {version = "1.0", optional = true}
+serde_derive = {version = "1.0", optional = true}
+base64 = {version = "0.10.1", optional = true}
+log = "^0.4.0"
+flate2 = "1.0.6"
+
+[features]
+serde_support = [
+    "serde",
+    "serde_derive"
+]
+serialize_level_data = [
+    "serde_support", "base64"
+]
