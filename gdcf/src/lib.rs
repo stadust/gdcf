@@ -113,7 +113,7 @@ extern crate serde;
 #[cfg(feature = "serde_support")]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "serde_support")]
+#[cfg(feature = "serialize_level_data")]
 extern crate base64;
 extern crate failure;
 
