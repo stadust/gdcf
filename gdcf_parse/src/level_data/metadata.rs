@@ -49,5 +49,5 @@ parser! {
         checked(index = 13, with = int_to_bool),
         portal_type(custom = PortalType::from_id, depends_on = [id]),
     },
-    id(index = 1),
+    id(^index = 1),
 }
