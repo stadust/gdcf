@@ -1,5 +1,5 @@
+use crate::error::ValueError;
 use base64::{DecodeError, URL_SAFE};
-use gdcf::error::ValueError;
 use percent_encoding::percent_decode;
 use std::{
     error::Error,
@@ -111,5 +111,5 @@ where
     value
         .parse()
         .map(Some)
-        .map_err(|error| ValueError::Parse(idx, value, Box::new(error)))
+        .map_err(|error: T::Err| ValueError::Parse(idx, value, error.to_string()))
 }

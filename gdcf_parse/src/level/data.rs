@@ -1,49 +1,42 @@
-use self::{
-    metadata::{ObjectMetadata, PortalMetadata},
-    portal::{PortalType, Speed},
-};
-use crate::Parse;
-use flate2::read::GzDecoder;
-use gdcf::{error::ValueError, model::Level};
-use std::{io::Read, time::Duration};
-
-pub mod ids;
-pub mod metadata;
-pub mod portal;
+use crate::{error::ValueError, Parse};
+use gdcf_model::level::data::{portal::Speed, LevelMetadata, LevelObject, ParsedIterator};
 
 #[derive(Debug)]
 pub struct LevelData(String);
 
-pub trait LevelExt {
-    fn decompress_data(&self) -> std::io::Result<LevelData>;
+pub fn parse_iter<'a>(level_string: &'a str) -> Result<ParsedIterator<impl Iterator<Item = LevelObject> + 'a>, ValueError<'a>> {
+    let mut iter = level_string.split(';');
+
+    let metadata = match iter.next() {
+        None => return Err(ValueError::NoValue("metadata")),
+        Some(s) => LevelMetadata::parse_str(s, ',')?,
+    };
+
+    let iter = iter.filter_map(|obj| {
+        LevelObject::parse_str(obj, ',')
+            .map_err(|err| error!("Ignoring error during parsing of object {} - {}", obj, err))
+            .ok()
+    });
+
+    Ok(ParsedIterator(metadata, iter))
 }
 
-impl<S: PartialEq, U: PartialEq> LevelExt for Level<S, U> {
-    fn decompress_data(&self) -> std::io::Result<LevelData> {
-        let mut s = String::new();
-        let mut d = GzDecoder::new(&self.level_data[..]);
-
-        d.read_to_string(&mut s)?;
-
-        Ok(LevelData(s))
+pub fn metadata(level_string: &str) -> Result<LevelMetadata, ValueError> {
+    match level_string.split(';').nth(0) {
+        None => Err(ValueError::NoValue("metadata")),
+        Some(s) => LevelMetadata::parse_str(s, ','),
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct LevelObject {
-    pub id: u16,
-    pub x: f32,
-    pub y: f32,
-    // ... other fields they all have ...
-    pub metadata: ObjectMetadata,
+pub fn objects<'a>(level_string: &'a str) -> impl Iterator<Item = LevelObject> + 'a {
+    level_string.split(';').skip(1).filter_map(|obj| {
+        LevelObject::parse_str(obj, ',')
+            .map_err(|err| error!("Ignoring error during parsing of object {} - {}", obj, err))
+            .ok()
+    })
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct LevelMetadata {
-    starting_speed: Speed,
-    // ... other fields in the metadata section ...
-}
-
+/*
 impl LevelData {
     pub fn objects(&self) -> impl Iterator<Item = &str> {
         self.0.split(';').skip(1)
@@ -106,7 +99,7 @@ impl LevelData {
 }
 
 pub struct ParsedLevelData(LevelMetadata, Vec<LevelObject>);
-
+*/
 parser! {
     LevelObject => {
         id(index = 1),

@@ -1,7 +1,7 @@
 //! Module containing request definitions for retrieving levels
 
 use api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
-use model::{DemonRating, LevelLength, LevelRating};
+use gdcf_model::level::{DemonRating, LevelLength, LevelRating};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},

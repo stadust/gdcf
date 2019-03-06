@@ -1,11 +1,9 @@
 use crate::{
+    error::ValueError,
     util::{default_to_none, int_to_bool},
     Parse,
 };
-use gdcf::{
-    error::ValueError,
-    model::{Creator, User},
-};
+use gdcf_model::user::{Creator, User};
 
 pub fn youtube(value: &str) -> Option<String> {
     if value.is_empty() {

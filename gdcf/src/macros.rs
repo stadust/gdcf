@@ -132,7 +132,7 @@ macro_rules! const_setter {
         }
     }
 }
-
+/*
 macro_rules! from_str {
     ($target: ident) => {
         impl FromStr for $target {
@@ -146,3 +146,4 @@ macro_rules! from_str {
         }
     };
 }
+*/

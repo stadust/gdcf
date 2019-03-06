@@ -2,8 +2,7 @@
 //!
 //! This crate is based on work by mgostIH and cos8o
 
-use crate::util::SelfZipExt;
-use gdcf::error::ValueError;
+use crate::{error::ValueError, util::SelfZipExt};
 
 #[macro_use]
 extern crate log;
@@ -11,8 +10,8 @@ extern crate log;
 pub mod util;
 #[macro_use]
 pub mod macros;
+pub mod error;
 pub mod level;
-pub mod level_data;
 pub mod song;
 pub mod user;
 

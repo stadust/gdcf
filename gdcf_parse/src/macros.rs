@@ -1,13 +1,13 @@
 macro_rules! __parsing {
     (@ $value: expr, index = $idx: expr, parse = $func: path) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     };
     (@ $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {
         match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     };
@@ -40,14 +40,14 @@ macro_rules! __parsing {
 macro_rules! __match_arm_expr {
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $func: path) => {{
         $field_name = match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     }};
 
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {{
         $field_name = match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     }};
@@ -79,7 +79,7 @@ macro_rules! __match_arm_expr {
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $func: path) => {{
         $f($idx, $value)?;
         $field_name = match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     }};
@@ -87,7 +87,7 @@ macro_rules! __match_arm_expr {
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {{
         $f($idx, $value)?;
         $field_name = match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, Box::new(err))),
+            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     }};

@@ -1,23 +1,15 @@
 use crate::{
-    level_data::{ids, portal::PortalType},
+    error::ValueError,
     util::{int_to_bool, parse},
     Parse,
 };
-use gdcf::error::ValueError;
+use gdcf_model::level::data::{
+    ids,
+    portal::{PortalData, PortalType},
+    ObjectData,
+};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ObjectMetadata {
-    None,
-    Portal(PortalMetadata),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PortalMetadata {
-    pub checked: bool,
-    pub portal_type: PortalType,
-}
-
-impl Parse for ObjectMetadata {
+impl Parse for ObjectData {
     fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
     where
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
@@ -30,7 +22,7 @@ impl Parse for ObjectMetadata {
 
         match id {
             ids::SLOW_PORTAL | ids::NORMAL_PORTAL | ids::MEDIUM_PORTAL | ids::FAST_PORTAL | ids::VERY_FAST_PORTAL =>
-                Ok(ObjectMetadata::Portal(PortalMetadata::parse(iter, f)?)),
+                Ok(ObjectData::Portal(PortalData::parse(iter, f)?)),
             // .. all the other types of metadata, which might have proper parsers ...
             _ => {
                 // We aren't delegating further, so we gotta drive the iterator to completion
@@ -38,14 +30,14 @@ impl Parse for ObjectMetadata {
                     f(idx, value)?
                 }
 
-                Ok(ObjectMetadata::None)
+                Ok(ObjectData::None)
             },
         }
     }
 }
 
 parser! {
-    PortalMetadata => {
+    PortalData => {
         checked(index = 13, with = int_to_bool),
         portal_type(custom = PortalType::from_id, depends_on = [id]),
     },

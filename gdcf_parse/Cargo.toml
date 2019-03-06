@@ -5,10 +5,9 @@ authors = ["stadust <43299462+stadust@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-flate2 = "1.0.6"
 base64 = "0.10.1"
 percent-encoding = "1.0.1"
 log = "0.4.6"
 
-[dependencies.gdcf]
-path = "../gdcf"
+[dependencies.gdcf_model]
+path = "../gdcf_model"

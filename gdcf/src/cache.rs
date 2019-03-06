@@ -1,6 +1,11 @@
+use crate::GDObject;
 use api::request::{user::UserRequest, LevelRequest, LevelsRequest};
 use error::CacheError;
-use model::{user::Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
+use gdcf_model::{
+    level::{Level, PartialLevel},
+    song::NewgroundsSong,
+    user::{Creator, User},
+};
 
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use failure::Fail;

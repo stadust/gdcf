@@ -1,15 +1,17 @@
 use crate::{
+    error::ValueError,
     util::{b64_decode_bytes, b64_decode_string, default_to_none, int_to_bool, xor_decrypt},
     Parse,
 };
 use base64::DecodeError;
-use gdcf::{
-    error::ValueError,
-    model::{
-        song::{MainSong, MAIN_SONGS, UNKNOWN},
-        Level, LevelRating, PartialLevel, Password,
-    },
+use gdcf_model::{
+    level::{Featured, Level, LevelLength, LevelRating, PartialLevel, Password},
+    song::{MainSong, MAIN_SONGS, UNKNOWN},
 };
+use std::num::ParseIntError;
+
+mod data;
+mod object;
 
 pub fn process_difficulty(rating: i32, is_auto: bool, is_demon: bool) -> LevelRating {
     if is_demon {
@@ -33,6 +35,25 @@ pub fn parse_description(value: &str) -> Option<String> {
     // I have decided that level descriptions are so broken that we simply ignore it if they fail to
     // parase
     b64_decode_string(value).ok()
+}
+
+pub fn parse_featured(value: &str) -> Result<Featured, ParseIntError> {
+    match value {
+        "-1" => Ok(Featured::Unfeatured),
+        "0" => Ok(Featured::NotFeatured),
+        other => other.parse().map(Featured::Featured),
+    }
+}
+
+pub fn parse_level_length(value: &str) -> LevelLength {
+    match value {
+        "0" => LevelLength::Tiny,
+        "1" => LevelLength::Short,
+        "2" => LevelLength::Medium,
+        "3" => LevelLength::Long,
+        "4" => LevelLength::ExtraLong,
+        _ => LevelLength::Unknown,
+    }
 }
 
 /// Attempts to parse the given `str` into a [`Password`]
@@ -69,9 +90,9 @@ parser! {
         main_song(custom = process_song, depends_on = [main_song_id, &custom_song]),
         gd_version(index = 13),
         likes(index = 14),
-        length(index = 15),
+        length(index = 15, parse_infallible = parse_level_length),
         stars(index = 18),
-        featured(index = 19),
+        featured(index = 19, parse = parse_featured),
         copy_of(index = 30, with = default_to_none),
         custom_song(index = 35, with = default_to_none),
         coin_amount(index = 37),

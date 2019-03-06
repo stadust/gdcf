@@ -1,4 +1,7 @@
-use model::{Level, NewgroundsSong, PartialLevel};
+use gdcf_model::{
+    level::{Level, PartialLevel},
+    song::NewgroundsSong,
+};
 
 pub(crate) fn partial_level_song<User: PartialEq>(
     PartialLevel {

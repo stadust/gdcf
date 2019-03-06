@@ -1,7 +1,7 @@
 use futures::Future;
 
+use crate::GDObject;
 use api::request::{LevelRequest, LevelsRequest};
-use model::GDObject;
 
 use api::request::user::UserRequest;
 use error::ApiError;

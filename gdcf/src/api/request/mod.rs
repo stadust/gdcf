@@ -19,7 +19,7 @@ pub use self::{
     level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
     user::UserRequest,
 };
-use model::GameVersion;
+use gdcf_model::GameVersion;
 use std::{fmt::Display, hash::Hash};
 
 pub mod level;

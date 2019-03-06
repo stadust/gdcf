@@ -116,6 +116,7 @@ extern crate serde_derive;
 #[cfg(feature = "serialize_level_data")]
 extern crate base64;
 extern crate failure;
+extern crate gdcf_model;
 
 // TODO: it would be nice to be able to differentiate between cache-miss because the data doesn't
 // exist and cache-miss because the data simply wasn't requested yet
@@ -131,7 +132,11 @@ use futures::{
     future::{result, Either, FutureResult},
     task, Async, Future, Stream,
 };
-use model::{song::SERVER_SIDED_DATA_INCONSISTENCY_ERROR, user::DELETED, Creator, GDObject, Level, NewgroundsSong, PartialLevel, User};
+use gdcf_model::{
+    level::{Level, PartialLevel},
+    song::{NewgroundsSong, SERVER_SIDED_DATA_INCONSISTENCY_ERROR},
+    user::{Creator, User, DELETED},
+};
 use std::mem;
 
 #[macro_use]
@@ -139,10 +144,62 @@ mod macros;
 
 pub mod api;
 pub mod cache;
-pub mod convert;
+//pub mod convert;
 pub mod error;
 mod exchange;
-pub mod model;
+//pub mod model;
+
+// FIXME: move this somewhere more fitting
+#[derive(Debug, Clone, PartialEq)]
+pub enum GDObject {
+    NewgroundsSong(NewgroundsSong),
+    PartialLevel(PartialLevel<u64, u64>),
+    Level(Level<u64, u64>),
+    Creator(Creator),
+    User(User),
+}
+
+impl From<NewgroundsSong> for GDObject {
+    fn from(song: NewgroundsSong) -> Self {
+        GDObject::NewgroundsSong(song)
+    }
+}
+
+impl From<Creator> for GDObject {
+    fn from(creator: Creator) -> Self {
+        GDObject::Creator(creator)
+    }
+}
+
+impl From<PartialLevel<u64, u64>> for GDObject {
+    fn from(level: PartialLevel<u64, u64>) -> Self {
+        GDObject::PartialLevel(level)
+    }
+}
+
+impl From<Level<u64, u64>> for GDObject {
+    fn from(level: Level<u64, u64>) -> Self {
+        GDObject::Level(level)
+    }
+}
+
+impl From<User> for GDObject {
+    fn from(user: User) -> Self {
+        GDObject::User(user)
+    }
+}
+
+impl std::fmt::Display for GDObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            GDObject::NewgroundsSong(inner) => inner.fmt(f),
+            GDObject::PartialLevel(inner) => inner.fmt(f),
+            GDObject::Level(inner) => inner.fmt(f),
+            GDObject::Creator(inner) => inner.fmt(f),
+            GDObject::User(inner) => inner.fmt(f),
+        }
+    }
+}
 
 // TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
 // a User

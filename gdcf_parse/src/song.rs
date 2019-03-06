@@ -1,8 +1,9 @@
 use crate::{
+    error::ValueError,
     util::{decode_url, into_option},
     Parse,
 };
-use gdcf::{error::ValueError, model::NewgroundsSong};
+use gdcf_model::song::NewgroundsSong;
 
 parser! {
     NewgroundsSong => {

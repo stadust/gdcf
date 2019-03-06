@@ -10,7 +10,7 @@ use std::{io::Read, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct LevelMetadata {
-    starting_speed: Speed,
+    pub starting_speed: Speed,
     // ... other fields in the metadata section ...
 }
 
@@ -31,8 +31,8 @@ pub enum ObjectData {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Stats {
-    duration: Duration,
-    object_count: u64,
+    pub duration: Duration,
+    pub object_count: u64,
 }
 
 impl<S, U> Level<S, U>
