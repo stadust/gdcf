@@ -9,5 +9,12 @@ base64 = "0.10.1"
 percent-encoding = "1.0.1"
 log = "0.4.6"
 
+[dependencies.rayon]
+version = "1.0.3"
+optional = true
+
 [dependencies.gdcf_model]
 path = "../gdcf_model"
+
+[features]
+parallel = ["rayon"]

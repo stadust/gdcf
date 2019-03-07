@@ -1,10 +1,22 @@
 use crate::{error::ValueError, Parse};
-use gdcf_model::level::data::{portal::Speed, LevelMetadata, LevelObject, ParsedIterator};
+use gdcf_model::level::data::{
+    portal::{self, PortalData, PortalType, Speed},
+    LevelInformationSource, LevelMetadata, LevelObject, ObjectData, Stats,
+};
+#[cfg(feature = "parallel")]
+use rayon::{iter::ParallelIterator, str::ParallelString};
+use std::time::Duration;
 
-#[derive(Debug)]
-pub struct LevelData(String);
+pub struct IterSource<I>(LevelMetadata, I)
+where
+    I: Iterator<Item = LevelObject>;
 
-pub fn parse_iter<'a>(level_string: &'a str) -> Result<ParsedIterator<impl Iterator<Item = LevelObject> + 'a>, ValueError<'a>> {
+#[cfg(feature = "parallel")]
+pub struct ParIterSource<I>(LevelMetadata, I)
+where
+    I: ParallelIterator<Item = LevelObject>;
+
+pub fn parse_lazy<'a>(level_string: &'a str) -> Result<IterSource<impl Iterator<Item = LevelObject> + 'a>, ValueError<'a>> {
     let mut iter = level_string.split(';');
 
     let metadata = match iter.next() {
@@ -18,59 +30,48 @@ pub fn parse_iter<'a>(level_string: &'a str) -> Result<ParsedIterator<impl Itera
             .ok()
     });
 
-    Ok(ParsedIterator(metadata, iter))
+    Ok(IterSource(metadata, iter))
 }
 
-pub fn metadata(level_string: &str) -> Result<LevelMetadata, ValueError> {
-    match level_string.split(';').nth(0) {
-        None => Err(ValueError::NoValue("metadata")),
-        Some(s) => LevelMetadata::parse_str(s, ','),
-    }
-}
+#[cfg(feature = "parallel")]
+pub fn parse_lazy_parallel<'a>(
+    level_string: &'a str,
+) -> Result<ParIterSource<impl ParallelIterator<Item = LevelObject> + 'a>, ValueError<'a>> {
+    let (metadata_str, object_str) = match level_string.find(';') {
+        Some(idx) => (&level_string[..idx - 1], &level_string[idx + 1..]),
+        None => return Err(ValueError::NoValue("metadata")),
+    };
 
-pub fn objects<'a>(level_string: &'a str) -> impl Iterator<Item = LevelObject> + 'a {
-    level_string.split(';').skip(1).filter_map(|obj| {
+    let metadata = LevelMetadata::parse_str(metadata_str, ',')?;
+
+    let iter = object_str.par_split(';').filter_map(|obj| {
         LevelObject::parse_str(obj, ',')
             .map_err(|err| error!("Ignoring error during parsing of object {} - {}", obj, err))
             .ok()
-    })
+    });
+
+    Ok(ParIterSource(metadata, iter))
 }
 
-/*
-impl LevelData {
-    pub fn objects(&self) -> impl Iterator<Item = &str> {
-        self.0.split(';').skip(1)
+impl<I> LevelInformationSource for IterSource<I>
+where
+    I: Iterator<Item = LevelObject>,
+{
+    fn collect(self) -> Vec<LevelObject> {
+        self.1.collect()
     }
 
-    pub fn object_count(&self) -> usize {
-        self.objects().count()
-    }
+    fn stats(self) -> Stats {
+        let IterSource(metadata, iter) = self;
 
-    pub fn parsed_objects<'a>(&'a self) -> impl Iterator<Item = LevelObject> + 'a {
-        self.objects().filter_map(|obj| {
-            LevelObject::parse_str(obj, ',')
-                .map_err(|err| error!("Ignoring error during parsing of object {} - {}", obj, err))
-                .ok()
-        })
-    }
-
-    pub fn metadata(&self) -> Result<LevelMetadata, ValueError> {
-        match self.0.split(';').nth(0) {
-            None => Err(ValueError::NoValue("metadata")),
-            Some(s) => LevelMetadata::parse_str(s, ','),
-        }
-    }
-
-    pub fn starting_speed(&self) -> Result<Speed, ValueError> {
-        Ok(self.metadata()?.starting_speed)
-    }
-
-    pub fn level_length(&self) -> Result<Duration, ValueError> {
+        let mut object_count = 0;
         let mut portals = Vec::new();
         let mut furthest_x = 0.0;
 
-        for object in self.parsed_objects() {
-            if let ObjectMetadata::Portal(PortalMetadata {
+        for object in iter {
+            object_count += 1;
+
+            if let ObjectData::Portal(PortalData {
                 checked: true,
                 portal_type: PortalType::Speed(speed),
             }) = object.metadata
@@ -83,23 +84,65 @@ impl LevelData {
 
         portals.sort_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
 
-        let seconds = portal::get_seconds_from_x_pos(furthest_x, self.starting_speed()?, &portals);
+        let duration = Duration::from_secs(portal::get_seconds_from_x_pos(furthest_x, metadata.starting_speed, &portals) as u64);
 
-        Ok(Duration::from_secs(seconds.round() as u64))
+        Stats { object_count, duration }
     }
 
-    pub fn parse_fully(&self) -> Result<ParsedLevelData, ValueError> {
-        let all_objects = self
-            .objects()
-            .map(|obj| LevelObject::parse_str(obj, ','))
-            .collect::<Result<_, _>>()?;
-
-        Ok(ParsedLevelData(self.metadata()?, all_objects))
+    fn metadata(&self) -> LevelMetadata {
+        self.0.clone()
     }
 }
 
-pub struct ParsedLevelData(LevelMetadata, Vec<LevelObject>);
-*/
+#[cfg(feature = "parallel")]
+impl<I> LevelInformationSource for ParIterSource<I>
+where
+    I: ParallelIterator<Item = LevelObject>,
+{
+    fn collect(self) -> Vec<LevelObject> {
+        self.1.collect()
+    }
+
+    fn stats(self) -> Stats {
+        let ParIterSource(metadata, iter) = self;
+
+        let (mut portals, object_count, max_x) = iter
+            .fold(
+                || (Vec::new(), 0, 0.0),
+                |(mut portals, obj_count, max_x), object| {
+                    if let ObjectData::Portal(PortalData {
+                        checked: true,
+                        portal_type: PortalType::Speed(speed),
+                    }) = object.metadata
+                    {
+                        portals.push((object.x, speed))
+                    }
+
+                    (portals, obj_count + 1, f32::max(max_x, object.x))
+                },
+            )
+            .reduce(
+                || (Vec::with_capacity(32), 0, 0.0),
+                |(mut v1, c1, x1), (v2, c2, x2)| {
+                    v1.extend(v2);
+                    (v1, c1 + c2, f32::max(x1, x2))
+                },
+            );
+
+        // The parallel parsing fucked up the order already anyway, so we wont have to bother using a stable
+        // sort
+        portals.sort_unstable_by(|(x1, _), (x2, _)| x1.partial_cmp(x2).unwrap());
+
+        let duration = Duration::from_secs(portal::get_seconds_from_x_pos(max_x, metadata.starting_speed, &portals) as u64);
+
+        Stats { object_count, duration }
+    }
+
+    fn metadata(&self) -> LevelMetadata {
+        self.0.clone()
+    }
+}
+
 parser! {
     LevelObject => {
         id(index = 1),
