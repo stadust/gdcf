@@ -153,52 +153,28 @@ mod exchange;
 
 // FIXME: move this somewhere more fitting
 #[derive(Debug, Clone, PartialEq)]
-pub enum GDObject {
+pub enum Secondary {
     NewgroundsSong(NewgroundsSong),
-    PartialLevel(PartialLevel<u64, u64>),
-    Level(Level<u64, u64>),
     Creator(Creator),
-    User(User),
 }
 
-impl From<NewgroundsSong> for GDObject {
+impl From<NewgroundsSong> for Secondary {
     fn from(song: NewgroundsSong) -> Self {
-        GDObject::NewgroundsSong(song)
+        Secondary::NewgroundsSong(song)
     }
 }
 
-impl From<Creator> for GDObject {
+impl From<Creator> for Secondary {
     fn from(creator: Creator) -> Self {
-        GDObject::Creator(creator)
+        Secondary::Creator(creator)
     }
 }
 
-impl From<PartialLevel<u64, u64>> for GDObject {
-    fn from(level: PartialLevel<u64, u64>) -> Self {
-        GDObject::PartialLevel(level)
-    }
-}
-
-impl From<Level<u64, u64>> for GDObject {
-    fn from(level: Level<u64, u64>) -> Self {
-        GDObject::Level(level)
-    }
-}
-
-impl From<User> for GDObject {
-    fn from(user: User) -> Self {
-        GDObject::User(user)
-    }
-}
-
-impl std::fmt::Display for GDObject {
+impl std::fmt::Display for Secondary {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            GDObject::NewgroundsSong(inner) => inner.fmt(f),
-            GDObject::PartialLevel(inner) => inner.fmt(f),
-            GDObject::Level(inner) => inner.fmt(f),
-            GDObject::Creator(inner) => inner.fmt(f),
-            GDObject::User(inner) => inner.fmt(f),
+            Secondary::NewgroundsSong(inner) => inner.fmt(f),
+            Secondary::Creator(inner) => inner.fmt(f),
         }
     }
 }
@@ -227,10 +203,9 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     }
 }
 
-
 impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
-    R: Request+ Send + Sync + 'static,
+    R: Request + Send + Sync + 'static,
     A: ApiClient + MakeRequest<R>,
     C: Cache + CanCache<R>,
 {
@@ -271,7 +246,7 @@ where
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
                     for object in excess {
-                        cache.store_any(&object).map_err(GdcfError::Cache)?;
+                        cache.store_secondary(&object).map_err(GdcfError::Cache)?;
                     }
 
                     cache
@@ -588,7 +563,7 @@ where
                                         Err(ref err) if err.is_cache_miss() => {
                                             let creator = Creator::deleted(cached.base.creator);
 
-                                            gdcf.cache().store_any(&creator.clone().into()).map_err(GdcfError::Cache)?;
+                                            gdcf.cache().store_secondary(&creator.clone().into()).map_err(GdcfError::Cache)?;
 
                                             Ok(exchange::level_user(cached, creator))
                                         },
@@ -645,7 +620,7 @@ where
                                                 Err(ref err) if err.is_cache_miss() => {
                                                     let creator = Creator::deleted(level.base.creator);
 
-                                                    gdcf.cache().store_any(&creator.clone().into()).map_err(GdcfError::Cache)?;
+                                                    gdcf.cache().store_secondary(&creator.clone().into()).map_err(GdcfError::Cache)?;
 
                                                     Ok(exchange::level_user(level, creator))
                                                 },

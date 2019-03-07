@@ -1,6 +1,6 @@
 use futures::Future;
 
-use crate::{api::request::Request, error::ApiError, GDObject};
+use crate::{api::request::Request, error::ApiError, Secondary};
 
 pub type ApiFuture<R, E> = Box<dyn Future<Item = Response<<R as Request>::Result>, Error = E> + Send + 'static>;
 
@@ -11,7 +11,7 @@ pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
 #[derive(Debug)]
 pub enum Response<T> {
     Exact(T),
-    More(T, Vec<GDObject>),
+    More(T, Vec<Secondary>),
 }
 
 pub trait MakeRequest<R: Request>: ApiClient {

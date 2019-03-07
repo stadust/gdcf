@@ -258,7 +258,7 @@ mod macros {
                              move | response | {
                              let mut result = None ; for obj in response {
                              $ cache . store_object ( & obj ) . map_err (
-                             GdcfError :: Cache ) ? ; if let GDObject :: $
+                             GdcfError :: Cache ) ? ; if let Secondary :: $
                              variant ( level ) = obj { result = Some ( level )
                              } } result . ok_or ( GdcfError :: NoContent ) } }
                              ;);
@@ -269,7 +269,7 @@ mod macros {
                               let mut result = Vec :: new (  ) ; for obj in
                               response {
                               $ cache . store_object ( & obj ) . map_err (
-                              GdcfError :: Cache ) ? ; if let GDObject :: $
+                              GdcfError :: Cache ) ? ; if let Secondary :: $
                               variant ( level ) = obj {
                               result . push ( level ) } } if ! result .
                               is_empty (  ) {
@@ -334,10 +334,10 @@ pub mod api {
         use crate::{
             api::request::{user::UserRequest, LevelRequest, LevelsRequest, Request},
             error::ApiError,
-            GDObject,
+            Secondary,
         };
         use futures::Future;
-        pub type ApiFuture<E> = Box<dyn Future<Item = Vec<GDObject>, Error = E> + Send + 'static>;
+        pub type ApiFuture<E> = Box<dyn Future<Item = Vec<Secondary>, Error = E> + Send + 'static>;
         pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
             type Err: ApiError;
             fn level(&self, req: LevelRequest) -> ApiFuture<Self::Err>;
@@ -346,7 +346,7 @@ pub mod api {
         }
         pub enum Response<T> {
             Exact(T),
-            More(T, Vec<GDObject>),
+            More(T, Vec<Secondary>),
         }
         #[automatically_derived]
         #[allow(unused_qualifications)]
@@ -1737,7 +1737,7 @@ pub mod cache {
     use crate::{
         api::request::{user::UserRequest, LevelRequest, LevelsRequest},
         error::CacheError,
-        GDObject,
+        Secondary,
     };
     use chrono::{DateTime, Duration, NaiveDateTime, Utc};
     use gdcf_model::{
@@ -1759,8 +1759,8 @@ pub mod cache {
         fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;
         fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
         fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
-        /// Stores an arbitrary [`GDObject`] in this [`Cache`]
-        fn store_object(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
+        /// Stores an arbitrary [`Secondary`] in this [`Cache`]
+        fn store_object(&mut self, obj: &Secondary) -> Result<(), Self::Err>;
         fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
             let now = Utc::now();
             let then = DateTime::<Utc>::from_utc(obj.last_cached_at(), Utc);
@@ -2110,7 +2110,7 @@ mod exchange {
         }
     }
 }
-pub enum GDObject {
+pub enum Secondary {
     NewgroundsSong(NewgroundsSong),
     PartialLevel(PartialLevel<u64, u64>),
     Level(Level<u64, u64>),
@@ -2119,30 +2119,30 @@ pub enum GDObject {
 }
 #[automatically_derived]
 #[allow(unused_qualifications)]
-impl ::std::fmt::Debug for GDObject {
+impl ::std::fmt::Debug for Secondary {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match (&*self,) {
-            (&GDObject::NewgroundsSong(ref __self_0),) => {
+            (&Secondary::NewgroundsSong(ref __self_0),) => {
                 let mut debug_trait_builder = f.debug_tuple("NewgroundsSong");
                 let _ = debug_trait_builder.field(&&(*__self_0));
                 debug_trait_builder.finish()
             },
-            (&GDObject::PartialLevel(ref __self_0),) => {
+            (&Secondary::PartialLevel(ref __self_0),) => {
                 let mut debug_trait_builder = f.debug_tuple("PartialLevel");
                 let _ = debug_trait_builder.field(&&(*__self_0));
                 debug_trait_builder.finish()
             },
-            (&GDObject::Level(ref __self_0),) => {
+            (&Secondary::Level(ref __self_0),) => {
                 let mut debug_trait_builder = f.debug_tuple("Level");
                 let _ = debug_trait_builder.field(&&(*__self_0));
                 debug_trait_builder.finish()
             },
-            (&GDObject::Creator(ref __self_0),) => {
+            (&Secondary::Creator(ref __self_0),) => {
                 let mut debug_trait_builder = f.debug_tuple("Creator");
                 let _ = debug_trait_builder.field(&&(*__self_0));
                 debug_trait_builder.finish()
             },
-            (&GDObject::User(ref __self_0),) => {
+            (&Secondary::User(ref __self_0),) => {
                 let mut debug_trait_builder = f.debug_tuple("User");
                 let _ = debug_trait_builder.field(&&(*__self_0));
                 debug_trait_builder.finish()
@@ -2152,33 +2152,33 @@ impl ::std::fmt::Debug for GDObject {
 }
 #[automatically_derived]
 #[allow(unused_qualifications)]
-impl ::std::clone::Clone for GDObject {
+impl ::std::clone::Clone for Secondary {
     #[inline]
-    fn clone(&self) -> GDObject {
+    fn clone(&self) -> Secondary {
         match (&*self,) {
-            (&GDObject::NewgroundsSong(ref __self_0),) => GDObject::NewgroundsSong(::std::clone::Clone::clone(&(*__self_0))),
-            (&GDObject::PartialLevel(ref __self_0),) => GDObject::PartialLevel(::std::clone::Clone::clone(&(*__self_0))),
-            (&GDObject::Level(ref __self_0),) => GDObject::Level(::std::clone::Clone::clone(&(*__self_0))),
-            (&GDObject::Creator(ref __self_0),) => GDObject::Creator(::std::clone::Clone::clone(&(*__self_0))),
-            (&GDObject::User(ref __self_0),) => GDObject::User(::std::clone::Clone::clone(&(*__self_0))),
+            (&Secondary::NewgroundsSong(ref __self_0),) => Secondary::NewgroundsSong(::std::clone::Clone::clone(&(*__self_0))),
+            (&Secondary::PartialLevel(ref __self_0),) => Secondary::PartialLevel(::std::clone::Clone::clone(&(*__self_0))),
+            (&Secondary::Level(ref __self_0),) => Secondary::Level(::std::clone::Clone::clone(&(*__self_0))),
+            (&Secondary::Creator(ref __self_0),) => Secondary::Creator(::std::clone::Clone::clone(&(*__self_0))),
+            (&Secondary::User(ref __self_0),) => Secondary::User(::std::clone::Clone::clone(&(*__self_0))),
         }
     }
 }
 #[automatically_derived]
 #[allow(unused_qualifications)]
-impl ::std::cmp::PartialEq for GDObject {
+impl ::std::cmp::PartialEq for Secondary {
     #[inline]
-    fn eq(&self, other: &GDObject) -> bool {
+    fn eq(&self, other: &Secondary) -> bool {
         {
             let __self_vi = unsafe { ::std::intrinsics::discriminant_value(&*self) } as isize;
             let __arg_1_vi = unsafe { ::std::intrinsics::discriminant_value(&*other) } as isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
-                    (&GDObject::NewgroundsSong(ref __self_0), &GDObject::NewgroundsSong(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
-                    (&GDObject::PartialLevel(ref __self_0), &GDObject::PartialLevel(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
-                    (&GDObject::Level(ref __self_0), &GDObject::Level(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
-                    (&GDObject::Creator(ref __self_0), &GDObject::Creator(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
-                    (&GDObject::User(ref __self_0), &GDObject::User(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
+                    (&Secondary::NewgroundsSong(ref __self_0), &Secondary::NewgroundsSong(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
+                    (&Secondary::PartialLevel(ref __self_0), &Secondary::PartialLevel(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
+                    (&Secondary::Level(ref __self_0), &Secondary::Level(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
+                    (&Secondary::Creator(ref __self_0), &Secondary::Creator(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
+                    (&Secondary::User(ref __self_0), &Secondary::User(ref __arg_1_0)) => (*__self_0) == (*__arg_1_0),
                     _ => unsafe { ::std::intrinsics::unreachable() },
                 }
             } else {
@@ -2188,17 +2188,17 @@ impl ::std::cmp::PartialEq for GDObject {
     }
 
     #[inline]
-    fn ne(&self, other: &GDObject) -> bool {
+    fn ne(&self, other: &Secondary) -> bool {
         {
             let __self_vi = unsafe { ::std::intrinsics::discriminant_value(&*self) } as isize;
             let __arg_1_vi = unsafe { ::std::intrinsics::discriminant_value(&*other) } as isize;
             if true && __self_vi == __arg_1_vi {
                 match (&*self, &*other) {
-                    (&GDObject::NewgroundsSong(ref __self_0), &GDObject::NewgroundsSong(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
-                    (&GDObject::PartialLevel(ref __self_0), &GDObject::PartialLevel(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
-                    (&GDObject::Level(ref __self_0), &GDObject::Level(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
-                    (&GDObject::Creator(ref __self_0), &GDObject::Creator(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
-                    (&GDObject::User(ref __self_0), &GDObject::User(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
+                    (&Secondary::NewgroundsSong(ref __self_0), &Secondary::NewgroundsSong(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
+                    (&Secondary::PartialLevel(ref __self_0), &Secondary::PartialLevel(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
+                    (&Secondary::Level(ref __self_0), &Secondary::Level(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
+                    (&Secondary::Creator(ref __self_0), &Secondary::Creator(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
+                    (&Secondary::User(ref __self_0), &Secondary::User(ref __arg_1_0)) => (*__self_0) != (*__arg_1_0),
                     _ => unsafe { ::std::intrinsics::unreachable() },
                 }
             } else {
@@ -2207,39 +2207,39 @@ impl ::std::cmp::PartialEq for GDObject {
         }
     }
 }
-impl From<NewgroundsSong> for GDObject {
+impl From<NewgroundsSong> for Secondary {
     fn from(song: NewgroundsSong) -> Self {
-        GDObject::NewgroundsSong(song)
+        Secondary::NewgroundsSong(song)
     }
 }
-impl From<Creator> for GDObject {
+impl From<Creator> for Secondary {
     fn from(creator: Creator) -> Self {
-        GDObject::Creator(creator)
+        Secondary::Creator(creator)
     }
 }
-impl From<PartialLevel<u64, u64>> for GDObject {
+impl From<PartialLevel<u64, u64>> for Secondary {
     fn from(level: PartialLevel<u64, u64>) -> Self {
-        GDObject::PartialLevel(level)
+        Secondary::PartialLevel(level)
     }
 }
-impl From<Level<u64, u64>> for GDObject {
+impl From<Level<u64, u64>> for Secondary {
     fn from(level: Level<u64, u64>) -> Self {
-        GDObject::Level(level)
+        Secondary::Level(level)
     }
 }
-impl From<User> for GDObject {
+impl From<User> for Secondary {
     fn from(user: User) -> Self {
-        GDObject::User(user)
+        Secondary::User(user)
     }
 }
-impl std::fmt::Display for GDObject {
+impl std::fmt::Display for Secondary {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            GDObject::NewgroundsSong(inner) => inner.fmt(f),
-            GDObject::PartialLevel(inner) => inner.fmt(f),
-            GDObject::Level(inner) => inner.fmt(f),
-            GDObject::Creator(inner) => inner.fmt(f),
-            GDObject::User(inner) => inner.fmt(f),
+            Secondary::NewgroundsSong(inner) => inner.fmt(f),
+            Secondary::PartialLevel(inner) => inner.fmt(f),
+            Secondary::Level(inner) => inner.fmt(f),
+            Secondary::Creator(inner) => inner.fmt(f),
+            Secondary::User(inner) => inner.fmt(f),
         }
     }
 }
@@ -2358,7 +2358,7 @@ where
                                     let mut result = None;
                                     for obj in response {
                                         cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                        if let GDObject::User(level) = obj {
+                                        if let Secondary::User(level) = obj {
                                             result = Some(level)
                                         }
                                     }
@@ -2407,7 +2407,7 @@ where
                                 let mut result = None;
                                 for obj in response {
                                     cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                    if let GDObject::User(level) = obj {
+                                    if let Secondary::User(level) = obj {
                                         result = Some(level)
                                     }
                                 }
@@ -2470,7 +2470,7 @@ where
                                     let mut result = None;
                                     for obj in response {
                                         cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                        if let GDObject::Level(level) = obj {
+                                        if let Secondary::Level(level) = obj {
                                             result = Some(level)
                                         }
                                     }
@@ -2519,7 +2519,7 @@ where
                                 let mut result = None;
                                 for obj in response {
                                     cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                    if let GDObject::Level(level) = obj {
+                                    if let Secondary::Level(level) = obj {
                                         result = Some(level)
                                     }
                                 }
@@ -2585,7 +2585,7 @@ where
                                         let mut result = Vec::new();
                                         for obj in response {
                                             cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                            if let GDObject::PartialLevel(level) = obj {
+                                            if let Secondary::PartialLevel(level) = obj {
                                                 result.push(level)
                                             }
                                         }
@@ -2642,7 +2642,7 @@ where
                                     let mut result = Vec::new();
                                     for obj in response {
                                         cache.store_object(&obj).map_err(GdcfError::Cache)?;
-                                        if let GDObject::PartialLevel(level) = obj {
+                                        if let Secondary::PartialLevel(level) = obj {
                                             result.push(level)
                                         }
                                     }

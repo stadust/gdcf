@@ -10,7 +10,7 @@ use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},
     chrono::{Duration, Utc},
-    GDObject,
+    Secondary,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
@@ -254,12 +254,10 @@ macro_rules! cache {
                 self.config.backend.query_one(&select)
             }
 
-            fn store_any(&mut self, obj: &GDObject) -> Result<(), <Self as Cache>::Err> {
+            fn store_secondary(&mut self, obj: &Secondary) -> Result<(), <Self as Cache>::Err> {
                 match obj {
-                    GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
-                    GDObject::NewgroundsSong(song) => self.store_song(song),
-                    GDObject::Creator(creator) => self.store_creator(creator),
-                    _ => panic!("dont do this"),
+                    Secondary::NewgroundsSong(song) => self.store_song(song),
+                    Secondary::Creator(creator) => self.store_creator(creator),
                 }
             }
 

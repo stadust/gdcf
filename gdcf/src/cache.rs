@@ -1,4 +1,4 @@
-use crate::{error::CacheError, GDObject};
+use crate::{error::CacheError, Secondary};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use std::hash::Hash;
@@ -20,8 +20,8 @@ pub trait Cache: Clone + Send + Sync + 'static {
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
     fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
-    /// Stores an arbitrary [`GDObject`] in this [`Cache`]
-    fn store_any(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
+    /// Stores an arbitrary [`Secondary`] in this [`Cache`]
+    fn store_secondary(&mut self, obj: &Secondary) -> Result<(), Self::Err>;
 
     fn hash<H: Hash>(&self, obj: H) -> u64;
 
