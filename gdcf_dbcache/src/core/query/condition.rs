@@ -12,14 +12,14 @@ pub trait Condition<DB: Database>: QueryPart<DB> + Debug {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct EqField<'a> {
-    pub field_1: &'a Field,
-    pub field_2: &'a Field,
+pub struct EqField {
+    pub field_1: Field,
+    pub field_2: Field,
 }
 
 #[derive(Debug)]
-pub struct EqValue<'a, DB: Database> {
-    pub field: &'a Field,
+pub struct EqValue<DB: Database> {
+    pub field: Field,
     pub value: Box<dyn AsSql<DB>>,
 }
 
@@ -35,8 +35,8 @@ pub struct Or<DB: Database> {
     pub cond_2: Box<dyn Condition<DB>>,
 }
 
-impl<'f, 'sql, DB: Database + 'sql> EqValue<'f, DB> {
-    pub fn new<S: AsSql<DB> + 'static>(field: &'f Field, value: S) -> EqValue<'f, DB> {
+impl<'sql, DB: Database + 'sql> EqValue<DB> {
+    pub fn new<S: AsSql<DB> + 'static>(field: Field, value: S) -> EqValue<DB> {
         EqValue {
             field,
             value: Box::new(value),
@@ -44,8 +44,8 @@ impl<'f, 'sql, DB: Database + 'sql> EqValue<'f, DB> {
     }
 }
 
-impl<'a> EqField<'a> {
-    pub fn new(field_1: &'a Field, field_2: &'a Field) -> EqField<'a> {
+impl EqField {
+    pub fn new(field_1: Field, field_2: Field) -> EqField {
         EqField { field_1, field_2 }
     }
 }
@@ -82,7 +82,7 @@ macro_rules! condition {
     };
 }
 
-condition!(EqField<'a>);
+condition!(EqField);
 condition!(And<DB>);
 condition!(Or<DB>);
-condition!(EqValue<'a, DB>);
+condition!(EqValue<DB>);

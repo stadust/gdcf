@@ -14,14 +14,14 @@ pub(crate) enum OnConflict {
 
 #[derive(Debug)]
 pub struct Insert<'a, DB: Database + 'a> {
-    table: &'a Table,
+    table: Table,
     values: Vec<SetField<'a, DB>>,
     // TODO: multiple rows in one insert
     pub(crate) conflict: OnConflict,
 }
 
 impl<'a, DB: Database + 'a> Insert<'a, DB> {
-    pub fn new(table: &'a Table, values: Vec<SetField<'a, DB>>) -> Insert<'a, DB> {
+    pub fn new(table: Table, values: Vec<SetField<'a, DB>>) -> Insert<'a, DB> {
         Insert {
             table,
             values,
@@ -33,7 +33,7 @@ impl<'a, DB: Database + 'a> Insert<'a, DB> {
         &self.values
     }
 
-    pub fn table(&self) -> &'a Table {
+    pub fn table(&self) -> Table {
         self.table
     }
 
@@ -55,7 +55,7 @@ impl<'a, DB: Database + 'a> Insert<'a, DB> {
 
 pub trait Insertable<DB: Database> {
     fn values(&self) -> Vec<SetField<DB>>;
-    fn table(&self) -> &Table;
+    fn table(&self) -> Table;
 
     fn insert(&self) -> Insert<DB> {
         Insert {

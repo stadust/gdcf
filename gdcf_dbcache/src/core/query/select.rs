@@ -9,8 +9,8 @@ use core::{
 };
 
 #[derive(Debug)]
-pub struct Join<'a, DB: Database + 'a> {
-    pub other: &'a Table,
+pub struct Join<DB: Database> {
+    pub other: Table,
     pub join_condition: Box<dyn Condition<DB>>,
 }
 
@@ -21,23 +21,23 @@ pub enum Ordering {
 }
 
 #[derive(Debug)]
-pub struct OrderBy<'a> {
-    pub field: &'a Field,
+pub struct OrderBy {
+    pub field: Field,
     pub ordering: Ordering,
 }
 
 #[derive(Debug)]
-pub struct Select<'a, DB: Database + 'a> {
-    pub table: &'a Table,
-    pub fields: Vec<&'a Field>,
-    pub joins: Vec<Join<'a, DB>>,
+pub struct Select<DB: Database> {
+    pub table: Table,
+    pub fields: Vec<Field>,
+    pub joins: Vec<Join<DB>>,
     pub filter: Option<Box<dyn Condition<DB>>>,
     pub subset: (Option<usize>, Option<usize>),
-    pub order: Vec<OrderBy<'a>>,
+    pub order: Vec<OrderBy>,
 }
 
-impl<'a, DB: Database + 'a> Select<'a, DB> {
-    pub fn new(table: &'a Table, fields: Vec<&'a Field>) -> Select<'a, DB> {
+impl<DB: Database> Select<DB> {
+    pub fn new(table: Table, fields: Vec<Field>) -> Select<DB> {
         Select {
             table,
             fields,
@@ -48,7 +48,7 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         }
     }
 
-    pub fn join<Cond>(mut self, other: &'a Table, condition: Cond) -> Select<'a, DB>
+    pub fn join<Cond>(mut self, other: Table, condition: Cond) -> Select<DB>
     where
         DB: 'static,
         Cond: Condition<DB> + 'static,
@@ -60,27 +60,27 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self
     }
 
-    pub fn limit(mut self, limit: usize) -> Select<'a, DB> {
+    pub fn limit(mut self, limit: usize) -> Select<DB> {
         self.subset = (self.subset.0, Some(limit));
         self
     }
 
-    pub fn offset(mut self, offset: usize) -> Select<'a, DB> {
+    pub fn offset(mut self, offset: usize) -> Select<DB> {
         self.subset = (Some(offset), self.subset.1);
         self
     }
 
-    pub fn select(mut self, fields: &[&'a Field]) -> Select<'a, DB> {
+    pub fn select(mut self, fields: &[Field]) -> Select<DB> {
         self.fields.extend(fields);
         self
     }
 
-    pub fn order_by(mut self, field: &'a Field, ordering: Ordering) -> Select<'a, DB> {
+    pub fn order_by(mut self, field: Field, ordering: Ordering) -> Select<DB> {
         self.order.push(OrderBy { field, ordering });
         self
     }
 
-    pub fn filter<Cond>(mut self, cond: Cond) -> Select<'a, DB>
+    pub fn filter<Cond>(mut self, cond: Cond) -> Select<DB>
     where
         DB: 'static,
         Cond: Condition<DB> + 'static,
@@ -98,7 +98,7 @@ impl<'a, DB: Database + 'a> Select<'a, DB> {
         self
     }
 
-    pub fn or<Cond>(mut self, cond: Cond) -> Select<'a, DB>
+    pub fn or<Cond>(mut self, cond: Cond) -> Select<DB>
     where
         DB: 'static,
         Cond: Condition<DB> + 'static,
@@ -150,11 +150,11 @@ impl<DB: Database> Row<DB> {
 }
 
 pub trait Queryable<DB: Database>: Sized {
-    fn select_from(table: &Table) -> Select<DB> {
+    fn select_from(table: Table) -> Select<DB> {
         table.select()
     }
 
     fn from_row(row: &Row<DB>, offset: isize) -> Result<Self, Error<DB>>;
 }
 
-if_query_part!(Select<'a, DB>, Query<DB>);
+if_query_part!(Select<DB>, Query<DB>);

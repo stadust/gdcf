@@ -8,14 +8,14 @@ use core::{
     AsSql,
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Table {
     pub name: &'static str,
-    pub fields: &'static [&'static Field],
+    pub fields: &'static [Field],
 }
 
 impl Table {
-    pub fn fields(&self) -> &'static [&'static Field] {
+    pub fn fields(&self) -> &'static [Field] {
         &self.fields
     }
 
@@ -28,7 +28,7 @@ impl Table {
         self.select().filter(cond)
     }
 
-    pub fn select<DB: Database>(&self) -> Select<DB> {
+    pub fn select<DB: Database>(self) -> Select<DB> {
         Select::new(self, self.fields().to_vec())
     }
 
@@ -40,40 +40,40 @@ impl Table {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Field {
     pub table: &'static str,
     pub name: &'static str,
 }
 
 impl Field {
-    pub fn eq<DB: Database, S: AsSql<DB> + 'static>(&self, value: S) -> EqValue<DB> {
-        EqValue::new(&self, value)
+    pub fn eq<DB: Database, S: AsSql<DB> + 'static>(self, value: S) -> EqValue<DB> {
+        EqValue::new(self, value)
     }
 
-    pub fn same_as<'a>(&'a self, other: &'a Field) -> EqField<'a> {
-        EqField::new(&self, other)
+    pub fn same_as(self, other: Field) -> EqField {
+        EqField::new(self, other)
     }
 
-    pub fn set<'a, DB: Database + 'a>(&'a self, value: &'a dyn AsSql<DB>) -> SetField<'a, DB> {
+    pub fn set<'a, DB: Database + 'a>(self, value: &'a dyn AsSql<DB>) -> SetField<'a, DB> {
         SetField {
-            field: &self,
+            field: self,
             value: FieldValue::Value(value),
         }
     }
 
-    pub fn set_default<DB: Database>(&self) -> SetField<DB> {
+    pub fn set_default<DB: Database>(self) -> SetField<'static, DB> {
         SetField {
-            field: &self,
+            field: self,
             value: FieldValue::Default,
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(self) -> &'static str {
         self.name
     }
 
-    pub fn qualified_name(&self) -> String {
+    pub fn qualified_name(self) -> String {
         format!("{}.{}", self.table, self.name)
     }
 }
@@ -111,6 +111,6 @@ where
 
 #[derive(Debug)]
 pub struct SetField<'a, DB: Database + 'a> {
-    pub field: &'a Field,
+    pub field: Field,
     pub value: FieldValue<'a, DB>,
 }

@@ -82,7 +82,7 @@ impl Table {
                     .unwrap(),
             );
 
-            field_string = format!("{},&{}", field_string, field);
+            field_string = format!("{},{}", field_string, field);
         }
 
         field_string.remove(0);
@@ -91,7 +91,8 @@ impl Table {
             format!(
                 "pub static table: Table = Table {{ name: table_name, fields: &[{}] }};",
                 field_string
-            ).parse()
+            )
+            .parse()
             .unwrap(),
         );
 
@@ -109,8 +110,8 @@ impl Table {
         format!(
             "use core::{{table::{{SetField, Table}}, query::insert::Insertable}};\
              impl Insertable<{}> for {} {{\
-             fn table(&self) -> &Table {{\
-             &table\
+             fn table(&self) -> Table {{\
+             table\
              }}\
              \
              fn values(&self) -> Vec<SetField<{}>> {{\
@@ -118,7 +119,8 @@ impl Table {
              }}\
              }}",
             backend, self.model_name, backend, field_setter
-        ).parse()
+        )
+        .parse()
         .unwrap()
     }
 
@@ -146,7 +148,8 @@ impl Table {
             backend,
             self.type_name(),
             field_getter
-        ).parse()
+        )
+        .parse()
         .unwrap()
     }
 

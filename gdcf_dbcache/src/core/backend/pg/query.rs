@@ -61,7 +61,7 @@ simple_query_part!(Pg, Unsigned<BigInteger>, "BIGINT");
 simple_query_part!(Pg, UtcTimestamp, "TIMESTAMP WITHOUT TIME ZONE");
 simple_query_part!(Pg, Bytes, "BYTEA");
 
-impl<'a> QueryPart<Pg> for EqField<'a> {
+impl QueryPart<Pg> for EqField {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
             .with_static("(")
@@ -72,7 +72,7 @@ impl<'a> QueryPart<Pg> for EqField<'a> {
     }
 }
 
-impl<'a> QueryPart<Pg> for EqValue<'a, Pg> {
+impl QueryPart<Pg> for EqValue<Pg> {
     fn to_sql(&self) -> Preparation<Pg> {
         Preparation::<Pg>::default()
             .with_static("(")
@@ -178,7 +178,7 @@ impl<'a> QueryPart<Pg> for Create<'a, Pg> {
     }
 }
 
-impl<'a> Select<'a, Pg> {
+impl Select<Pg> {
     fn qualify(&self) -> bool {
         !self.joins.is_empty()
     }
@@ -201,7 +201,7 @@ impl<'a> Select<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Select<'a, Pg> {
+impl QueryPart<Pg> for Select<Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let mut p = Preparation::<Pg>::default()
             .with_static("SELECT")
@@ -218,7 +218,7 @@ impl<'a> QueryPart<Pg> for Select<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for Join<'a, Pg> {
+impl QueryPart<Pg> for Join<Pg> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         Preparation::<Pg>::default()
             .with_static("JOIN")
@@ -228,7 +228,7 @@ impl<'a> QueryPart<Pg> for Join<'a, Pg> {
     }
 }
 
-impl<'a> QueryPart<Pg> for OrderBy<'a> {
+impl QueryPart<Pg> for OrderBy {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Pg>>) {
         let p = Preparation::<Pg>::default().with_static(self.field.name);
 

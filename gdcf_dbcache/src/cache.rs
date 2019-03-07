@@ -113,44 +113,6 @@ macro_rules! cache {
 
         #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
-            fn store_song(&self, song: &NewgroundsSong) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing song {}", song);
-
-                let ts = Utc::now().naive_utc();
-
-                song.insert()
-                    .with(newgrounds_song::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&newgrounds_song::song_id])
-                    .execute(&self.config.backend)
-            }
-
-            fn store_creator(&self, creator: &Creator) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing creator {}", creator);
-
-                let ts = Utc::now().naive_utc();
-
-                creator
-                    .insert()
-                    .with(creator::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&creator::user_id])
-                    .execute(&self.config.backend)
-            }
-
-            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing partial level {}", level);
-
-                let ts = Utc::now().naive_utc();
-
-                level
-                    .insert()
-                    .with(partial_level::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&partial_level::level_id])
-                    .execute(&self.config.backend)
-            }
-        }
-
-        #[cfg(feature = $feature)]
-        impl DatabaseCache<$backend> {
             /// Retrieves every partial level stored in the database
             pub fn all_partial_levels(&self) -> Result<Vec<PartialLevel<u64, u64>>, <Self as Cache>::Err> {
                 self.config.backend.query(&partial_level::table.select())
@@ -175,7 +137,7 @@ macro_rules! cache {
             }
 
             fn lookup(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err> {
-                let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
+                let select = Level::select_from(full_level::table).filter(full_level::level_id.eq(req.level_id));
 
                 self.config.backend.query_one(&select)
             }
@@ -189,10 +151,10 @@ macro_rules! cache {
                 let h = self.hash(req);
 
                 let select = Select::new(
-                    &partial_levels::cached_at::table,
+                    partial_levels::cached_at::table,
                     vec![
-                        &partial_levels::cached_at::first_cached_at,
-                        &partial_levels::cached_at::last_cached_at,
+                        partial_levels::cached_at::first_cached_at,
+                        partial_levels::cached_at::last_cached_at,
                     ],
                 )
                 .filter(partial_levels::cached_at::request_hash.eq(h));
@@ -203,12 +165,12 @@ macro_rules! cache {
 
                 let last_cached_at = row.get(1).unwrap()?;
 
-                let select = Select::new(&partial_levels::table, Vec::new())
+                let select = Select::new(partial_levels::table, Vec::new())
                     .select(partial_level::table.fields())
                     .filter(partial_levels::request_hash.eq(h))
                     .join(
-                        &partial_level::table,
-                        partial_levels::level_id.same_as(&partial_level::level_id),
+                        partial_level::table,
+                        partial_levels::level_id.same_as(partial_level::level_id),
                     );
 
                 let levels: Vec<PartialLevel<u64, u64>> = self.config.backend.query(&select)?;
@@ -224,7 +186,7 @@ macro_rules! cache {
                     .if_met(partial_levels::request_hash.eq(request_hash))
                     .execute(&self.config.backend)?;
 
-                Insert::new(&partial_levels::cached_at::table, Vec::new())
+                Insert::new(partial_levels::cached_at::table, Vec::new())
                     .with(partial_levels::cached_at::last_cached_at.set(&ts))
                     .with(partial_levels::cached_at::request_hash.set(&request_hash))
                     .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
@@ -233,7 +195,7 @@ macro_rules! cache {
                 for level in levels {
                     self.store_partial_level(&level)?;
 
-                    Insert::new(&partial_levels::table, Vec::new())
+                    Insert::new(partial_levels::table, Vec::new())
                         .with(partial_levels::request_hash.set(&request_hash))
                         .with(partial_levels::level_id.set(&level.level_id))
                         .execute(&self.config.backend)?;
@@ -246,7 +208,7 @@ macro_rules! cache {
         #[cfg(feature = $feature)]
         impl CanCache<UserRequest> for DatabaseCache<$backend> {
             fn lookup(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
-                let select = User::select_from(&profile::table).filter(profile::account_id.eq(req.user));
+                let select = User::select_from(profile::table).filter(profile::account_id.eq(req.user));
 
                 self.config.backend.query_one(&select)
             }
@@ -281,13 +243,13 @@ macro_rules! cache {
             }
 
             fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-                let select = NewgroundsSong::select_from(&newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
+                let select = NewgroundsSong::select_from(newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
 
                 self.config.backend.query_one(&select)
             }
 
             fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err> {
-                let select = Creator::select_from(&creator::table).filter(creator::user_id.eq(user_id));
+                let select = Creator::select_from(creator::table).filter(creator::user_id.eq(user_id));
 
                 self.config.backend.query_one(&select)
             }
@@ -312,3 +274,66 @@ macro_rules! cache {
 
 cache!("pg", Pg);
 cache!("sqlite", Sqlite);
+
+use core::AsSql;
+use gdcf::chrono::NaiveDateTime;
+
+impl<DB: Database + Send + Sync + Clone> DatabaseCache<DB>
+where
+    NewgroundsSong: Queryable<DB> + Insertable<DB>,
+    PartialLevel<u64, u64>: Insertable<DB>,
+    Creator: Insertable<DB>,
+    NaiveDateTime: AsSql<DB>,
+    for<'a> Insert<'a, DB>: Query<DB>,
+{
+    fn store_song(&self, song: &NewgroundsSong) -> Result<(), Error<DB>> {
+        debug!("Storing song {}", song);
+
+        let ts = Utc::now().naive_utc();
+
+        song.insert()
+            .with(newgrounds_song::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&newgrounds_song::song_id])
+            .execute(&self.config.backend)
+    }
+
+    fn store_creator(&self, creator: &Creator) -> Result<(), Error<DB>> {
+        debug!("Storing creator {}", creator);
+
+        let ts = Utc::now().naive_utc();
+
+        creator
+            .insert()
+            .with(creator::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&creator::user_id])
+            .execute(&self.config.backend)
+    }
+
+    fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), Error<DB>> {
+        debug!("Storing partial level {}", level);
+
+        let ts = Utc::now().naive_utc();
+
+        level
+            .insert()
+            .with(partial_level::last_cached_at.set(&ts))
+            .on_conflict_update(vec![&partial_level::level_id])
+            .execute(&self.config.backend)
+    }
+
+    /*pub fn initialize(&self) -> Result<(), Error<DB>> {
+        info!("Intializing  database cache!");
+
+        song::newgrounds_song::create().ignore_if_exists().execute(&self.config.backend)?;
+        level::partial_level::create().ignore_if_exists().execute(&self.config.backend)?;
+        level::partial_levels::create().ignore_if_exists().execute(&self.config.backend)?;
+        level::partial_levels::cached_at::create()
+            .ignore_if_exists()
+            .execute(&self.config.backend)?;
+        level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
+        user::creator::create().ignore_if_exists().execute(&self.config.backend)?;
+        user::profile::create().ignore_if_exists().execute(&self.config.backend)?;
+
+        Ok(())
+    }*/
+}

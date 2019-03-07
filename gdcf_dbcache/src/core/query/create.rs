@@ -71,7 +71,7 @@ impl<'a, DB: Database + 'a> Column<'a, DB> {
         self.constraint(DefaultConstraint::new(None, default))
     }
 
-    pub fn foreign_key(self, references: &'a Field) -> Self
+    pub fn foreign_key(self, references: Field) -> Self
     where
         ForeignKeyConstraint<'a>: Constraint<DB> + 'static,
     {
@@ -105,7 +105,7 @@ pub struct PrimaryKeyConstraint<'a>(pub Option<&'a str>);
 #[derive(Debug)]
 pub struct ForeignKeyConstraint<'a> {
     name: Option<&'a str>,
-    references: &'a Field,
+    references: Field,
 }
 
 #[derive(Debug)]
@@ -124,7 +124,7 @@ impl<'a, DB: Database + 'a> DefaultConstraint<'a, DB> {
 }
 
 impl<'a> ForeignKeyConstraint<'a> {
-    pub fn new(name: Option<&'a str>, references: &'a Field) -> ForeignKeyConstraint<'a> {
+    pub fn new(name: Option<&'a str>, references: Field) -> ForeignKeyConstraint<'a> {
         ForeignKeyConstraint { name, references }
     }
 }
