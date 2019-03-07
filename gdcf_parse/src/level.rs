@@ -10,8 +10,8 @@ use gdcf_model::{
 };
 use std::num::ParseIntError;
 
-mod data;
-mod object;
+pub mod data;
+pub mod object;
 
 pub fn process_difficulty(rating: i32, is_auto: bool, is_demon: bool) -> LevelRating {
     if is_demon {

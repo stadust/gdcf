@@ -72,7 +72,9 @@ where
     I: Iterator<Item = LevelObject>,
 {
     /// Calculates as many stats about the level as possible in a single iteration pass.
-    pub fn stats(ParsedIterator(metadata, iter): Self) -> Stats {
+    pub fn stats(self) -> Stats {
+        let ParsedIterator(metadata, iter) = self;
+
         let mut object_count = 0;
         let mut portals = Vec::new();
         let mut furthest_x = 0.0;
