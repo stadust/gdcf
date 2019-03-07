@@ -224,49 +224,6 @@ macro_rules! cache {
                     .execute(&self.config.backend)
             }
         }
-
-        /*#[cfg(feature = $feature)]
-        impl Cache for DatabaseCache<$backend> {
-            // we cannot turn this into an impl generic over DB: Database
-            // because it would require us to add explicit trait bounds for all the
-            // structs used for query building, which in turn would require us to add a
-            // lifetime to the impl. This would force all structs used internally to be bound to
-            // that lifetime, although they only live for the function they're used in.
-            // Since that obviously results in compiler errors, we cant do that.
-            // (and we also cant add the lifetimes directly to the functions, because trait)
-
-            type Config = DatabaseCacheConfig<$backend>;
-            type Err = Error<$backend>;
-
-            fn config(&self) -> &DatabaseCacheConfig<$backend> {
-                &self.config
-            }
-
-            fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
-                let select = NewgroundsSong::select_from(newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
-
-                self.config.backend.query_one(&select)
-            }
-
-            fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err> {
-                let select = Creator::select_from(creator::table).filter(creator::user_id.eq(user_id));
-
-                self.config.backend.query_one(&select)
-            }
-
-            fn store_secondary(&mut self, obj: &Secondary) -> Result<(), <Self as Cache>::Err> {
-                match obj {
-                    Secondary::NewgroundsSong(song) => self.store_song(song),
-                    Secondary::Creator(creator) => self.store_creator(creator),
-                }
-            }
-
-            fn hash<H: Hash>(&self, h: H) -> u64 {
-                let mut hasher = SeaHasher::default();
-                h.hash(&mut hasher);
-                hasher.finish()
-            }
-        }*/
     };
 }
 
@@ -318,22 +275,6 @@ where
             .on_conflict_update(vec![&partial_level::level_id])
             .execute(&self.config.backend)
     }
-
-    /*pub fn initialize(&self) -> Result<(), Error<DB>> {
-        info!("Intializing  database cache!");
-
-        song::newgrounds_song::create().ignore_if_exists().execute(&self.config.backend)?;
-        level::partial_level::create().ignore_if_exists().execute(&self.config.backend)?;
-        level::partial_levels::create().ignore_if_exists().execute(&self.config.backend)?;
-        level::partial_levels::cached_at::create()
-            .ignore_if_exists()
-            .execute(&self.config.backend)?;
-        level::full_level::create().ignore_if_exists().execute(&self.config.backend)?;
-        user::creator::create().ignore_if_exists().execute(&self.config.backend)?;
-        user::profile::create().ignore_if_exists().execute(&self.config.backend)?;
-
-        Ok(())
-    }*/
 }
 
 use core::{
