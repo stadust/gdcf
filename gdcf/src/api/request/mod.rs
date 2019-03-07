@@ -95,8 +95,8 @@ impl Default for BaseRequest {
 /// they're built upon. If new fields are added in later version of GDCF, they
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
-pub trait Request: Display + Default + Hash + Clone {
-    type Result: Send + Sync;
+pub trait Request: Display + Default + Hash + Clone + Send + Sync + 'static {
+    type Result: Send + Sync + 'static;
 }
 
 pub trait PaginatableRequest: Request {

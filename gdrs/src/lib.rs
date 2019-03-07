@@ -29,17 +29,16 @@ extern crate gdcf_model;
 
 use crate::error::ApiError;
 use futures::{future::Executor, Future, Stream};
-use gdcf::{
-    api::{
-        client::ApiFuture,
-        request::{
-            level::{LevelRequest, LevelsRequest},
-            user::UserRequest,
-        },
-        ApiClient,
+use gdcf::api::{
+    client::{ApiFuture, MakeRequest, Response},
+    request::{
+        level::{LevelRequest, LevelsRequest},
+        user::UserRequest,
+        Request as GdcfRequest,
     },
-    GDObject,
+    ApiClient,
 };
+use handle::Handler;
 use hyper::{
     client::{Builder, HttpConnector},
     header::HeaderValue,
@@ -55,20 +54,21 @@ use tokio_retry::{
 #[macro_use]
 mod macros;
 pub mod error;
+pub mod handle;
 pub mod parse;
 mod ser;
 
 #[derive(Serialize, Debug)]
 #[serde(untagged)]
-pub enum Req {
+pub enum Req<'a> {
     #[serde(with = "LevelRequestRem")]
-    LevelRequest(LevelRequest),
+    LevelRequest(&'a LevelRequest),
 
     #[serde(with = "LevelsRequestRem")]
-    LevelsRequest(LevelsRequest),
+    LevelsRequest(&'a LevelsRequest),
 
     #[serde(with = "UserRequestRem")]
-    UserRequest(UserRequest),
+    UserRequest(&'a UserRequest),
 }
 
 #[derive(Debug, Default, Clone)]
@@ -95,19 +95,29 @@ impl BoomlingsClient {
 
 impl ApiClient for BoomlingsClient {
     type Err = ApiError;
-
-    api_call!(level, LevelRequest, "downloadGJLevel22", parse::level);
-
-    api_call!(levels, LevelsRequest, "getGJLevels21", parse::levels);
-
-    api_call!(user, UserRequest, "getGJUserInfo20", parse::user);
 }
 
-struct ApiRequestAction {
+impl<R: GdcfRequest + Handler> MakeRequest<R> for BoomlingsClient {
+    fn make(&self, request: R) -> ApiFuture<R, ApiError> {
+        let action = ApiRequestAction {
+            client: self.client.clone(),
+            request,
+        };
+
+        let retry = ExponentialBackoff::from_millis(10).map(jitter).take(5);
+
+        Box::new(RetryIf::spawn(retry, action, ApiRetryCondition).map_err(|err| {
+            match err {
+                RetryError::OperationError(e) => e,
+                _ => unimplemented!(),
+            }
+        }))
+    }
+}
+
+struct ApiRequestAction<R: GdcfRequest + Handler> {
     client: Client<HttpConnector>,
-    endpoint: &'static str,
-    request: Req,
-    parser: fn(&str) -> Result<Vec<GDObject>, ApiError>,
+    request: R,
 }
 
 struct ApiRetryCondition;
@@ -124,18 +134,15 @@ impl Condition<ApiError> for ApiRetryCondition {
     }
 }
 
-impl Action for ApiRequestAction {
+impl<R: GdcfRequest + Handler> Action for ApiRequestAction<R> {
     type Error = ApiError;
-    type Future = ApiFuture<ApiError>;
-    type Item = Vec<GDObject>;
+    type Future = ApiFuture<R, ApiError>;
+    type Item = Response<R::Result>;
 
-    fn run(&mut self) -> ApiFuture<ApiError> {
-        let req = make_request(self.endpoint, &self.request);
-
-        let parser = self.parser;
+    fn run(&mut self) -> ApiFuture<R, ApiError> {
         let future = self
             .client
-            .request(req)
+            .request(make_request(&self.request))
             .map_err(ApiError::Custom)
             .and_then(|resp| {
                 debug!("Received {} response", resp.status());
@@ -155,7 +162,7 @@ impl Action for ApiRequestAction {
                             Ok(body) => {
                                 trace!("Received response {}", body);
 
-                                parser(body)
+                                R::handle(&body)
                             },
                             Err(_) => Err(ApiError::UnexpectedFormat),
                         }
@@ -170,16 +177,16 @@ impl Action for ApiRequestAction {
     }
 }
 
-fn make_request(endpoint: &str, req: &Req) -> Request<Body> {
-    let body = serde_urlencoded::to_string(req).unwrap();
+fn make_request<R: GdcfRequest + Handler>(request: &R) -> Request<Body> {
+    let body = serde_urlencoded::to_string(request.to_req()).unwrap();
     let len = body.len();
 
-    info!("Preparing request {} to {}", body, endpoint);
+    info!("Preparing request {} to {}", body, R::endpoint());
 
     let mut req = Request::new(Body::from(body));
 
     *req.method_mut() = Method::POST;
-    *req.uri_mut() = endpoint!(endpoint);
+    *req.uri_mut() = R::endpoint().parse().unwrap(); //endpoint!(endpoint);
     req.headers_mut()
         .insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
     req.headers_mut()

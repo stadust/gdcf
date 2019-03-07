@@ -258,11 +258,12 @@ where
         };
 
         let mut cache = self.cache();
-        let future = self.client().make(&request).map_err(GdcfError::Api).and_then(move |response| {
+        let req_clone = request.clone(); // FIXME: for storing we should only need a hash of the request object!
+        let future = self.client().make(request).map_err(GdcfError::Api).and_then(move |response| {
             match response {
                 Response::Exact(what_we_want) =>
                     cache
-                        .store(&what_we_want, &request)
+                        .store(&what_we_want, &req_clone)
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
@@ -271,7 +272,7 @@ where
                     }
 
                     cache
-                        .store(&what_we_want, &request)
+                        .store(&what_we_want, &req_clone)
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache)
                 },
