@@ -37,6 +37,17 @@ pub enum PortalType {
 }
 
 impl PortalType {
+    pub fn from_id_str(id: &str) -> PortalType {
+        match id {
+            ids::S_SLOW_PORTAL => PortalType::Speed(Speed::Slow),
+            ids::S_NORMAL_PORTAL => PortalType::Speed(Speed::Normal),
+            ids::S_MEDIUM_PORTAL => PortalType::Speed(Speed::Medium),
+            ids::S_FAST_PORTAL => PortalType::Speed(Speed::Fast),
+            ids::S_VERY_FAST_PORTAL => PortalType::Speed(Speed::VeryFast),
+            _ => PortalType::Nonsense,
+        }
+    }
+
     pub fn from_id(id: u16) -> PortalType {
         match id {
             ids::SLOW_PORTAL => PortalType::Speed(Speed::Slow),

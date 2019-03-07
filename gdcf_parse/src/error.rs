@@ -1,5 +1,3 @@
-use std::error::Error;
-
 #[derive(Debug)]
 pub enum ValueError<'a> {
     NoValue(&'a str),
@@ -16,7 +14,7 @@ impl std::fmt::Display for ValueError<'_> {
         }
     }
 }
-
+/*
 #[derive(Debug)]
 pub struct Unexpected(&'static str);
 
@@ -27,3 +25,4 @@ impl std::fmt::Display for Unexpected {
         write!(f, "{}", self.0)
     }
 }
+*/

@@ -1,8 +1,4 @@
-use crate::{
-    error::ValueError,
-    util::{int_to_bool, parse},
-    Parse,
-};
+use crate::{error::ValueError, util::int_to_bool, Parse};
 use gdcf_model::level::data::{
     ids,
     portal::{PortalData, PortalType},
@@ -15,13 +11,14 @@ impl Parse for ObjectData {
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>,
     {
-        let id = match iter.clone().find(|(idx, _)| idx == &"1") {
-            Some((idx, id)) => parse(idx, id)?.ok_or(ValueError::NoValue("1"))?,
-            None => return Err(ValueError::NoValue("1")),
-        };
+        let id = iter
+            .clone()
+            .find(|(idx, _)| idx == &"1")
+            .map(|(_, id)| id)
+            .ok_or(ValueError::NoValue("1"))?;
 
         match id {
-            ids::SLOW_PORTAL | ids::NORMAL_PORTAL | ids::MEDIUM_PORTAL | ids::FAST_PORTAL | ids::VERY_FAST_PORTAL =>
+            ids::S_SLOW_PORTAL | ids::S_NORMAL_PORTAL | ids::S_MEDIUM_PORTAL | ids::S_FAST_PORTAL | ids::S_VERY_FAST_PORTAL =>
                 Ok(ObjectData::Portal(PortalData::parse(iter, f)?)),
             // .. all the other types of metadata, which might have proper parsers ...
             _ => {
@@ -39,7 +36,7 @@ impl Parse for ObjectData {
 parser! {
     PortalData => {
         checked(index = 13, with = int_to_bool),
-        portal_type(custom = PortalType::from_id, depends_on = [id]),
+        portal_type(custom = PortalType::from_id_str, depends_on = [id]),
     },
-    id(^index = 1),
+    id(^index = 1, noparse),
 }

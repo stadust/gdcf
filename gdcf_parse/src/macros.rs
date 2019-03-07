@@ -1,43 +1,5 @@
-macro_rules! __parsing {
-    (@ $value: expr, index = $idx: expr, parse = $func: path) => {
-        match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
-            Ok(v) => Some(v),
-        }
-    };
-    (@ $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {
-        match $func($value) {
-            Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
-            Ok(v) => Some(v),
-        }
-    };
-
-    (@ $value: expr, index = $idx: expr, with = $func: path) => {
-        parse(stringify!($idx), $value)?.map($func)
-    };
-
-    (@ $value: expr, index = $idx: expr, with = $func: path, $($also_tokens:tt)*) => {
-        parse(stringify!($idx), $value)?.map($func)
-    };
-
-    (@ $value: expr, index = $idx: expr, parse_infallible = $func: path) => {
-        Some($func($value))
-    };
-
-    (@ $value: expr, index = $idx: expr, parse_infallible = $func: path, $($also_tokens:tt)*) => {
-        Some($func($value))
-    };
-
-    (@ $value: expr, index = $idx: expr, $($also_tokens:tt)*) => {
-        parse(stringify!($idx), $value)?
-    };
-
-    (@ $value: expr, index = $idx: expr) => {
-        parse(stringify!($idx), $value)?
-    };
-}
-
 macro_rules! __match_arm_expr {
+    // Custom parser function
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $func: path) => {{
         $field_name = match $func($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
@@ -45,30 +7,42 @@ macro_rules! __match_arm_expr {
         }
     }};
 
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {{
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $func: path, $($__:tt)*) => {{
         $field_name = match $func($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
             Ok(v) => Some(v),
         }
     }};
 
+    // Built-in parser, but map the value afterward
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, with = $func: path) => {{
         $field_name = parse(stringify!($idx), $value)?.map($func)
     }};
 
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, with = $func: path, $($also_tokens:tt)*) => {{
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, with = $func: path, $($__:tt)*) => {{
         $field_name = parse(stringify!($idx), $value)?.map($func)
     }};
 
+    // Custom parser that cannot fail
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $func: path) => {{
         $field_name = Some($func($value))
     }};
 
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $func: path, $($also_tokens:tt)*) => {{
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $func: path, $($__:tt)*) => {{
         $field_name = Some($func($value))
     }};
 
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, $($also_tokens:tt)*) => {{
+    // no parsing at all
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, noparse) => {{
+        $field_name = Some($value)
+    }};
+
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, noparse, $($__:tt)*) => {{
+        $field_name = Some($value)
+    }};
+
+    // Built-in parsing
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, $($__:tt)*) => {{
         $field_name = parse(stringify!($idx), $value)?
     }};
 
@@ -76,6 +50,7 @@ macro_rules! __match_arm_expr {
         $field_name = parse(stringify!($idx), $value)?
     }};
 
+    // Custom parser function, but delegate original value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $func: path) => {{
         $f($idx, $value)?;
         $field_name = match $func($value) {
@@ -84,7 +59,7 @@ macro_rules! __match_arm_expr {
         }
     }};
 
-    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $func: path, $($also_tokens:tt)*) => {{
+    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $func: path, $($__:tt)*) => {{
         $f($idx, $value)?;
         $field_name = match $func($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err.to_string())),
@@ -92,6 +67,7 @@ macro_rules! __match_arm_expr {
         }
     }};
 
+    // Built-in parser, but map the value afterward AND delegate value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, with = $func: path) => {{
         $f(stringify!($idx), $value)?;
         $field_name = parse(stringify!($idx), $value)?.map($func)
@@ -102,6 +78,7 @@ macro_rules! __match_arm_expr {
         $field_name = parse(stringify!($idx), $value)?.map($func)
     }};
 
+    // Custom parser that cannot fail, but delegate the value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse_infallible = $func: path) => {{
         $f(stringify!($idx), $value)?;
         $field_name = Some($func($value))
@@ -112,6 +89,18 @@ macro_rules! __match_arm_expr {
         $field_name = Some($func($value))
     }};
 
+    // No parsing, but delegate the value upward
+    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse) => {{
+        $f(stringify!($idx), $value)?;
+        $field_name = Some($value)
+    }};
+
+    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse, $($also_tokens:tt)*) => {{
+        $f(stringify!($idx), $value)?;
+        $field_name = Some($value)
+    }};
+
+    // Build-in parsing, but delegate the value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, $($also_tokens:tt)*) => {{
         $f(stringify!($idx), $value)?;
         $field_name = parse(stringify!($idx), $value)?
@@ -134,7 +123,7 @@ macro_rules! __index {
 }
 
 macro_rules! __unwrap {
-    ($field_name: ident($(^)?index = $idx: expr)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?)) => {
         $field_name.ok_or(ValueError::NoValue(stringify!($idx)))?
     };
 
@@ -142,19 +131,19 @@ macro_rules! __unwrap {
         $field_name.unwrap_or_default()
     };
 
-    ($field_name: ident($(^)?index = $idx: expr, default = $default_func: path)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, default = $default_func: path)) => {
         $field_name.unwrap_or_self($default_func)
     };
 
-    ($field_name: ident($(^)?index = $idx: expr, with = $p: path $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, with = $p: path $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident($(^)?index = $idx: expr, parse_infallible = $p: path $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, parse_infallible = $p: path $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident($(^)?index = $idx: expr, parse = $p: path $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, parse = $p: path $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 }
