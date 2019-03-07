@@ -1,6 +1,7 @@
 //! Module ontianing request definitions for retrieving users
 
 use api::request::{BaseRequest, Request, GD_21};
+use gdcf_model::user::User;
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -51,4 +52,6 @@ impl Display for UserRequest {
     }
 }
 
-impl Request for UserRequest {}
+impl Request for UserRequest {
+    type Result = User;
+}

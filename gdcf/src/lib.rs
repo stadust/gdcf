@@ -121,12 +121,15 @@ extern crate gdcf_model;
 // TODO: it would be nice to be able to differentiate between cache-miss because the data doesn't
 // exist and cache-miss because the data simply wasn't requested yet
 
-use api::{
-    request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
-    ApiClient,
+use crate::{
+    api::{
+        client::{MakeRequest, Response},
+        request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
+        ApiClient,
+    },
+    cache::{Cache, CachedObject, CanCache},
+    error::GdcfError,
 };
-use cache::{Cache, CachedObject};
-use error::GdcfError;
 use futures::{
     future::{err, ok, Either},
     task, Async, Future, Stream,
@@ -224,6 +227,64 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     }
 }
 
+impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
+where
+    R: Request + Send + Sync + 'static,
+    A: ApiClient + MakeRequest<R>,
+    C: Cache + CanCache<R>,
+{
+    fn process_request(&self, request: R) -> GdcfFuture<R::Result, A::Err, C::Err> {
+        info!("Processing request {}", request);
+
+        let cached = match self.cache.lookup(&request) {
+            Ok(cached) =>
+                if self.cache.is_expired(&cached) {
+                    info!("Cache entry for request {} is expired!", request);
+
+                    Some(cached)
+                } else {
+                    info!("Cached entry for request {} is up-to-date!", request);
+
+                    return GdcfFuture::up_to_date(cached)
+                },
+
+            Err(ref error) if error.is_cache_miss() => {
+                info!("No cache entry for request {}", request);
+
+                None
+            },
+
+            Err(error) => return GdcfFuture::cache_error(error),
+        };
+
+        let mut cache = self.cache();
+        let future = self.client().make(&request).map_err(GdcfError::Api).and_then(move |response| {
+            match response {
+                Response::Exact(what_we_want) =>
+                    cache
+                        .store(&what_we_want, &request)
+                        .map(move |_| what_we_want)
+                        .map_err(GdcfError::Cache),
+                Response::More(what_we_want, excess) => {
+                    for object in excess {
+                        cache.store_object(&object).map_err(GdcfError::Cache)?;
+                    }
+
+                    cache
+                        .store(&what_we_want, &request)
+                        .map(move |_| what_we_want)
+                        .map_err(GdcfError::Cache)
+                },
+            }
+        });
+
+        match cached {
+            Some(value) => GdcfFuture::outdated(value, future),
+            None => GdcfFuture::absent(future),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Gdcf<A, C>
 where
@@ -247,71 +308,11 @@ where
     }
 }
 
-impl<A, C> ProcessRequest<A, C, UserRequest, User> for Gdcf<A, C>
-where
-    A: ApiClient,
-    C: Cache,
-{
-    fn process_request(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
-        info!("Processing request {}", request);
-
-        gdcf! {
-            self, request, lookup_user, || {
-                let mut cache = self.cache();
-
-                self.client.user(request)
-                    .map_err(GdcfError::Api)
-                    .and_then(collect_one!(cache, User))
-            }
-        }
-    }
-}
-
-impl<A, C> ProcessRequest<A, C, LevelRequest, Level<u64, u64>> for Gdcf<A, C>
-where
-    A: ApiClient,
-    C: Cache,
-{
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, u64>, A::Err, C::Err> {
-        info!("Processing request {} with 'u64' as Song type and 'u64' as User type", request);
-
-        gdcf! {
-            self, request, lookup_level, || {
-                let mut cache = self.cache();
-
-                self.client.level(request)
-                    .map_err(GdcfError::Api)
-                    .and_then(collect_one!(cache, Level))
-            }
-        }
-    }
-}
-
-impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, u64>>> for Gdcf<A, C>
-where
-    A: ApiClient,
-    C: Cache,
-{
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, u64>>, A::Err, C::Err> {
-        info!("Processing request {} with 'u64' as Song type and 'u64' as User type", request);
-
-        gdcf! {
-            self, request, lookup_partial_levels, || {
-                let mut cache = self.cache();
-
-                self.client.levels(request.clone())
-                    .map_err(GdcfError::Api)
-                    .and_then(collect_many!(request, cache, store_partial_levels, PartialLevel))
-            }
-        }
-    }
-}
-
 impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
 where
     Self: ProcessRequest<A, C, LevelRequest, Level<u64, User>>,
-    A: ApiClient,
-    C: Cache,
+    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
+    C: Cache + CanCache<LevelRequest> + CanCache<LevelsRequest>,
     User: PartialEq + Send + 'static,
 {
     fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, A::Err, C::Err> {
@@ -323,7 +324,7 @@ where
         // When simply downloading a level, we do not get its song, only the song ID. The song itself is
         // only provided for a LevelsRequest
 
-        let raw: GdcfFuture<Level<u64, User>, _, _> = self.process_request(request);
+        let raw = self.level::<u64, User>(request);
         let gdcf = self.clone();
 
         // TODO: reintroduce debugging statements
@@ -437,8 +438,8 @@ where
 impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
 where
     Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, User>>>,
-    A: ApiClient,
-    C: Cache,
+    A: ApiClient + MakeRequest<LevelsRequest>,
+    C: Cache + CanCache<LevelsRequest>,
     User: PartialEq + Send + 'static,
 {
     fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, User>>, A::Err, C::Err> {
@@ -488,8 +489,8 @@ where
 
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, Creator>>> for Gdcf<A, C>
 where
-    A: ApiClient,
-    C: Cache,
+    A: ApiClient + MakeRequest<LevelsRequest>,
+    C: Cache + CanCache<LevelsRequest>,
 {
     fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, Creator>>, A::Err, C::Err> {
         info!("Processing request {} with 'Creator' as User type", request);
@@ -538,15 +539,16 @@ where
 
 impl<A, C> ProcessRequest<A, C, LevelRequest, Level<u64, Creator>> for Gdcf<A, C>
 where
-    A: ApiClient,
-    C: Cache,
+    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
+    C: Cache + CanCache<LevelRequest> + CanCache<LevelsRequest>,
 {
     fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<u64, Creator>, A::Err, C::Err> {
         info!("Processing request {} with 'Creator' as User type", request);
 
         // Note that the creator of a level cannot change. We can always use the user ID cached with the
         // level (if existing).
-        let raw: GdcfFuture<Level<u64, u64>, _, _> = self.process_request(request);
+        //let raw: GdcfFuture<Level<u64, u64>, _, _> = self.process_request(request);
+        let raw = self.level::<u64, u64>(request);
         let gdcf = self.clone();
 
         match raw {
@@ -735,6 +737,8 @@ where
     pub fn level<Song, User>(&self, request: LevelRequest) -> GdcfFuture<Level<Song, User>, A::Err, C::Err>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
+        A: MakeRequest<LevelRequest>,
+        C: CanCache<LevelRequest>,
         Song: PartialEq,
         User: PartialEq,
     {
@@ -759,6 +763,8 @@ where
     pub fn levels<Song, User>(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
+        A: MakeRequest<LevelsRequest>,
+        C: CanCache<LevelsRequest>,
         Song: PartialEq,
         User: PartialEq,
     {
@@ -779,7 +785,11 @@ where
     }
 
     /// Processes the given [`UserRequest`]
-    pub fn user(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err> {
+    pub fn user(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C::Err>
+    where
+        A: MakeRequest<UserRequest>,
+        C: CanCache<UserRequest>,
+    {
         self.process_request(request)
     }
 }

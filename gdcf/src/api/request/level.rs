@@ -1,7 +1,7 @@
 //! Module containing request definitions for retrieving levels
 
 use api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
-use gdcf_model::level::{DemonRating, LevelLength, LevelRating};
+use gdcf_model::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -535,9 +535,13 @@ impl From<u64> for LevelRequest {
     }
 }
 
-impl Request for LevelRequest {}
+impl Request for LevelRequest {
+    type Result = Level<u64, u64>;
+}
 
-impl Request for LevelsRequest {}
+impl Request for LevelsRequest {
+    type Result = Vec<PartialLevel<u64, u64>>;
+}
 
 impl PaginatableRequest for LevelsRequest {
     fn next(&self) -> Self {

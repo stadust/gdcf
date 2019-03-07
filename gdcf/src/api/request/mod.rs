@@ -96,10 +96,7 @@ impl Default for BaseRequest {
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
 pub trait Request: Display + Default + Hash + Clone {
-    /// Creates a default instance of this `Request`
-    fn new() -> Self {
-        Default::default()
-    }
+    type Result: Send + Sync;
 }
 
 pub trait PaginatableRequest: Request {

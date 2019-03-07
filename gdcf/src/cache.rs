@@ -33,6 +33,7 @@ pub trait Cache: Clone + Send + Sync + 'static {
     fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
     /// Stores an arbitrary [`GDObject`] in this [`Cache`]
+    /// // TODO: rename to `store_any`
     fn store_object(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
@@ -41,6 +42,11 @@ pub trait Cache: Clone + Send + Sync + 'static {
 
         now - then > self.config().invalidate_after()
     }
+}
+
+pub trait CanCache<R: crate::api::request::Request>: Cache {
+    fn lookup(&self, request: &R) -> Lookup<R::Result, Self::Err>;
+    fn store(&self, object: &R::Result, request: &R) -> Result<(), Self::Err>;
 }
 
 #[derive(Debug)]

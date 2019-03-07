@@ -1,7 +1,7 @@
 use futures::Future;
 
 use crate::{
-    api::request::{user::UserRequest, LevelRequest, LevelsRequest},
+    api::request::{user::UserRequest, LevelRequest, LevelsRequest, Request},
     error::ApiError,
     GDObject,
 };
@@ -15,4 +15,14 @@ pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
     fn levels(&self, req: LevelsRequest) -> ApiFuture<Self::Err>;
 
     fn user(&self, req: UserRequest) -> ApiFuture<Self::Err>;
+}
+
+#[derive(Debug)]
+pub enum Response<T> {
+    Exact(T),
+    More(T, Vec<GDObject>),
+}
+
+pub trait MakeRequest<R: Request>: ApiClient {
+    fn make(&self, request: &R) -> Box<dyn Future<Item = Response<R::Result>, Error = Self::Err> + Send + 'static>;
 }
