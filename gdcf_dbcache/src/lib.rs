@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    //unused_imports,
+    unused_imports,
     unused_parens
 )]
 
