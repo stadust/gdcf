@@ -225,7 +225,7 @@ macro_rules! cache {
             }
         }
 
-        #[cfg(feature = $feature)]
+        /*#[cfg(feature = $feature)]
         impl Cache for DatabaseCache<$backend> {
             // we cannot turn this into an impl generic over DB: Database
             // because it would require us to add explicit trait bounds for all the
@@ -266,7 +266,7 @@ macro_rules! cache {
                 h.hash(&mut hasher);
                 hasher.finish()
             }
-        }
+        }*/
     };
 }
 
@@ -334,4 +334,62 @@ where
 
         Ok(())
     }*/
+}
+
+use core::{
+    query::condition::{And, Condition, EqValue},
+    FromSql, QueryPart,
+};
+
+impl<DB: Database + Sync + Send + Clone + 'static> Cache for DatabaseCache<DB>
+where
+    NewgroundsSong: Queryable<DB> + Insertable<DB>,
+    PartialLevel<u64, u64>: Queryable<DB> + Insertable<DB>,
+    Creator: Queryable<DB> + Insertable<DB>,
+    NaiveDateTime: AsSql<DB> + FromSql<DB>,
+    for<'a> Insert<'a, DB>: Query<DB>,
+    Select<DB>: QueryPart<DB>,
+    EqValue<DB>: Condition<DB>,
+    And<DB>: QueryPart<DB>,
+    u64: AsSql<DB>,
+{
+    // we cannot turn this into an impl generic over DB: Database
+    // because it would require us to add explicit trait bounds for all the
+    // structs used for query building, which in turn would require us to add a
+    // lifetime to the impl. This would force all structs used internally to be bound to
+    // that lifetime, although they only live for the function they're used in.
+    // Since that obviously results in compiler errors, we cant do that.
+    // (and we also cant add the lifetimes directly to the functions, because trait)
+
+    type Config = DatabaseCacheConfig<DB>;
+    type Err = Error<DB>;
+
+    fn config(&self) -> &DatabaseCacheConfig<DB> {
+        &self.config
+    }
+
+    fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Error<DB>> {
+        let select = NewgroundsSong::select_from(newgrounds_song::table).filter(newgrounds_song::song_id.eq(newground_id));
+
+        self.config.backend.query_one(&select)
+    }
+
+    fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Error<DB>> {
+        let select = Creator::select_from(creator::table).filter(creator::user_id.eq(user_id));
+
+        self.config.backend.query_one(&select)
+    }
+
+    fn store_secondary(&mut self, obj: &Secondary) -> Result<(), Error<DB>> {
+        match obj {
+            Secondary::NewgroundsSong(song) => self.store_song(song),
+            Secondary::Creator(creator) => self.store_creator(creator),
+        }
+    }
+
+    fn hash<H: Hash>(&self, h: H) -> u64 {
+        let mut hasher = SeaHasher::default();
+        h.hash(&mut hasher);
+        hasher.finish()
+    }
 }
