@@ -1,10 +1,55 @@
 # Geometry Dash Caching Framework
 
-GDCF is a combined API wrapper and cache for Geometry Dash. It was written with the idea to provide fast and reliable access to the resources provided by the Geometry Dash servers, falling back to a local cache for often accessed data or if the Geometry Dash servers fail to respond. It allows cached data to be accessed immediately while triggering cache refreshes asynchronously in the background, making it perferct for usage in environment where response time should be minimized (e.g. pointercrate).
+GDCF provides the means to process all sorts of Geometry Dash releated data. Originally intended to be a caching API client for the `boomlings.com` HTTP API (hence the name "caching framework"), is has since gained the means to efficiently process robtop's data formats and support for reading/modifying the game's application data is planned.
 
-It also attempts to provide a san*er* way of dealing with the Geometry Dash API in general, by being able to automatically glue together multiple requests to provide more complete objects (e.g. a request to `downloadGJLevel` normally only provides the level data and the level's metadata, which includes it's custom song's and creator's _ID_, but nothing more. GDCF can combine this request with a `getGJLevels` automatically to retrieve the custom song data and minimal creator data, or with a `getGJUserInfo` to get the creator's whole profile).
+In general, GDCF itself are the following 3 crates:
 
-Although written with the mostly insane design decisions made by robtop for the boomlings API in mind, is it possible write APi clients for GDCF interfacing with arbitrary servers, as long as they uphold some invariants about which endpoints provides which information.
+## `gdcf_model`
+
+This crate contains `structs` modelling the various objects you can read from the game's files or receive from the servers. It optionally provides [serde](https://github.com/serde-rs/serde) support, if you wanna get a sane representation of the stuff.
+
+## `gdcf_parse`
+
+This crate contains efficient parsers for RobTop's data structures and the means to create custom ones yourself (via the `parser!` macro). All parsers in this crate use no allocations until it actually comes to constructing the `gdcf_model` structs (though we could just slap a lifetime on them and use `&str` instead of `String`).
+
+A benchmark with `criterion.rs` has showed, that `gdcf_parse` can calculate the level length of bloodlust in just `~57ms` (Calculating the level length requires parsing all objects, extracting the speed portals, sorting them, and doing some simple maths)!
+
+## `gdcf`
+
+This crate is, although the smallest, the actual heart of the project. It defines traits for how a API client to retrieve, and a cache to store, objects from `gdcf_model` should look. It then defines the `Gdcf` struct, which allows you to make requests through the API client, where the responses are stored in the cache. For each request, it first looks into the cache, to see if the request _could_ be satisfied using cached data. There are three possible outcomes here:
+
+- _The requested data isn't cached_: In this case, GDCF makes a request using the provided API client and returns a future. That future first awaits the API request's completion, stores the response in the provided cache (for later use), and then resolves to the received data
+- _The requested data is cached, but the cached value is considered outdated_: In this case, GDCF does the same as above, but returns the cached value along with the future
+- _The requested data is cached and valid_: In this case, GDCF never makes any API request and simply returns the cached data
+
+### Why you would want to do this
+
+There are multiple reasons why this makes sense:
+
+- The Geometry Dash servers are notoriously slow, with response times of multiple seconds. In environments, where it's simply not acceptable to wait that long, but it's okay to sometimes produce no data at all (e.g. a website that wants to embed information about levels, but want to keep its own request times down, like say, pointercrate), you can always use the cached value (which is only a database query away, if it exists), and schedule the provided future on some background worker.
+- The Geometry Dash servers are unreliable. They error out randomly, they provide incomplete HTTP responses and they are down very often. While the first two problems aren't really this crates responsibility (it doesn't define how the API client works, just what data it should provide. The `gdrs` crate below however, does adress these problems), it allows you to still access the data in your cache if the servers happen to be down.
+- GDCF is very good at stitching together data. Robtop's server responses are built exactly for how the Geometry Dash client works. If you download a level, you won't get song or creator information, because that data is downloaded when you browse the level list. GDCF can automatically detect the absense of relevant data and provide it either from cache, or make additionally requests to retrieve it. Want to download a level and have the creators profile as associate user data? GDCF's got you covered.
+
+## `gdrs`
+
+This crate is a reference implementation of an API client to use with the `gdcf` crate. It implements the serialization of requests and parses the responses with `gdcf_parse`. It implements automatic retry (with exponentiall backoff) for when the boomlings servers decide to act up.
+
+## `gdcf_dbcache`
+
+This crate implement a postgres and an sqlite cache for use with `gdcf`. You probably really dont want to deal much with this crate, its the worst of the lot
+
+## Planned features
+
+- Parsing of `CCLocalLevels.dat` and maybe `CCGameManager.dat`. This would, for example, allow us to write a program that automatically fixes broken savefiles (although using GDCF for that is really overkill, as it can be done with a 20 line python script)
+- Support for endpoints and other things. Right now GDCF is mainly focused on levels. It'd be nice if it supported things like leaderboards as well (and maybe even support the parts of the API that require authentication)
+- And obviously figure out more about what the yet-unidentified fields (called `index_*`) represent.
+
+## Potential use cases
+
+- _Caching proxy servers for boomlings.com_: By replicating the endpoints of the boomlings API, one could use GDCF to write a caching proxy for the GD servers. Or, if you use a no-op API client, a private server (though this would require a lot more support of things in GDCF itself).
+- _Caching API clients_: This is what I originally designed the whole thing for and how it's used on pointercrate.
+- _A part of a custom Geometry Dash level editor_: If one were to write functions to reverse the work done in `gdcf_parse` and once the support for processing `CCLocalLevels.dat` is done, `gdcf_model` and `gdcf_parse` could be used as the building blocks for a custom Geometry Dash level editor.
+- _Collecting statistical data about GD_: Since `gdrs` is very good at recovering from errors, one could use the built-in pagination support (which is better than the one in the official client, go figure) to clone certain sections of the Geometry Dash databases. If you write clever code, you could build working leaderboards on top of GDCF. Or find out which custom song has the most uses in 2.1 levels.
 
 ## Disclaimer
 
