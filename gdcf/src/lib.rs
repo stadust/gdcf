@@ -227,9 +227,10 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     }
 }
 
+
 impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
-    R: Request + Send + Sync + 'static,
+    R: Request+ Send + Sync + 'static,
     A: ApiClient + MakeRequest<R>,
     C: Cache + CanCache<R>,
 {
@@ -257,22 +258,24 @@ where
             Err(error) => return GdcfFuture::cache_error(error),
         };
 
+        let request_hash = self.cache.hash(&request);
+
         let mut cache = self.cache();
-        let req_clone = request.clone(); // FIXME: for storing we should only need a hash of the request object!
+
         let future = self.client().make(request).map_err(GdcfError::Api).and_then(move |response| {
             match response {
                 Response::Exact(what_we_want) =>
                     cache
-                        .store(&what_we_want, &req_clone)
+                        .store(&what_we_want, request_hash)
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
                     for object in excess {
-                        cache.store_object(&object).map_err(GdcfError::Cache)?;
+                        cache.store_any(&object).map_err(GdcfError::Cache)?;
                     }
 
                     cache
-                        .store(&what_we_want, &req_clone)
+                        .store(&what_we_want, request_hash)
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache)
                 },
@@ -585,7 +588,7 @@ where
                                         Err(ref err) if err.is_cache_miss() => {
                                             let creator = Creator::deleted(cached.base.creator);
 
-                                            gdcf.cache().store_object(&creator.clone().into()).map_err(GdcfError::Cache)?;
+                                            gdcf.cache().store_any(&creator.clone().into()).map_err(GdcfError::Cache)?;
 
                                             Ok(exchange::level_user(cached, creator))
                                         },
@@ -642,7 +645,7 @@ where
                                                 Err(ref err) if err.is_cache_miss() => {
                                                     let creator = Creator::deleted(level.base.creator);
 
-                                                    gdcf.cache().store_object(&creator.clone().into()).map_err(GdcfError::Cache)?;
+                                                    gdcf.cache().store_any(&creator.clone().into()).map_err(GdcfError::Cache)?;
 
                                                     Ok(exchange::level_user(level, creator))
                                                 },

@@ -1,14 +1,7 @@
-use crate::{
-    api::request::{user::UserRequest, LevelRequest, LevelsRequest},
-    error::CacheError,
-    GDObject,
-};
+use crate::{error::CacheError, GDObject};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use gdcf_model::{
-    level::{Level, PartialLevel},
-    song::NewgroundsSong,
-    user::{Creator, User},
-};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
+use std::hash::Hash;
 
 pub type Lookup<T, E> = Result<CachedObject<T>, E>;
 
@@ -24,17 +17,13 @@ pub trait Cache: Clone + Send + Sync + 'static {
 
     fn config(&self) -> &Self::Config;
 
-    fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err>;
-    fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>]) -> Result<(), Self::Err>;
-
-    fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err>;
-    fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err>;
     fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err>;
     fn lookup_creator(&self, user_id: u64) -> Lookup<Creator, Self::Err>;
 
     /// Stores an arbitrary [`GDObject`] in this [`Cache`]
-    /// // TODO: rename to `store_any`
-    fn store_object(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
+    fn store_any(&mut self, obj: &GDObject) -> Result<(), Self::Err>;
+
+    fn hash<H: Hash>(&self, obj: H) -> u64;
 
     fn is_expired<T>(&self, obj: &CachedObject<T>) -> bool {
         let now = Utc::now();
@@ -46,7 +35,7 @@ pub trait Cache: Clone + Send + Sync + 'static {
 
 pub trait CanCache<R: crate::api::request::Request>: Cache {
     fn lookup(&self, request: &R) -> Lookup<R::Result, Self::Err>;
-    fn store(&self, object: &R::Result, request: &R) -> Result<(), Self::Err>;
+    fn store(&mut self, object: &R::Result, request_hash: u64) -> Result<(), Self::Err>;
 }
 
 #[derive(Debug)]

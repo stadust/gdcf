@@ -35,4 +35,3 @@ mod de;
 pub mod resulter;
 pub mod schema;
 mod ser;
-mod util;

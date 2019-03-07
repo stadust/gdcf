@@ -8,7 +8,7 @@ use core::{
 };
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
-    cache::{Cache, CacheConfig, CachedObject, Lookup},
+    cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},
     chrono::{Duration, Utc},
     GDObject,
 };
@@ -22,7 +22,8 @@ use schema::{
     song::{self, newgrounds_song},
     user::{self, creator, profile},
 };
-use util;
+use seahash::SeaHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone)]
 pub struct DatabaseCacheConfig<DB: Database> {
@@ -112,18 +113,6 @@ macro_rules! cache {
 
         #[cfg(feature = $feature)]
         impl DatabaseCache<$backend> {
-            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing partial level {}", level);
-
-                let ts = Utc::now().naive_utc();
-
-                level
-                    .insert()
-                    .with(partial_level::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&partial_level::level_id])
-                    .execute(&self.config.backend)
-            }
-
             fn store_song(&self, song: &NewgroundsSong) -> Result<(), <Self as Cache>::Err> {
                 debug!("Storing song {}", song);
 
@@ -132,21 +121,6 @@ macro_rules! cache {
                 song.insert()
                     .with(newgrounds_song::last_cached_at.set(&ts))
                     .on_conflict_update(vec![&newgrounds_song::song_id])
-                    .execute(&self.config.backend)
-            }
-
-            fn store_level(&self, level: &Level<u64, u64>) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing level {}", level);
-
-                let ts = Utc::now().naive_utc();
-
-                self.store_partial_level(&level.base)?;
-
-                level
-                    .insert()
-                    .with(full_level::level_id.set(&level.base.level_id))
-                    .with(full_level::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&full_level::level_id])
                     .execute(&self.config.backend)
             }
 
@@ -162,14 +136,15 @@ macro_rules! cache {
                     .execute(&self.config.backend)
             }
 
-            fn store_user(&self, user: &User) -> Result<(), <Self as Cache>::Err> {
-                debug!("Storing user {}", user);
+            fn store_partial_level(&self, level: &PartialLevel<u64, u64>) -> Result<(), <Self as Cache>::Err> {
+                debug!("Storing partial level {}", level);
 
                 let ts = Utc::now().naive_utc();
 
-                user.insert()
-                    .with(profile::last_cached_at.set(&ts))
-                    .on_conflict_update(vec![&profile::user_id])
+                level
+                    .insert()
+                    .with(partial_level::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&partial_level::level_id])
                     .execute(&self.config.backend)
             }
         }
@@ -183,26 +158,35 @@ macro_rules! cache {
         }
 
         #[cfg(feature = $feature)]
-        impl Cache for DatabaseCache<$backend> {
-            // we cannot turn this into an impl generic over DB: Database
-            // because it would require us to add explicit trait bounds for all the
-            // structs used for query building, which in turn would require us to add a
-            // lifetime to the impl. This would force all structs used internally to be bound to
-            // that lifetime, although they only live for the function they're used in.
-            // Since that obviously results in compiler errors, we cant do that.
-            // (and we also cant add the lifetimes directly to the functions, because trait)
+        impl CanCache<LevelRequest> for DatabaseCache<$backend> {
+            fn store(&mut self, level: &Level<u64, u64>, _: u64) -> Result<(), <Self as Cache>::Err> {
+                debug!("Storing level {}", level);
 
-            type Config = DatabaseCacheConfig<$backend>;
-            type Err = Error<$backend>;
+                let ts = Utc::now().naive_utc();
 
-            fn config(&self) -> &DatabaseCacheConfig<$backend> {
-                &self.config
+                self.store_partial_level(&level.base)?;
+
+                level
+                    .insert()
+                    .with(full_level::level_id.set(&level.base.level_id))
+                    .with(full_level::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&full_level::level_id])
+                    .execute(&self.config.backend)
             }
 
-            fn lookup_partial_levels(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err> {
+            fn lookup(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err> {
+                let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
+
+                self.config.backend.query_one(&select)
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl CanCache<LevelsRequest> for DatabaseCache<$backend> {
+            fn lookup(&self, req: &LevelsRequest) -> Lookup<Vec<PartialLevel<u64, u64>>, Self::Err> {
                 debug!("Performing cache lookup for request {}", req);
 
-                let h = util::hash(req);
+                let h = self.hash(req);
 
                 let select = Select::new(
                     &partial_levels::cached_at::table,
@@ -232,35 +216,68 @@ macro_rules! cache {
                 Ok(CachedObject::new(levels, first_cached_at, last_cached_at))
             }
 
-            fn store_partial_levels(&mut self, req: &LevelsRequest, levels: &[PartialLevel<u64, u64>]) -> Result<(), <Self as Cache>::Err> {
-                let h = util::hash(req);
+            fn store(&mut self, levels: &Vec<PartialLevel<u64, u64>>, request_hash: u64) -> Result<(), <Self as Cache>::Err> {
                 let ts = Utc::now().naive_utc();
 
                 // TODO: wrap this into a transaction if I can figure out how to implement them
                 Delete::new(&partial_levels::table)
-                    .if_met(partial_levels::request_hash.eq(h))
+                    .if_met(partial_levels::request_hash.eq(request_hash))
                     .execute(&self.config.backend)?;
 
                 Insert::new(&partial_levels::cached_at::table, Vec::new())
                     .with(partial_levels::cached_at::last_cached_at.set(&ts))
-                    .with(partial_levels::cached_at::request_hash.set(&h))
+                    .with(partial_levels::cached_at::request_hash.set(&request_hash))
                     .on_conflict_update(vec![&partial_levels::cached_at::request_hash])
                     .execute(&self.config.backend)?;
 
                 for level in levels {
+                    self.store_partial_level(&level)?;
+
                     Insert::new(&partial_levels::table, Vec::new())
-                        .with(partial_levels::request_hash.set(&h))
+                        .with(partial_levels::request_hash.set(&request_hash))
                         .with(partial_levels::level_id.set(&level.level_id))
                         .execute(&self.config.backend)?;
                 }
 
                 Ok(())
             }
+        }
 
-            fn lookup_level(&self, req: &LevelRequest) -> Lookup<Level<u64, u64>, Self::Err> {
-                let select = Level::select_from(&full_level::table).filter(full_level::level_id.eq(req.level_id));
+        #[cfg(feature = $feature)]
+        impl CanCache<UserRequest> for DatabaseCache<$backend> {
+            fn lookup(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
+                let select = User::select_from(&profile::table).filter(profile::account_id.eq(req.user));
 
                 self.config.backend.query_one(&select)
+            }
+
+            fn store(&mut self, user: &User, _: u64) -> Result<(), <Self as Cache>::Err> {
+                debug!("Storing user {}", user);
+
+                let ts = Utc::now().naive_utc();
+
+                user.insert()
+                    .with(profile::last_cached_at.set(&ts))
+                    .on_conflict_update(vec![&profile::user_id])
+                    .execute(&self.config.backend)
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl Cache for DatabaseCache<$backend> {
+            // we cannot turn this into an impl generic over DB: Database
+            // because it would require us to add explicit trait bounds for all the
+            // structs used for query building, which in turn would require us to add a
+            // lifetime to the impl. This would force all structs used internally to be bound to
+            // that lifetime, although they only live for the function they're used in.
+            // Since that obviously results in compiler errors, we cant do that.
+            // (and we also cant add the lifetimes directly to the functions, because trait)
+
+            type Config = DatabaseCacheConfig<$backend>;
+            type Err = Error<$backend>;
+
+            fn config(&self) -> &DatabaseCacheConfig<$backend> {
+                &self.config
             }
 
             fn lookup_song(&self, newground_id: u64) -> Lookup<NewgroundsSong, Self::Err> {
@@ -275,20 +292,19 @@ macro_rules! cache {
                 self.config.backend.query_one(&select)
             }
 
-            fn lookup_user(&self, req: &UserRequest) -> Lookup<User, Self::Err> {
-                let select = User::select_from(&profile::table).filter(profile::account_id.eq(req.user));
-
-                self.config.backend.query_one(&select)
-            }
-
-            fn store_object(&mut self, obj: &GDObject) -> Result<(), <Self as Cache>::Err> {
+            fn store_any(&mut self, obj: &GDObject) -> Result<(), <Self as Cache>::Err> {
                 match obj {
                     GDObject::PartialLevel(lvl) => self.store_partial_level(lvl),
                     GDObject::NewgroundsSong(song) => self.store_song(song),
-                    GDObject::Level(lvl) => self.store_level(lvl),
                     GDObject::Creator(creator) => self.store_creator(creator),
-                    GDObject::User(user) => self.store_user(user),
+                    _ => panic!("dont do this"),
                 }
+            }
+
+            fn hash<H: Hash>(&self, h: H) -> u64 {
+                let mut hasher = SeaHasher::default();
+                h.hash(&mut hasher);
+                hasher.finish()
             }
         }
     };
