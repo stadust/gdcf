@@ -55,7 +55,6 @@ use tokio_retry::{
 mod macros;
 pub mod error;
 pub mod handle;
-pub mod parse;
 mod ser;
 
 #[derive(Serialize, Debug)]
