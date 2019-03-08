@@ -61,7 +61,7 @@ simple_query_part!(Sqlite, Unsigned<BigInteger>, "INTEGER");
 simple_query_part!(Sqlite, UtcTimestamp, "TEXT");
 simple_query_part!(Sqlite, Bytes, "BLOB");
 
-impl<'a> QueryPart<Sqlite> for EqField<'a> {
+impl QueryPart<Sqlite> for EqField {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         Preparation::<Sqlite>::default()
             .with_static("(")
@@ -72,7 +72,7 @@ impl<'a> QueryPart<Sqlite> for EqField<'a> {
     }
 }
 
-impl<'a> QueryPart<Sqlite> for EqValue<'a, Sqlite> {
+impl QueryPart<Sqlite> for EqValue<Sqlite> {
     fn to_sql(&self) -> Preparation<Sqlite> {
         Preparation::<Sqlite>::default()
             .with_static("(")
@@ -109,8 +109,8 @@ impl<'a> QueryPart<Sqlite> for Insert<'a, Sqlite> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         let p = match self.conflict {
             OnConflict::Ignore => Preparation::<Sqlite>::default().with_static("INSERT OR IGNORE"),
-            OnConflict::Update(_) => Preparation::<Sqlite>::default().with_static("INSERT OR REPLACE"), /* TODO: maybe use actual
-                                                                                                          * UPSERT here */
+            OnConflict::Update(_) => Preparation::<Sqlite>::default().with_static("INSERT OR REPLACE"), /* TODO: maybe use actual */
+            // UPSERT here
             OnConflict::Fail => Preparation::<Sqlite>::default().with_static("INSERT OR FAIL"),
         };
 
@@ -124,7 +124,8 @@ impl<'a> QueryPart<Sqlite> for Insert<'a, Sqlite> {
             pv = match set_field.value {
                 FieldValue::Default => pv.with_static("DEFAULT"),
                 FieldValue::Value(v) => pv.with(v.to_sql()),
-            }.with_static(",");
+            }
+            .with_static(",");
         }
 
         p.0.pop();
@@ -163,7 +164,7 @@ impl<'a> QueryPart<Sqlite> for Create<'a, Sqlite> {
     }
 }
 
-impl<'a> Select<'a, Sqlite> {
+impl Select<Sqlite> {
     fn qualify(&self) -> bool {
         !self.joins.is_empty()
     }
@@ -186,7 +187,7 @@ impl<'a> Select<'a, Sqlite> {
     }
 }
 
-impl<'a> QueryPart<Sqlite> for Select<'a, Sqlite> {
+impl QueryPart<Sqlite> for Select<Sqlite> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         let mut p = Preparation::<Sqlite>::default()
             .with_static("SELECT")
@@ -203,7 +204,7 @@ impl<'a> QueryPart<Sqlite> for Select<'a, Sqlite> {
     }
 }
 
-impl<'a> QueryPart<Sqlite> for Join<'a, Sqlite> {
+impl QueryPart<Sqlite> for Join<Sqlite> {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         Preparation::<Sqlite>::default()
             .with_static("JOIN")
@@ -213,7 +214,7 @@ impl<'a> QueryPart<Sqlite> for Join<'a, Sqlite> {
     }
 }
 
-impl<'a> QueryPart<Sqlite> for OrderBy<'a> {
+impl QueryPart<Sqlite> for OrderBy {
     fn to_sql(&self) -> (PreparedStatement, Vec<&dyn AsSql<Sqlite>>) {
         let p = Preparation::<Sqlite>::default().with_static(self.field.name);
 

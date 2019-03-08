@@ -200,7 +200,7 @@ pub(crate) mod full_level {
     impl Queryable<Sqlite> for Level<u64, u64> {
         fn select_from(from: Table) -> Select<Sqlite> {
             Select::new(from, Vec::new())
-                .join(&super::partial_level::table, level_id.same_as(&super::partial_level::level_id))
+                .join(super::partial_level::table, level_id.same_as(super::partial_level::level_id))
                 .select(&super::partial_level::table.fields()[..24])
                 .select(&from.fields()[1..])
         }
