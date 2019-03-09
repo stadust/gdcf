@@ -1,11 +1,11 @@
-use core::{
+use crate::core::{
     backend::{
         pg::{Pg, PgTypes},
         Database, Error,
     },
     AsSql, FromSql,
 };
-use gdcf::chrono::NaiveDateTime;
+use chrono::NaiveDateTime;
 use postgres::types::{FromSql as FromPgSql, IsNull, ToSql as ToPgSql, Type};
 use std::{
     error::Error as StdError,
@@ -127,7 +127,7 @@ impl Display for PgTypes {
 // SqlExpr<Sqlite> Maybe one day we'll find a better way to do this
 mod _dummy {
     use super::*;
-    use core::{
+    use crate::core::{
         statement::{Preparation, PreparedStatement},
         QueryPart, SqlExpr,
     };

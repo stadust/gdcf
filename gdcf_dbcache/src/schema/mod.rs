@@ -1,16 +1,17 @@
 #![allow(unused_imports)]
 
 #[cfg(feature = "pg")]
-use core::backend::pg::Pg;
-#[cfg(feature = "sqlite")]
-use core::backend::sqlite::Sqlite;
-use core::{
+use crate::core::backend::pg::Pg;
+use crate::core::{
     backend::{Database, Error},
     query::select::{Queryable, Row},
     statement::{Preparation, Prepare},
     FromSql, QueryPart, SqlExpr,
 };
-use gdcf::{cache::CachedObject, chrono::NaiveDateTime};
+use chrono::NaiveDateTime;
+#[cfg(feature = "sqlite")]
+use core::backend::sqlite::Sqlite;
+use gdcf::cache::CachedObject;
 
 pub mod level;
 pub mod song;

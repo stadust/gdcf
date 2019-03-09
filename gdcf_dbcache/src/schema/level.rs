@@ -1,8 +1,8 @@
 pub(crate) mod partial_level {
-    use core::backend::Error;
+    use crate::core::backend::Error;
     use gdcf_model::level::PartialLevel;
 
-    use schema::NowAtUtc;
+    use crate::schema::NowAtUtc;
 
     use pm_gdcf_dbcache::{create, iqtable};
 
@@ -104,7 +104,7 @@ pub(crate) mod partial_levels {
     }
 
     pub(crate) mod cached_at {
-        use schema::NowAtUtc;
+        use crate::schema::NowAtUtc;
 
         use pm_gdcf_dbcache::{create, table};
 
@@ -130,15 +130,17 @@ pub(crate) mod partial_levels {
 pub(crate) mod full_level {
     use pm_gdcf_dbcache::{create, itable};
 
-    use core::{
-        backend::Error,
-        query::{
-            select::{Queryable, Row},
-            Select,
+    use crate::{
+        core::{
+            backend::Error,
+            query::{
+                select::{Queryable, Row},
+                Select,
+            },
         },
+        schema::NowAtUtc,
     };
     use gdcf_model::level::{Level, PartialLevel};
-    use schema::NowAtUtc;
 
     itable! {
         Level<u64, u64> => level {
@@ -171,7 +173,7 @@ pub(crate) mod full_level {
     // TODO: the other backends
     // TODO: better way of doing this
     #[cfg(feature = "pg")]
-    use core::backend::pg::Pg;
+    use crate::core::backend::pg::Pg;
     #[cfg(feature = "pg")]
     impl Queryable<Pg> for Level<u64, u64> {
         fn select_from(from: Table) -> Select<Pg> {

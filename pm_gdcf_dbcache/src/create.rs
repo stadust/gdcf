@@ -111,10 +111,10 @@ impl Create {
         let mut streams = Vec::<TokenStream>::new();
 
         streams.push(stream! {
-            "use core::types::*;".parse().unwrap(),
-            "use core::query::create::*;".parse().unwrap(),
-            "use core::SqlExpr;".parse().unwrap(),
-            "use core::backend::Database;".parse().unwrap()
+            "use crate::core::types::*;".parse().unwrap(),
+            "use crate::core::query::create::*;".parse().unwrap(),
+            "use crate::core::SqlExpr;".parse().unwrap(),
+            "use crate::core::backend::Database;".parse().unwrap()
         });
 
         streams.push(
@@ -237,13 +237,7 @@ impl Constraint {
                     "DefaultConstraint<'a, DB>: Constraint<DB> + 'static,".parse().unwrap(),
                     ty.clone(),
                     ": SqlExpr<DB>".parse().unwrap()
-                }, /*"DefaultConstraint<'a, DB>: Constraint<DB> + 'static".parse().unwrap()*//*stream! {
-                       "DefaultConstraint<'a, DB, ".parse().unwrap(),
-                       ty.clone(),
-                       ">: Constraint<DB> + 'static,".parse().unwrap(),
-                       ty.clone(),
-                       ": SqlExpr<DB> + 'static".parse().unwrap()
-                   }*/
+                },
         }
     }
 

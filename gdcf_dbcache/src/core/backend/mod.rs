@@ -1,4 +1,4 @@
-use core::{
+use crate::core::{
     query::{
         select::{Queryable, Row},
         Query,
@@ -7,6 +7,7 @@ use core::{
 };
 use failure::Fail;
 use gdcf::error::CacheError;
+use log::trace;
 use std::fmt::{Debug, Display};
 
 #[cfg(feature = "pg")]

@@ -1,15 +1,22 @@
 #[cfg(feature = "pg")]
-pub use core::backend::pg::Pg;
+pub use crate::core::backend::pg::Pg;
+use crate::{
+    core::{
+        backend::{Database, Error},
+        query::{delete::Delete, insert::Insertable, select::Queryable, Insert, Query, Select},
+    },
+    schema::{
+        level::{self, full_level, partial_level, partial_levels},
+        song::{self, newgrounds_song},
+        user::{self, creator, profile},
+    },
+};
+use chrono::{Duration, Utc};
 #[cfg(feature = "sqlite")]
 pub use core::backend::sqlite::Sqlite;
-use core::{
-    backend::{Database, Error},
-    query::{delete::Delete, insert::Insertable, select::Queryable, Insert, Query, Select},
-};
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},
-    chrono::{Duration, Utc},
     Secondary,
 };
 use gdcf_model::{
@@ -17,11 +24,7 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use schema::{
-    level::{self, full_level, partial_level, partial_levels},
-    song::{self, newgrounds_song},
-    user::{self, creator, profile},
-};
+use log::{debug, info};
 use seahash::SeaHasher;
 use std::hash::{Hash, Hasher};
 
@@ -230,8 +233,8 @@ macro_rules! cache {
 cache!("pg", Pg);
 cache!("sqlite", Sqlite);
 
-use core::AsSql;
-use gdcf::chrono::NaiveDateTime;
+use crate::core::AsSql;
+use chrono::NaiveDateTime;
 
 impl<DB: Database + Send + Sync + Clone> DatabaseCache<DB>
 where
@@ -277,7 +280,7 @@ where
     }
 }
 
-use core::{
+use crate::core::{
     query::condition::{And, Condition, EqValue},
     FromSql, QueryPart,
 };

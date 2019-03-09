@@ -1,6 +1,6 @@
 //! Module containing request definitions for retrieving levels
 
-use api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
+use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
 use gdcf_model::level::{DemonRating, Level, LevelLength, LevelRating, PartialLevel};
 use std::{
     fmt::{Display, Error, Formatter},

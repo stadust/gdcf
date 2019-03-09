@@ -608,7 +608,6 @@ impl Into<i32> for DemonRating {
     }
 }
 
-
 impl ToString for LevelRating {
     fn to_string(&self) -> String {
         match self {
@@ -650,7 +649,8 @@ impl ToString for DemonRating {
             DemonRating::Insane => "InsaneDemon",
             DemonRating::Extreme => "ExtremeDemon",
             DemonRating::Unknown => "__UNKNOWN_DEMON_RATING__",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -676,7 +676,8 @@ impl ToString for LevelLength {
             LevelLength::Long => "Long",
             LevelLength::ExtraLong => "ExtraLong",
             LevelLength::Unknown => "__UNKNOWN_LEVEL_LENGTH__",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 

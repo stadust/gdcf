@@ -1,4 +1,4 @@
-use core::{backend::Database, QueryPart};
+use crate::core::{backend::Database, QueryPart};
 
 pub trait Type<DB: Database>: QueryPart<DB> {}
 

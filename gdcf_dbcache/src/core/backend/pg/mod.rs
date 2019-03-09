@@ -1,6 +1,6 @@
 use super::Error;
-use core::{backend::Database, query::select::Row, AsSql};
-use gdcf::chrono::NaiveDateTime;
+use crate::core::{backend::Database, query::select::Row, AsSql};
+use chrono::NaiveDateTime;
 use postgres::{types::ToSql as ToPgSql, Error as PgError};
 use r2d2::Pool;
 use r2d2_postgres::{PostgresConnectionManager, TlsMode};

@@ -1,3 +1,4 @@
+use failure_derive::Fail;
 use gdcf::error::ApiError as TApiError;
 use gdcf_parse::error::ValueError;
 

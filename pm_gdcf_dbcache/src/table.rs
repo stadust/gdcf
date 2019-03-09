@@ -1,4 +1,4 @@
-use create::parse_ty;
+use crate::create::parse_ty;
 use itertools::Itertools;
 use proc_macro::{Delimiter, Group, Ident, Spacing, TokenStream, TokenTree};
 use std::iter::FromIterator;
@@ -70,7 +70,7 @@ impl Table {
     pub(super) fn generate(&self) -> TokenStream {
         let mut streams = Vec::<TokenStream>::new();
 
-        streams.push("use core::table::{Field, Table};".parse().unwrap());
+        streams.push("use crate::core::table::{Field, Table};".parse().unwrap());
         streams.push(format!("pub const table_name: &str = \"{}\";", self.table_name).parse().unwrap());
 
         let mut field_string = String::new();
@@ -108,7 +108,7 @@ impl Table {
             .join(",");
 
         format!(
-            "use core::{{table::{{SetField, Table}}, query::insert::Insertable}};\
+            "use crate::core::{{table::{{SetField, Table}}, query::insert::Insertable}};\
              impl Insertable<{}> for {} {{\
              fn table(&self) -> Table {{\
              table\
@@ -134,7 +134,7 @@ impl Table {
             .join(",");
 
         format!(
-            "use core::query::select::{{Queryable, Row}};\
+            "use crate::core::query::select::{{Queryable, Row}};\
              impl Queryable<{}> for {} {{\
              fn from_row(row: &Row<{}>, offset: isize) -> Result<Self, Error<{}>> {{\
              Ok({} {{\
@@ -157,7 +157,7 @@ impl Table {
         stream! {
             format!("#[cfg(feature=\"{0}\")] mod {0}", feature).parse().unwrap(),
             TokenTree::Group(Group::new(Delimiter::Brace, stream! {
-                format!("use core::backend::{}::{};", module, backend).parse().unwrap(),
+                format!("use crate::core::backend::{}::{};", module, backend).parse().unwrap(),
                 "use super::*;".parse().unwrap(),
                 self.insert(backend),
                 self.query(backend)
@@ -169,7 +169,7 @@ impl Table {
         stream! {
             format!("#[cfg(feature=\"{0}\")] mod {0}", feature).parse().unwrap(),
             TokenTree::Group(Group::new(Delimiter::Brace, stream! {
-                format!("use core::backend::{}::{};", module, backend).parse().unwrap(),
+                format!("use crate::core::backend::{}::{};", module, backend).parse().unwrap(),
                 "use super::*;".parse().unwrap(),
                 self.insert(backend)
             })).into()

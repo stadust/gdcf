@@ -13,9 +13,8 @@
 extern crate itertools;
 extern crate proc_macro;
 
-use create::Create;
+use crate::{create::Create, table::Table};
 use proc_macro::TokenStream;
-use table::Table;
 
 #[macro_use]
 mod macros;

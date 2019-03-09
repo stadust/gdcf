@@ -1,4 +1,4 @@
-use core::{backend::Database, AsSql};
+use crate::core::{backend::Database, AsSql};
 use joinery::Joinable;
 
 #[derive(Debug)]
@@ -36,7 +36,8 @@ impl PreparedStatement {
                         placeholder_fmt(idx)
                     },
                 }
-            }).join_with(" ")
+            })
+            .join_with(" ")
             .to_string()
     }
 
@@ -82,7 +83,8 @@ impl<'a, DB: Database> Prepare<DB> for (PreparedStatement, Vec<&'a dyn AsSql<DB>
                         raw
                     },
                 }
-            }).join_with(" ")
+            })
+            .join_with(" ")
             .to_string()
     }
 }

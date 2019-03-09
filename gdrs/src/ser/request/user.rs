@@ -1,5 +1,6 @@
 use super::BaseRequestRem;
 use gdcf::api::request::{user::UserRequest, BaseRequest};
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 #[serde(remote = "UserRequest")]

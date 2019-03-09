@@ -1,6 +1,6 @@
 //! Module ontianing request definitions for retrieving users
 
-use api::request::{BaseRequest, Request, GD_21};
+use crate::api::request::{BaseRequest, Request, GD_21};
 use gdcf_model::user::User;
 use std::{
     fmt::{Display, Error, Formatter},

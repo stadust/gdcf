@@ -1,4 +1,4 @@
-use core::{backend::Database, table::Field, AsSql, QueryPart};
+use crate::core::{backend::Database, table::Field, AsSql, QueryPart};
 use std::fmt::Debug;
 
 pub trait Condition<DB: Database>: QueryPart<DB> + Debug {

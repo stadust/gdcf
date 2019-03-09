@@ -2,7 +2,7 @@ pub use self::{
     insert::{Insert, Insertable},
     select::Select,
 };
-use core::{
+use crate::core::{
     backend::{Database, Error},
     QueryPart,
 };

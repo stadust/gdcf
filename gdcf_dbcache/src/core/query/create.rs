@@ -1,4 +1,4 @@
-use core::{backend::Database, query::Query, table::Field, types::Type, QueryPart, SqlExpr};
+use crate::core::{backend::Database, query::Query, table::Field, types::Type, QueryPart, SqlExpr};
 
 #[derive(Debug)]
 pub struct Create<'a, DB: Database + 'a> {

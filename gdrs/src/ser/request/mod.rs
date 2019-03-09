@@ -1,6 +1,7 @@
+use crate::ser;
 use gdcf::api::request::BaseRequest;
 use gdcf_model::GameVersion;
-use ser;
+use serde_derive::Serialize;
 
 pub(super) mod level;
 pub(super) mod user;

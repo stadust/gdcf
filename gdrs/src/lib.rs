@@ -10,24 +10,11 @@
     unused_parens
 )]
 
-extern crate futures;
-extern crate gdcf;
-extern crate hyper;
-#[macro_use]
-extern crate log;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate failure;
-extern crate gdcf_parse;
-extern crate joinery;
-extern crate serde_urlencoded;
-extern crate tokio_retry;
-#[macro_use]
-extern crate failure_derive;
-extern crate gdcf_model;
-
-use crate::error::ApiError;
+use crate::{
+    error::ApiError,
+    handle::Handler,
+    ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem},
+};
 use futures::{future::Executor, Future, Stream};
 use gdcf::api::{
     client::{ApiFuture, MakeRequest, Response},
@@ -38,13 +25,13 @@ use gdcf::api::{
     },
     ApiClient,
 };
-use handle::Handler;
 use hyper::{
     client::{Builder, HttpConnector},
     header::HeaderValue,
     Body, Client, Method, Request, StatusCode,
 };
-use ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem};
+use log::{debug, error, info, trace, warn};
+use serde_derive::Serialize;
 use std::str;
 use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},

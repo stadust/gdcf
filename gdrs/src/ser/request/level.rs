@@ -1,11 +1,11 @@
+use super::BaseRequestRem;
+use crate::ser;
 use gdcf::api::request::{
     level::{LevelRequestType, LevelsRequest, SearchFilters},
     BaseRequest, LevelRequest,
 };
 use gdcf_model::level::{DemonRating, LevelLength, LevelRating};
-
-use super::BaseRequestRem;
-use ser;
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 #[serde(remote = "LevelRequest")]

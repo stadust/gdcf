@@ -1,8 +1,8 @@
 pub(crate) mod creator {
-    use core::backend::Error;
+    use crate::core::backend::Error;
     use gdcf_model::user::Creator;
 
-    use schema::NowAtUtc;
+    use crate::schema::NowAtUtc;
 
     use pm_gdcf_dbcache::{create, iqtable};
 
@@ -30,10 +30,10 @@ pub(crate) mod creator {
 }
 
 pub(crate) mod profile {
-    use core::backend::Error;
+    use crate::core::backend::Error;
     use gdcf_model::user::User;
 
-    use schema::NowAtUtc;
+    use crate::schema::NowAtUtc;
 
     use pm_gdcf_dbcache::{create, iqtable};
 

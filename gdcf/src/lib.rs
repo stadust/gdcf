@@ -104,19 +104,6 @@
 //!
 //! tokio::run(future);
 //! ```
-pub extern crate chrono;
-extern crate futures;
-#[macro_use]
-extern crate log;
-#[cfg(feature = "serde_support")]
-extern crate serde;
-#[cfg(feature = "serde_support")]
-#[macro_use]
-extern crate serde_derive;
-#[cfg(feature = "serialize_level_data")]
-extern crate base64;
-extern crate failure;
-extern crate gdcf_model;
 
 // TODO: it would be nice to be able to differentiate between cache-miss because the data doesn't
 // exist and cache-miss because the data simply wasn't requested yet
@@ -139,6 +126,7 @@ use gdcf_model::{
     song::{NewgroundsSong, SERVER_SIDED_DATA_INCONSISTENCY_ERROR},
     user::{Creator, User, DELETED},
 };
+use log::{info, warn};
 use std::mem;
 
 #[macro_use]

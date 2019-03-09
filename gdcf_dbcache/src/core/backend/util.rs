@@ -1,7 +1,7 @@
 //! Module containing utility functions or struct-impls that are valid across
 //! (most) backends
 
-use core::{
+use crate::core::{
     backend::Database,
     statement::{Preparation, Prepare},
     QueryPart,
