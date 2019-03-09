@@ -872,13 +872,6 @@ where
                 Ok(Async::Ready(Some(result)))
             },
 
-            // FIXME:
-            Err(GdcfError::NoContent) => {
-                info!("Stream over request {} terminating due to exhaustion!", self.next_request);
-
-                Ok(Async::Ready(None))
-            },
-
             Err(GdcfError::Api(ref err)) if err.is_no_result() => {
                 info!("Stream over request {} terminating due to exhaustion!", self.next_request);
 

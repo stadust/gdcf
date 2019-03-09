@@ -17,7 +17,4 @@ pub enum GdcfError<A: ApiError, C: CacheError> {
 
     #[fail(display = "{}", _0)]
     Api(#[cause] A),
-
-    #[fail(display = "Neither cache-lookup, nor API response yielded any result")]
-    NoContent,
 }
