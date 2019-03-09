@@ -6,6 +6,8 @@ use crate::{song::MainSong, GameVersion};
 use std::fmt::{Display, Error, Formatter};
 
 #[cfg(feature = "serde_support")]
+use serde::Deserializer;
+#[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
 
 /// Enum representing the possible level lengths known to GDCF
@@ -482,14 +484,14 @@ where
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }
 }
-#[cfg(feature = "serde_support")]
-use serde::{Deserialize, Deserializer};
 
 #[cfg(feature = "serde_support")]
 fn deserialize_main_song<'de, D>(deserializer: D) -> Result<Option<&'static MainSong>, D::Error>
 where
     D: Deserializer<'de>,
 {
+    use serde::Deserialize as _;
+
     Ok(Option::<u8>::deserialize(deserializer)?.map(From::from))
 }
 
