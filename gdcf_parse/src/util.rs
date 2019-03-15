@@ -59,13 +59,13 @@ pub fn xor_decrypt(encrypted: &str, key: &str) -> String {
 
 pub fn parse<'a, T>(idx: &'a str, value: &'a str) -> Result<Option<T>, ValueError<'a>>
 where
-    T: RobtopConvert<String, str>,
+    T: RobtopConvert<T, String, str>,
 {
     if value == "" {
         return Ok(None)
     }
 
-    RobtopConvert::robtop_from(value)
+    T::robtop_from(value)
         .map(Some)
         .map_err(|error| ValueError::Parse(idx, value, error))
 }

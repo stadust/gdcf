@@ -6,17 +6,17 @@ use gdcf_model::{
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::{borrow::Borrow, str::FromStr};
 
-pub trait RobtopConvert<T: Borrow<BT>, BT: ?Sized>: Sized {
-    fn robtop_from(s: &BT) -> Result<Self, String>;
-    fn robtop_into(self) -> T;
+pub trait RobtopConvert<For, T: Borrow<BT>, BT: ?Sized>: Sized {
+    fn robtop_from(s: &BT) -> Result<For, String>;
+    fn robtop_into(f: For) -> T;
 
-    fn can_omit(&self) -> bool {
+    fn can_omit(f: &For) -> bool {
         false
     }
 }
 
-impl RobtopConvert<String, str> for bool {
-    fn robtop_from(s: &str) -> Result<Self, String> {
+impl RobtopConvert<bool, String, str> for bool {
+    fn robtop_from(s: &str) -> Result<bool, String> {
         match s {
             "0" => Ok(false),
             "1" => Ok(true),
@@ -24,33 +24,33 @@ impl RobtopConvert<String, str> for bool {
         }
     }
 
-    fn robtop_into(self) -> String {
-        match self {
+    fn robtop_into(b: bool) -> String {
+        match b {
             true => "1",
             false => "0",
         }
         .to_string()
     }
 
-    fn can_omit(&self) -> bool {
-        !*self
+    fn can_omit(b: &bool) -> bool {
+        !*b
     }
 }
 
 macro_rules! delegate_to_from_str {
-    ($($t: ty),*) => {
+    ($($t: ident),*) => {
         $(
-            impl RobtopConvert<String, str> for $t {
-                fn robtop_from(s: &str ) -> Result<Self, String> {
+            impl RobtopConvert<$t, String, str> for $t {
+                fn robtop_from(s: &str ) -> Result<$t, String> {
                     s.parse().map_err(|e: <Self as FromStr>::Err| e.to_string())
                 }
 
-                fn robtop_into(self) -> String {
-                    self.to_string()
+                fn robtop_into(t: $t) -> String {
+                    t.to_string()
                 }
 
-                fn can_omit(&self) -> bool {
-                    *self == Self::default()
+                fn can_omit(t: &$t) -> bool {
+                    *t == $t::default()
                 }
             }
         )*
@@ -59,30 +59,30 @@ macro_rules! delegate_to_from_str {
 
 delegate_to_from_str!(i8, u8, i16, u16, i32, u32, i64, u64, usize, isize, f32, f64);
 
-impl RobtopConvert<String, str> for String {
-    fn robtop_from(s: &str) -> Result<Self, String> {
+impl RobtopConvert<String, String, str> for String {
+    fn robtop_from(s: &str) -> Result<String, String> {
         Ok(s.to_string())
     }
 
-    fn robtop_into(self) -> String {
-        self
+    fn robtop_into(s: String) -> String {
+        s
     }
 
-    fn can_omit(&self) -> bool {
-        self.is_empty()
+    fn can_omit(s: &String) -> bool {
+        s.is_empty()
     }
 }
 
 macro_rules! delegate_to_from_str_no_omit {
     ($($t: ty),*) => {
         $(
-            impl RobtopConvert<String, str> for $t {
-                fn robtop_from(s: &str ) -> Result<Self, String> {
+            impl RobtopConvert<$t, String, str> for $t {
+                fn robtop_from(s: &str ) -> Result<$t, String> {
                     s.parse().map_err(|e: <Self as FromStr>::Err| e.to_string())
                 }
 
-                fn robtop_into(self) -> String {
-                    self.to_string()
+                fn robtop_into(t: $t) -> String {
+                    t.to_string()
                 }
             }
         )*
@@ -91,8 +91,8 @@ macro_rules! delegate_to_from_str_no_omit {
 
 delegate_to_from_str_no_omit!(GameVersion);
 
-impl RobtopConvert<String, str> for Featured {
-    fn robtop_from(s: &str) -> Result<Self, String> {
+impl RobtopConvert<Featured, String, str> for Featured {
+    fn robtop_from(s: &str) -> Result<Featured, String> {
         match s {
             "-1" => Ok(Featured::Unfeatured),
             "0" => Ok(Featured::NotFeatured),
@@ -100,8 +100,8 @@ impl RobtopConvert<String, str> for Featured {
         }
     }
 
-    fn robtop_into(self) -> String {
-        match self {
+    fn robtop_into(f: Featured) -> String {
+        match f {
             Featured::Unfeatured => "-1".to_string(),
             Featured::NotFeatured => "0".to_string(),
             Featured::Featured(value) => value.to_string(),
@@ -109,8 +109,8 @@ impl RobtopConvert<String, str> for Featured {
     }
 }
 
-impl RobtopConvert<String, str> for LevelLength {
-    fn robtop_from(s: &str) -> Result<Self, String> {
+impl RobtopConvert<LevelLength, String, str> for LevelLength {
+    fn robtop_from(s: &str) -> Result<LevelLength, String> {
         Ok(match s {
             "0" => LevelLength::Tiny,
             "1" => LevelLength::Short,
@@ -121,8 +121,8 @@ impl RobtopConvert<String, str> for LevelLength {
         })
     }
 
-    fn robtop_into(self) -> String {
-        match self {
+    fn robtop_into(length: LevelLength) -> String {
+        match length {
             LevelLength::Tiny => "0",
             LevelLength::Short => "1",
             LevelLength::Medium => "2",
@@ -134,13 +134,13 @@ impl RobtopConvert<String, str> for LevelLength {
     }
 }
 
-impl RobtopConvert<String, str> for Password {
+impl RobtopConvert<Password, String, str> for Password {
     /// Attempts to parse the given `str` into a [`Password`]
     ///
     /// # Errors
     /// If the given string isn't `"0"` and also isn't valid URL-safe base64, a
     /// [`DecodeError`] is returned
-    fn robtop_from(encrypted: &str) -> Result<Self, String> {
+    fn robtop_from(encrypted: &str) -> Result<Password, String> {
         match encrypted {
             "0" => Ok(Password::NoCopy),
             pass => {
@@ -157,8 +157,8 @@ impl RobtopConvert<String, str> for Password {
         }
     }
 
-    fn robtop_into(self) -> String {
-        let encrypted = match self {
+    fn robtop_into(pass: Password) -> String {
+        let encrypted = match pass {
             Password::NoCopy => return "0".to_string(),
             Password::FreeCopy => xor_decrypt("1", "26364"),
             Password::PasswordCopy(pw) => xor_decrypt(&format!("0{}", pw), "26364"),
@@ -168,8 +168,8 @@ impl RobtopConvert<String, str> for Password {
     }
 }
 
-impl RobtopConvert<String, str> for Speed {
-    fn robtop_from(speed: &str) -> Result<Self, String> {
+impl RobtopConvert<Speed, String, str> for Speed {
+    fn robtop_from(speed: &str) -> Result<Speed, String> {
         match speed {
             "0" => Ok(Speed::Slow),
             "1" => Ok(Speed::Normal),
@@ -180,8 +180,8 @@ impl RobtopConvert<String, str> for Speed {
         }
     }
 
-    fn robtop_into(self) -> String {
-        match self {
+    fn robtop_into(speed: Speed) -> String {
+        match speed {
             Speed::Slow => "0",
             Speed::Normal => "1",
             Speed::Medium => "2",
@@ -193,19 +193,23 @@ impl RobtopConvert<String, str> for Speed {
     }
 }
 
-impl<D: Default + PartialEq, BT: ?Sized, T: Borrow<BT>> RobtopConvert<T, BT> for Option<D>
+impl<D: Default + PartialEq, BT: ?Sized, T: Borrow<BT>> RobtopConvert<Option<D>, T, BT> for Option<D>
 where
-    D: RobtopConvert<T, BT>,
+    D: RobtopConvert<D, T, BT>,
 {
-    fn robtop_from(s: &BT) -> Result<Self, String> {
+    fn robtop_from(s: &BT) -> Result<Option<D>, String> {
         D::robtop_from(s).map(|inner| if inner == D::default() { None } else { Some(inner) })
     }
 
-    fn robtop_into(self) -> T {
-        match self {
-            None => D::default().robtop_into(),
-            Some(d) => d.robtop_into(),
-        }
+    fn robtop_into(option: Option<D>) -> T {
+        D::robtop_into(match option {
+            None => D::default(),
+            Some(d) => d,
+        })
+    }
+
+    fn can_omit(f: &Option<D>) -> bool {
+        f.is_none()
     }
 }
 
@@ -218,18 +222,9 @@ pub trait InfallibleRobtopConvert<For, T: Borrow<BT>, BT: ?Sized> {
     }
 }
 
-pub trait ExternalRobtopConvert<For, T: Borrow<BT>, BT: ?Sized> {
-    fn robtop_from(s: &BT) -> Result<For, String>;
-    fn robtop_into(f: For) -> T;
-
-    fn can_omit(&self) -> bool {
-        false
-    }
-}
-
 pub struct Base64BytesConverter;
 
-impl ExternalRobtopConvert<Vec<u8>, String, str> for Base64BytesConverter {
+impl RobtopConvert<Vec<u8>, String, str> for Base64BytesConverter {
     fn robtop_from(s: &str) -> Result<Vec<u8>, String> {
         base64::decode_config(s, base64::URL_SAFE).map_err(|e| e.to_string())
     }
@@ -254,7 +249,7 @@ impl InfallibleRobtopConvert<Option<String>, String, str> for Base64Converter {
     }
 }
 
-impl ExternalRobtopConvert<String, String, str> for Base64Converter {
+impl RobtopConvert<String, String, str> for Base64Converter {
     fn robtop_from(s: &str) -> Result<String, String> {
         util::b64_decode_string(s).map_err(|e| e.to_string())
     }
@@ -266,7 +261,7 @@ impl ExternalRobtopConvert<String, String, str> for Base64Converter {
 
 pub struct UrlConverter;
 
-impl ExternalRobtopConvert<String, String, str> for UrlConverter {
+impl RobtopConvert<String, String, str> for UrlConverter {
     fn robtop_from(s: &str) -> Result<String, String> {
         let utf8_cow = percent_decode(s.as_bytes()).decode_utf8().map_err(|e| e.to_string())?;
 
