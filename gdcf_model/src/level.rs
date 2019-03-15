@@ -446,7 +446,7 @@ where
     /// copyable + Otherwise the value is base64 encoded and "encrypted"
     /// using robtop's XOR routine using key `26364`. If the "decrypted"
     /// value is `"1"`, the level is free to
-    /// copy. Otherwise the decrypted value is the level password.
+    /// copy. Otherwise the decrypted value (minus the first char) is the level password.
     pub password: Password,
 
     /// The time passed since the `Level` was uploaded

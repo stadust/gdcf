@@ -1,4 +1,4 @@
-use crate::{error::ValueError, util::int_to_bool, Parse};
+use crate::{error::ValueError, Parse};
 use gdcf_model::level::data::{
     ids,
     portal::{PortalData, PortalType},
@@ -37,7 +37,7 @@ impl Parse for ObjectData {
 
 parser! {
     PortalData => {
-        checked(index = 13, with = int_to_bool),
+        checked(index = 13),
         portal_type(custom = PortalType::from_id_str, depends_on = [id]),
     },
     id(^index = 1, noparse),
@@ -48,7 +48,7 @@ parser! {
         r(index = 7),
         g(index = 8),
         b(index = 9),
-        blending_enabled(index = 17, with = int_to_bool),
+        blending_enabled(index = 17),
     }
 }
 

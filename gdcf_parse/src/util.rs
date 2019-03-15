@@ -1,4 +1,4 @@
-use crate::error::ValueError;
+use crate::{convert::RobtopConvert, error::ValueError};
 use base64::{DecodeError, URL_SAFE};
 use percent_encoding::percent_decode;
 use std::{
@@ -35,19 +35,13 @@ impl<I> SelfZipExt for I where I: Iterator {}
 
 pub fn default_to_none<T>(value: T) -> Option<T>
 where
-    T: FromStr + Default + PartialEq,
+    T: Default + PartialEq,
 {
     if value == Default::default() {
         None
     } else {
         Some(value)
     }
-}
-
-/// Converts the given `u8` into a `bool` by returning `true` if `value !=
-/// 0`, and `false` otherwise
-pub const fn int_to_bool(value: u8) -> bool {
-    value != 0
 }
 
 pub fn into_option<T>(value: T) -> Option<T> {
@@ -101,15 +95,13 @@ pub fn xor_decrypt(encrypted: &str, key: &str) -> String {
 
 pub fn parse<'a, T>(idx: &'a str, value: &'a str) -> Result<Option<T>, ValueError<'a>>
 where
-    T: FromStr,
-    T::Err: Error + Send + Sync + 'static,
+    T: RobtopConvert<String, str>,
 {
     if value == "" {
         return Ok(None)
     }
 
-    value
-        .parse()
+    RobtopConvert::robtop_from(value)
         .map(Some)
-        .map_err(|error: T::Err| ValueError::Parse(idx, value, error.to_string()))
+        .map_err(|error| ValueError::Parse(idx, value, error))
 }

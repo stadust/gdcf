@@ -14,6 +14,7 @@ pub mod error;
 pub mod level;
 pub mod song;
 pub mod user;
+pub mod convert;
 
 const INDICES: [&str; 50] = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",
@@ -28,13 +29,21 @@ pub trait Parse: Sized {
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
 
     fn parse_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
-        Self::parse(iter.self_zip(), |i, v| Ok(warn!("Unused value '{}' at index '{}'", v, i)))
+        Self::parse(iter.self_zip(), |i, v| {
+            Ok(warn!(
+                "Unused value '{}' at index '{}'. This can and will lead to incorrect .unparse() results",
+                v, i
+            ))
+        })
     }
 
     fn parse_unindexed_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
         // well this is a stupid solution
         Self::parse(INDICES.iter().cloned().zip(iter), |i, v| {
-            Ok(warn!("Unused value '{}' at index '{}'", v, i))
+            Ok(warn!(
+                "Unused value '{}' at index '{}'. This can and will lead to incorrect .unparse() results",
+                v, i
+            ))
         })
     }
 

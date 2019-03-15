@@ -1,6 +1,6 @@
 use crate::{
     error::ValueError,
-    util::{default_to_none, int_to_bool},
+    util::{default_to_none},
     Parse,
 };
 use gdcf_model::user::{Creator, User};
@@ -50,7 +50,7 @@ parser! {
         ufo_index(index = 24),
         wave_index(index = 25),
         robot_index(index = 26),
-        has_glow(index = 28, with = int_to_bool),
+        has_glow(index = 28),
         index_29(index = 29),
         global_rank(index = 30, with = default_to_none),
         index_31(index = 31),

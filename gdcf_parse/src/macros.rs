@@ -197,14 +197,10 @@ macro_rules! parser {
                 for (idx, value) in iter.into_iter() {
                     match idx {
                         $(
-                            __index!($($tokens)*) => __match_arm_expr!(@ f, $field_name, value, $($tokens)*),//$field_name = __parsing!(@ value, $($tokens)*),
+                            __index!($($tokens)*) => __match_arm_expr!(@ f, $field_name, value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => __match_arm_expr!(@ f, $helper_field, value, $($tokens2)*),/*{
-                                $helper_field = __parsing!(@ value, $($tokens2)*);
-
-                                f(idx, value)?
-                            },*/
+                            __index!($($tokens2)*) => __match_arm_expr!(@ f, $helper_field, value, $($tokens2)*),
                         )*
                         _ => f(idx, value)?
                     }
@@ -270,14 +266,10 @@ macro_rules! parser {
                 let closure = |idx: &'a str, value: &'a str| -> Result<(), ValueError<'a>> {
                     match idx {
                         $(
-                            __index!($($tokens)*) => __match_arm_expr!(@ f, $field_name, value, $($tokens)*),//$field_name = __parsing!(@ value, $($tokens)*),
+                            __index!($($tokens)*) => __match_arm_expr!(@ f, $field_name, value, $($tokens)*),
                         )*
                         $(
-                            __index!($($tokens2)*) => __match_arm_expr!(@ f, $helper_field, value, $($tokens2)*),/*{
-                                $helper_field = __parsing!(@ value, $($tokens2)*);
-
-                                f(idx, value)?
-                            },*/
+                            __index!($($tokens2)*) => __match_arm_expr!(@ f, $helper_field, value, $($tokens2)*),
                         )*
                         _ => f(idx, value)?
                     }
