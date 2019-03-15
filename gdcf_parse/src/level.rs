@@ -1,9 +1,10 @@
 use crate::{
+    convert::{Base64BytesConverter, Base64Converter, ExternalRobtopConvert, InfallibleRobtopConvert},
     error::ValueError,
     util::{b64_decode_bytes, b64_decode_string, default_to_none, xor_decrypt},
     Parse,
 };
-use base64::DecodeError;
+use base64::{DecodeError, URL_SAFE};
 use gdcf_model::{
     level::{Featured, Level, LevelLength, LevelRating, PartialLevel, Password},
     song::{MainSong, MAIN_SONGS, UNKNOWN},
@@ -31,17 +32,11 @@ pub fn process_song(main_song: usize, custom_song: &Option<u64>) -> Option<&'sta
     }
 }
 
-pub fn parse_description(value: &str) -> Option<String> {
-    // I have decided that level descriptions are so broken that we simply ignore it if they fail to
-    // parse
-    b64_decode_string(value).ok()
-}
-
 parser! {
     PartialLevel<u64, u64> => {
         level_id(index = 1),
         name(index = 2),
-        description(index = 3, parse_infallible = parse_description, default),
+        description(index = 3, parse_infallible = Base64Converter, default),
         version(index = 5),
         creator(index = 6),
         difficulty(custom = process_difficulty, depends_on = [rating, is_auto, is_demon]),
@@ -52,11 +47,11 @@ parser! {
         length(index = 15),
         stars(index = 18),
         featured(index = 19),
-        copy_of(index = 30, with = default_to_none),
-        custom_song(index = 35, with = default_to_none),
+        copy_of(index = 30),
+        custom_song(index = 35),
         coin_amount(index = 37),
         coins_verified(index = 38),
-        stars_requested(index = 39, with = default_to_none),
+        stars_requested(index = 39),
         is_epic(index = 42),
         index_43(index = 43),
         object_amount(index = 45),
@@ -72,7 +67,7 @@ parser! {
 parser! {
     Level<u64, u64> => {
         base(delegate),
-        level_data(index = 4, parse = b64_decode_bytes),
+        level_data(index = 4, parse = Base64BytesConverter),
         password(index = 27),
         time_since_upload(index = 28),
         time_since_update(index = 29),

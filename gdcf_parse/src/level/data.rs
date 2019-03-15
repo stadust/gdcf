@@ -156,20 +156,9 @@ parser! {
     }
 }
 
-fn parse_starting_speed(speed: u8) -> Speed {
-    match speed {
-        0 => Speed::Slow,
-        1 => Speed::Normal,
-        2 => Speed::Medium,
-        3 => Speed::Fast,
-        4 => Speed::VeryFast,
-        _ => Speed::Invalid,
-    }
-}
-
 parser! {
     LevelMetadata => {
-        starting_speed(index = kA4, with = parse_starting_speed),
+        starting_speed(index = kA4),
         // ... all the other fields ...
     }
 }

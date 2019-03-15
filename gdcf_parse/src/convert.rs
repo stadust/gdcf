@@ -1,8 +1,9 @@
-use crate::util::{b64_decode_string, xor_decrypt};
+use crate::util::{self, b64_decode_string, xor_decrypt};
 use gdcf_model::{
-    level::{Featured, LevelLength, Password},
+    level::{data::portal::Speed, Featured, LevelLength, Password},
     GameVersion,
 };
+use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::{borrow::Borrow, str::FromStr};
 
 pub trait RobtopConvert<T: Borrow<BT>, BT: ?Sized>: Sized {
@@ -164,5 +165,149 @@ impl RobtopConvert<String, str> for Password {
         };
 
         base64::encode_config(&encrypted, base64::URL_SAFE)
+    }
+}
+
+impl RobtopConvert<String, str> for Speed {
+    fn robtop_from(speed: &str) -> Result<Self, String> {
+        match speed {
+            "0" => Ok(Speed::Slow),
+            "1" => Ok(Speed::Normal),
+            "2" => Ok(Speed::Medium),
+            "3" => Ok(Speed::Fast),
+            "4" => Ok(Speed::VeryFast),
+            _ => Err("Unknown speed value".to_string()),
+        }
+    }
+
+    fn robtop_into(self) -> String {
+        match self {
+            Speed::Slow => "0",
+            Speed::Normal => "1",
+            Speed::Medium => "2",
+            Speed::Fast => "3",
+            Speed::VeryFast => "4",
+            Speed::Invalid => "",
+        }
+        .to_string()
+    }
+}
+
+impl<D: Default + PartialEq, BT: ?Sized, T: Borrow<BT>> RobtopConvert<T, BT> for Option<D>
+where
+    D: RobtopConvert<T, BT>,
+{
+    fn robtop_from(s: &BT) -> Result<Self, String> {
+        D::robtop_from(s).map(|inner| if inner == D::default() { None } else { Some(inner) })
+    }
+
+    fn robtop_into(self) -> T {
+        match self {
+            None => D::default().robtop_into(),
+            Some(d) => d.robtop_into(),
+        }
+    }
+}
+
+pub trait InfallibleRobtopConvert<For, T: Borrow<BT>, BT: ?Sized> {
+    fn robtop_from_infallible(s: &BT) -> For;
+    fn robtop_into_infallible(f: For) -> T;
+
+    fn can_omit(&self) -> bool {
+        false
+    }
+}
+
+pub trait ExternalRobtopConvert<For, T: Borrow<BT>, BT: ?Sized> {
+    fn robtop_from(s: &BT) -> Result<For, String>;
+    fn robtop_into(f: For) -> T;
+
+    fn can_omit(&self) -> bool {
+        false
+    }
+}
+
+pub struct Base64BytesConverter;
+
+impl ExternalRobtopConvert<Vec<u8>, String, str> for Base64BytesConverter {
+    fn robtop_from(s: &str) -> Result<Vec<u8>, String> {
+        base64::decode_config(s, base64::URL_SAFE).map_err(|e| e.to_string())
+    }
+
+    fn robtop_into(f: Vec<u8>) -> String {
+        base64::encode_config(&f, base64::URL_SAFE)
+    }
+}
+
+pub struct Base64Converter;
+
+impl InfallibleRobtopConvert<Option<String>, String, str> for Base64Converter {
+    fn robtop_from_infallible(s: &str) -> Option<String> {
+        util::b64_decode_string(s).ok()
+    }
+
+    fn robtop_into_infallible(f: Option<String>) -> String {
+        match f {
+            Some(desc) => base64::encode_config(&desc, base64::URL_SAFE),
+            None => String::new(),
+        }
+    }
+}
+
+impl ExternalRobtopConvert<String, String, str> for Base64Converter {
+    fn robtop_from(s: &str) -> Result<String, String> {
+        util::b64_decode_string(s).map_err(|e| e.to_string())
+    }
+
+    fn robtop_into(f: String) -> String {
+        base64::encode_config(&f, base64::URL_SAFE)
+    }
+}
+
+pub struct UrlConverter;
+
+impl ExternalRobtopConvert<String, String, str> for UrlConverter {
+    fn robtop_from(s: &str) -> Result<String, String> {
+        let utf8_cow = percent_decode(s.as_bytes()).decode_utf8().map_err(|e| e.to_string())?;
+
+        Ok(utf8_cow.to_string())
+    }
+
+    fn robtop_into(f: String) -> String {
+        percent_encode(f.as_bytes(), SIMPLE_ENCODE_SET).to_string()
+    }
+}
+
+pub struct YoutubeConverter;
+pub struct TwitterConverter;
+pub struct TwitchConverter;
+
+impl InfallibleRobtopConvert<String, String, str> for YoutubeConverter {
+    fn robtop_from_infallible(s: &str) -> String {
+        unimplemented!()
+    }
+
+    fn robtop_into_infallible(f: String) -> String {
+        unimplemented!()
+    }
+}
+
+impl InfallibleRobtopConvert<String, String, str> for TwitterConverter {
+    fn robtop_from_infallible(s: &str) -> String {
+        unimplemented!()
+    }
+
+    fn robtop_into_infallible(f: String) -> String {
+        unimplemented!()
+    }
+}
+
+impl InfallibleRobtopConvert<String, String, str> for TwitchConverter {
+    fn robtop_from_infallible(s: &str) -> String {
+        unimplemented!()
+    }
+
+    fn robtop_into_infallible(f: String) -> String {
+        unimplemented!()
     }
 }

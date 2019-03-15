@@ -10,11 +10,11 @@ extern crate log;
 pub mod util;
 #[macro_use]
 pub mod macros;
+pub mod convert;
 pub mod error;
 pub mod level;
 pub mod song;
 pub mod user;
-pub mod convert;
 
 const INDICES: [&str; 50] = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24",

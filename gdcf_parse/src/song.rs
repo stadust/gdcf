@@ -1,4 +1,5 @@
 use crate::{
+    convert::{ExternalRobtopConvert, UrlConverter},
     error::ValueError,
     util::{decode_url, into_option},
     Parse,
@@ -12,9 +13,9 @@ parser! {
         index_3(index = 3, default),
         artist(index = 4, default),
         filesize(index = 5),
-        index_6(index = 6, with = into_option, default),
-        index_7(index = 7, with = into_option, default),
+        index_6(index = 6, optional),
+        index_7(index = 7, optional),
         index_8(index = 8),
-        link(index = 10, parse = decode_url),
+        link(index = 10, parse = UrlConverter),
     }
 }
