@@ -1,7 +1,7 @@
 macro_rules! __match_arm_expr {
     // Custom parser function
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $external: ident) => {{
-        use $crate::convert::RobtopConvert;
+        use $crate::convert::RobtopFrom;
         $field_name = match $external::robtop_from($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err)),
             Ok(v) => Some(v),
@@ -14,7 +14,7 @@ macro_rules! __match_arm_expr {
 
     // Custom parser that cannot fail
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $external: ident) => {{
-        use $crate::convert::InfallibleRobtopConvert;
+        use $crate::convert::RobtopFromInfallible;
         $field_name = Some($external::robtop_from_infallible($value))
     }};
 
@@ -192,6 +192,27 @@ macro_rules! parser {
                         $custom_field: $func($($field,)*),
                     )*
                 })
+            }
+
+            fn unparse(self) -> std::collections::HashMap<String, String> {
+                //use crate::convert::RobtopConvert;
+
+                let Self {
+                    $(
+                        $field_name,
+                    )*
+                    $(
+                        $custom_field,
+                    )*
+                } = self;
+
+                let mut map = std::collections::HashMap::new();
+
+                /*$(
+                    map.insert(__index!($($tokens)*).to_string(), RobtopConvert::<_, String, str>::robtop_into($field_name));
+                )**/
+
+                map
             }
         }
     };

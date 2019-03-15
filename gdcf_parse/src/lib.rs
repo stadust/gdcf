@@ -3,6 +3,7 @@
 //! This crate is based on work by mgostIH and cos8o
 
 use crate::{error::ValueError, util::SelfZipExt};
+use std::collections::HashMap;
 
 #[macro_use]
 extern crate log;
@@ -61,5 +62,9 @@ pub trait Parse: Sized {
 
     fn parse_unindexed_str2<'a>(input: &'a str, delimiter: &'a str) -> Result<Self, ValueError<'a>> {
         Self::parse_unindexed_iter(input.split(delimiter))
+    }
+
+    fn unparse(self) -> HashMap<String, String> {
+        HashMap::new()
     }
 }

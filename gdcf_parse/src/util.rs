@@ -1,4 +1,4 @@
-use crate::{convert::RobtopConvert, error::ValueError};
+use crate::{convert::RobtopFrom, error::ValueError};
 use base64::{DecodeError, URL_SAFE};
 use percent_encoding::percent_decode;
 use std::{
@@ -59,7 +59,7 @@ pub fn xor_decrypt(encrypted: &str, key: &str) -> String {
 
 pub fn parse<'a, T>(idx: &'a str, value: &'a str) -> Result<Option<T>, ValueError<'a>>
 where
-    T: RobtopConvert<T, String, str>,
+    T: RobtopFrom<T, &'a str>,
 {
     if value == "" {
         return Ok(None)

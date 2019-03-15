@@ -1,8 +1,4 @@
-use crate::{
-    convert::{UrlConverter},
-    error::ValueError,
-    Parse,
-};
+use crate::{convert::UrlConverter, error::ValueError, Parse};
 use gdcf_model::song::NewgroundsSong;
 
 parser! {
