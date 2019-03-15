@@ -207,10 +207,6 @@ where
             Some(d) => d,
         })
     }
-
-    fn can_omit(f: &Option<D>) -> bool {
-        f.is_none()
-    }
 }
 
 pub trait InfallibleRobtopConvert<For, T: Borrow<BT>, BT: ?Sized> {
