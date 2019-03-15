@@ -150,7 +150,7 @@ parser! {
         y(index = 3),
         flipped_y(index = 4, with = int_to_bool, default),
         flipped_x(index = 5, with = int_to_bool, default),
-        rotation(index = 6),
+        rotation(index = 6, default),
         // ... all the other fields ...
         metadata(delegate),
     }
