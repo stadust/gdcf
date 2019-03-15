@@ -10,7 +10,7 @@ use crate::core::{
 };
 use chrono::NaiveDateTime;
 #[cfg(feature = "sqlite")]
-use core::backend::sqlite::Sqlite;
+use crate::core::backend::sqlite::Sqlite;
 use gdcf::cache::CachedObject;
 
 pub mod level;

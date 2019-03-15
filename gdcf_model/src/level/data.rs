@@ -1,5 +1,7 @@
 pub mod ids;
 pub mod portal;
+pub mod trigger;
+pub mod text;
 
 use crate::level::{
     data::portal::{PortalData, Speed},
@@ -7,6 +9,8 @@ use crate::level::{
 };
 use flate2::read::GzDecoder;
 use std::{io::Read, time::Duration};
+use crate::level::data::text::TextData;
+use crate::level::data::trigger::ColorTriggerData;
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct LevelMetadata {
@@ -19,6 +23,9 @@ pub struct LevelObject {
     pub id: u16,
     pub x: f32,
     pub y: f32,
+    pub flipped_x: bool,
+    pub flipped_y: bool,
+    pub rotation: f32,
     // ... other fields they all have ...
     pub metadata: ObjectData,
 }
@@ -27,6 +34,8 @@ pub struct LevelObject {
 pub enum ObjectData {
     None,
     Portal(PortalData),
+    Text(TextData),
+    ColorTrigger(ColorTriggerData)
 }
 
 #[derive(Debug, PartialEq, Eq)]

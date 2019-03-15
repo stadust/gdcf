@@ -2,6 +2,8 @@ use crate::{error::ValueError, util::int_to_bool, Parse};
 use gdcf_model::level::data::{
     ids,
     portal::{PortalData, PortalType},
+    trigger::ColorTriggerData,
+    text::TextData,
     ObjectData,
 };
 
@@ -39,4 +41,19 @@ parser! {
         portal_type(custom = PortalType::from_id_str, depends_on = [id]),
     },
     id(^index = 1, noparse),
+}
+
+parser! {
+    ColorTriggerData => {
+        r(index = 7),
+        g(index = 8),
+        b(index = 9),
+        blending_enabled(index = 17, with = int_to_bool),
+    }
+}
+
+parser! {
+    TextData => {
+        text(index = 31),
+    }
 }

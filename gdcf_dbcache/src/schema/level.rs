@@ -197,7 +197,7 @@ pub(crate) mod full_level {
         }
     }
     #[cfg(feature = "sqlite")]
-    use core::backend::sqlite::Sqlite;
+    use crate::core::backend::sqlite::Sqlite;
     #[cfg(feature = "sqlite")]
     impl Queryable<Sqlite> for Level<u64, u64> {
         fn select_from(from: Table) -> Select<Sqlite> {

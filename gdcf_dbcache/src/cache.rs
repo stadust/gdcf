@@ -13,7 +13,7 @@ use crate::{
 };
 use chrono::{Duration, Utc};
 #[cfg(feature = "sqlite")]
-pub use core::backend::sqlite::Sqlite;
+pub use crate::core::backend::sqlite::Sqlite;
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},
