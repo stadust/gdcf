@@ -1,7 +1,6 @@
 use crate::{
     convert::{ExternalRobtopConvert, UrlConverter},
     error::ValueError,
-    util::{decode_url, into_option},
     Parse,
 };
 use gdcf_model::song::NewgroundsSong;

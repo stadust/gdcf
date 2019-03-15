@@ -1,7 +1,6 @@
 use crate::{
-    convert::{TwitchConverter, TwitterConverter, YoutubeConverter, InfallibleRobtopConvert},
+    convert::{InfallibleRobtopConvert, TwitchConverter, TwitterConverter, YoutubeConverter},
     error::ValueError,
-    util::default_to_none,
     Parse,
 };
 use gdcf_model::user::{Creator, User};

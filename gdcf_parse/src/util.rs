@@ -33,42 +33,6 @@ pub trait SelfZipExt: Iterator {
 
 impl<I> SelfZipExt for I where I: Iterator {}
 
-pub fn default_to_none<T>(value: T) -> Option<T>
-where
-    T: Default + PartialEq,
-{
-    if value == Default::default() {
-        None
-    } else {
-        Some(value)
-    }
-}
-
-pub fn into_option<T>(value: T) -> Option<T> {
-    Some(value)
-}
-
-/// Takes a percent-encoded URL and decodes it
-///
-/// # Errors
-/// If the decoded data cannot be put together as UTF8, an [`Utf8Error`] is
-/// returned
-pub fn decode_url(encoded: &str) -> Result<String, Utf8Error> {
-    let utf8_cow = percent_decode(encoded.as_bytes()).decode_utf8()?;
-
-    Ok(utf8_cow.to_string())
-}
-
-/// Performs URL-safe base64 decoding on the given [`str`] and returns the
-/// decoded bytes
-///
-/// # Errors
-/// If the given string isn't valid URL-safe base64, an [`DecodeError`] is
-/// returned
-pub fn b64_decode_bytes(encoded: &str) -> Result<Vec<u8>, DecodeError> {
-    base64::decode_config(encoded, URL_SAFE)
-}
-
 /// Performs URL-safe base64 decoding on the given [`str`] and tries to
 /// build a UTF8 String from the resulting bytes.
 ///
@@ -76,7 +40,7 @@ pub fn b64_decode_bytes(encoded: &str) -> Result<Vec<u8>, DecodeError> {
 /// If the given string isn't valid URL-safe base64, a [`DecodeError`] is
 /// returned
 pub fn b64_decode_string(encoded: &str) -> Result<String, DecodeError> {
-    b64_decode_bytes(encoded).map(|bytes| String::from_utf8_lossy(&bytes[..]).to_string())
+    base64::decode_config(encoded, URL_SAFE).map(|bytes| String::from_utf8_lossy(&bytes[..]).to_string())
 }
 
 /// Performs robtop's XOR en-/decryption routine on `encrypted` using `key`

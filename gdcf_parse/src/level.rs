@@ -1,7 +1,7 @@
 use crate::{
     convert::{Base64BytesConverter, Base64Converter, ExternalRobtopConvert, InfallibleRobtopConvert},
     error::ValueError,
-    util::{b64_decode_bytes, b64_decode_string, default_to_none, xor_decrypt},
+    util::xor_decrypt,
     Parse,
 };
 use base64::{DecodeError, URL_SAFE};
