@@ -273,32 +273,48 @@ pub struct YoutubeConverter;
 pub struct TwitterConverter;
 pub struct TwitchConverter;
 
-impl InfallibleRobtopConvert<String, String, str> for YoutubeConverter {
-    fn robtop_from_infallible(s: &str) -> String {
-        unimplemented!()
+fn url_path_tail(url: String) -> String {
+    url.rsplit('/').next().unwrap().to_string()
+}
+
+impl InfallibleRobtopConvert<Option<String>, String, str> for YoutubeConverter {
+    fn robtop_from_infallible(value: &str) -> Option<String> {
+        if value.is_empty() {
+            None
+        } else {
+            Some(format!("https://www.youtube.com/channel/{}", value))
+        }
     }
 
-    fn robtop_into_infallible(f: String) -> String {
-        unimplemented!()
+    fn robtop_into_infallible(f: Option<String>) -> String {
+        f.map(url_path_tail).unwrap_or_default()
     }
 }
 
-impl InfallibleRobtopConvert<String, String, str> for TwitterConverter {
-    fn robtop_from_infallible(s: &str) -> String {
-        unimplemented!()
+impl InfallibleRobtopConvert<Option<String>, String, str> for TwitterConverter {
+    fn robtop_from_infallible(value: &str) -> Option<String> {
+        if value.is_empty() {
+            None
+        } else {
+            Some(format!("https://www.twitter.com/{}", value))
+        }
     }
 
-    fn robtop_into_infallible(f: String) -> String {
-        unimplemented!()
+    fn robtop_into_infallible(f: Option<String>) -> String {
+        f.map(url_path_tail).unwrap_or_default()
     }
 }
 
-impl InfallibleRobtopConvert<String, String, str> for TwitchConverter {
-    fn robtop_from_infallible(s: &str) -> String {
-        unimplemented!()
+impl InfallibleRobtopConvert<Option<String>, String, str> for TwitchConverter {
+    fn robtop_from_infallible(value: &str) -> Option<String> {
+        if value.is_empty() {
+            None
+        } else {
+            Some(format!("https://www.twitch.tv/{}", value))
+        }
     }
 
-    fn robtop_into_infallible(f: String) -> String {
-        unimplemented!()
+    fn robtop_into_infallible(f: Option<String>) -> String {
+        f.map(url_path_tail).unwrap_or_default()
     }
 }
