@@ -1,11 +1,13 @@
-use crate::core::{
-    backend::{Database, Error},
-    query::select::Row,
-    AsSql,
+use crate::{
+    core::{
+        backend::{Database, Error},
+        query::select::Row,
+        AsSql,
+    },
+    resulter::Resulter,
 };
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
-use resulter::Resulter;
 use rusqlite::{types::ToSql, Error as DbError};
 use std::path::Path;
 

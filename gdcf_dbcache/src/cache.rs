@@ -1,5 +1,7 @@
 #[cfg(feature = "pg")]
 pub use crate::core::backend::pg::Pg;
+#[cfg(feature = "sqlite")]
+pub use crate::core::backend::sqlite::Sqlite;
 use crate::{
     core::{
         backend::{Database, Error},
@@ -12,8 +14,6 @@ use crate::{
     },
 };
 use chrono::{Duration, Utc};
-#[cfg(feature = "sqlite")]
-pub use crate::core::backend::sqlite::Sqlite;
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},

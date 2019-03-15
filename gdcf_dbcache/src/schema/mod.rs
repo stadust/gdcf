@@ -2,6 +2,8 @@
 
 #[cfg(feature = "pg")]
 use crate::core::backend::pg::Pg;
+#[cfg(feature = "sqlite")]
+use crate::core::backend::sqlite::Sqlite;
 use crate::core::{
     backend::{Database, Error},
     query::select::{Queryable, Row},
@@ -9,8 +11,6 @@ use crate::core::{
     FromSql, QueryPart, SqlExpr,
 };
 use chrono::NaiveDateTime;
-#[cfg(feature = "sqlite")]
-use crate::core::backend::sqlite::Sqlite;
 use gdcf::cache::CachedObject;
 
 pub mod level;

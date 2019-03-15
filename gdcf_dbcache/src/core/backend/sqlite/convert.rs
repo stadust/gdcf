@@ -5,7 +5,7 @@ use crate::core::{
     },
     AsSql, FromSql,
 };
-use gdcf::chrono::NaiveDateTime;
+use chrono::NaiveDateTime;
 use rusqlite::{
     types::{FromSql as SqliteFromSql, FromSqlError, ToSql as SqliteToSql, ToSqlOutput, Value, ValueRef},
     Error as SqliteError,
@@ -52,7 +52,7 @@ impl SqliteToSql for SqliteTypes {
 // SqlExpr<Sqlite> Maybe one day we'll find a better way to do this
 mod _dummy {
     use super::*;
-    use core::{
+    use crate::core::{
         statement::{Preparation, PreparedStatement},
         QueryPart, SqlExpr,
     };
