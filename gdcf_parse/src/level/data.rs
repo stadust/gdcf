@@ -1,4 +1,4 @@
-use crate::{error::ValueError, Parse};
+use crate::{error::ValueError, util::int_to_bool, Parse};
 use gdcf_model::level::data::{
     portal::{self, PortalData, PortalType, Speed},
     LevelInformationSource, LevelMetadata, LevelObject, ObjectData, Stats,
@@ -148,8 +148,8 @@ parser! {
         id(index = 1),
         x(index = 2),
         y(index = 3),
-        flipped_y(index = 4),
-        flipped_x(index = 5),
+        flipped_y(index = 4, with = int_to_bool, default),
+        flipped_x(index = 5, with = int_to_bool, default),
         rotation(index = 6),
         // ... all the other fields ...
         metadata(delegate),

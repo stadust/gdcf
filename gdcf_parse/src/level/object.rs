@@ -2,8 +2,8 @@ use crate::{error::ValueError, util::int_to_bool, Parse};
 use gdcf_model::level::data::{
     ids,
     portal::{PortalData, PortalType},
-    trigger::ColorTriggerData,
     text::TextData,
+    trigger::ColorTriggerData,
     ObjectData,
 };
 
