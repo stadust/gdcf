@@ -1,6 +1,7 @@
 macro_rules! __match_arm_expr {
     // Custom parser function
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $external: ident) => {{
+        use $crate::convert::ExternalRobtopConvert;
         $field_name = match $external::robtop_from($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err)),
             Ok(v) => Some(v),
@@ -13,6 +14,7 @@ macro_rules! __match_arm_expr {
 
     // Custom parser that cannot fail
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $external: ident) => {{
+        use $crate::convert::InfallibleRobtopConvert;
         $field_name = Some($external::robtop_from_infallible($value))
     }};
 
