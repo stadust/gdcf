@@ -26,16 +26,16 @@ macro_rules! __match_arm_expr {
     }};
 
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, noparse, $($__:tt)*) => {{
-        $field_name = Some($value)
+        __match_arm_expr!(@ $_, $field_name, $value, index = $idx, noparse)
     }};
 
     // Built-in parsing
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, $($__:tt)*) => {{
-        __match_arm_expr!(@ $_, $field_name, $value, index = $idx)
-    }};
-
     (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr) => {{
         $field_name = parse(stringify!($idx), $value)?
+    }};
+
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, $($__:tt)*) => {{
+        __match_arm_expr!(@ $_, $field_name, $value, index = $idx)
     }};
 
     // Custom parser function, but delegate original value upward
@@ -61,23 +61,22 @@ macro_rules! __match_arm_expr {
     // No parsing, but delegate the value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse) => {{
         $f(stringify!($idx), $value)?;
-        $field_name = Some($value)
+        __match_arm_expr!(@ $f, $field_name, $value, index = $idx, noparse)
     }};
 
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse, $($also_tokens:tt)*) => {{
         $f(stringify!($idx), $value)?;
-        $field_name = Some($value)
+        __match_arm_expr!(@ $f, $field_name, $value, ^index = $idx, noparse)
     }};
 
     // Build-in parsing, but delegate the value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, $($also_tokens:tt)*) => {{
         $f(stringify!($idx), $value)?;
-        $field_name = parse(stringify!($idx), $value)?
+        __match_arm_expr!(@ $f, $field_name, $value, index = $idx)
     }};
 
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr) => {{
-        $f(stringify!($idx), $value)?;
-        $field_name = parse(stringify!($idx), $value)?
+        __match_arm_expr!(@ $f, $field_name, $value, ^index = $idx)
     }};
 }
 
