@@ -73,9 +73,17 @@ where
         .map_err(|error| ValueError::Parse(idx, value, error))
 }
 
-pub fn unparse<T>(value: T) -> String
+// FIXME: this is just fucking horrible
+pub(crate) fn unparse<T>(value: T) -> String
 where
     T: RobtopInto<T, String>,
 {
     value.robtop_into()
+}
+
+pub(crate) fn can_omit<T>(value: &T) -> bool
+where
+    T: RobtopInto<T, String>,
+{
+    value.can_omit()
 }

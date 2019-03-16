@@ -82,7 +82,7 @@ macro_rules! __into_expr {
     // Custom parser function
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, optional $(, $($__:tt)*)?) => {{
         let value = RobtopInto::<$external, _>::robtop_into($value);
-        if !value.can_omit() {
+        if RobtopInto::<$external, _>::can_omit(&value) {
             $map.insert(stringify!($idx), value);
         }
     }};
@@ -99,9 +99,9 @@ macro_rules! __into_expr {
     // Built-in parsing
     (@ $map: expr, $value: expr, index = $idx: expr $(, $($__:tt)*)?) => {{
         let value = crate::util::unparse($value);
-        //if !value.can_omit() {
+        if !crate::util::can_omit(&value) {
             $map.insert(stringify!($idx), value);
-        //}
+        }
     }};
 
     (@ $map: expr, $value: expr, index = $idx: expr $(, $($__:tt)*)?) => {{
