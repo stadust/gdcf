@@ -80,6 +80,13 @@ macro_rules! __match_arm_expr {
 
 macro_rules! __into_expr {
     // Custom parser function
+    (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, optional $(, $($__:tt)*)?) => {{
+        let value = RobtopInto::<$external, _>::robtop_into($value);
+        if !value.can_omit() {
+            $map.insert(stringify!($idx), value);
+        }
+    }};
+
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident $(, $($__:tt)*)?) => {{
         $map.insert(stringify!($idx), RobtopInto::<$external, _>::robtop_into($value))
     }};
@@ -90,6 +97,13 @@ macro_rules! __into_expr {
     }};
 
     // Built-in parsing
+    (@ $map: expr, $value: expr, index = $idx: expr $(, $($__:tt)*)?) => {{
+        let value = crate::util::unparse($value);
+        //if !value.can_omit() {
+            $map.insert(stringify!($idx), value);
+        //}
+    }};
+
     (@ $map: expr, $value: expr, index = $idx: expr $(, $($__:tt)*)?) => {{
         $map.insert(stringify!($idx), crate::util::unparse($value))
     }};
@@ -124,7 +138,7 @@ macro_rules! __unwrap {
     };
 
     ($field_name: ident($(^)?index = $idx: expr, optional)) => {
-        $field_name
+        $field_name.unwrap_or_default()
     };
 
     ($field_name: ident($(^)?index = $idx: expr, default)) => {

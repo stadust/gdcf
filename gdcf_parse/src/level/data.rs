@@ -148,9 +148,9 @@ parser! {
         id(index = 1),
         x(index = 2),
         y(index = 3),
-        flipped_y(index = 4, default),
-        flipped_x(index = 5, default),
-        rotation(index = 6, default),
+        flipped_y(index = 4, optional),
+        flipped_x(index = 5, optional),
+        rotation(index = 6, optional),
         // ... all the other fields ...
         metadata(delegate),
     }
