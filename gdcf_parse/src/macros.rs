@@ -48,6 +48,8 @@ macro_rules! __match_arm_expr {
     }};
 }
 
+// TODO: correct handling of optional values (check RobtopInto::can_omit)
+
 macro_rules! __into_expr {
     // Custom parser function
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident $(, $($__:tt)*)?) => {{
@@ -225,7 +227,6 @@ macro_rules! parser {
 
                 $(
                     __into_expr!(@ map, $field_name, $($tokens)*);
-                    //map.insert(__index!($($tokens)*).to_string(), RobtopInto::robtop_into($field_name));
                 )*
 
                 map
@@ -263,11 +264,11 @@ macro_rules! parser {
                 trace!("Parsing {}", stringify!($struct_name));
 
                 $(
-                    let mut $field_name = None;
+                    __declare!($field_name, $($tokens)*);
                 )*
 
                 $(
-                    let mut $helper_field = None;
+                    __declare!($helper_field, $($tokens2)*);
                 )*
 
                 let closure = |idx: &'a str, value: &'a str| -> Result<(), ValueError<'a>> {
@@ -303,6 +304,32 @@ macro_rules! parser {
                         $custom_field: $func($($field,)*),
                     )*
                 })
+            }
+
+            fn unparse(self) -> std::collections::HashMap<&'static str, String> {
+                use crate::convert::RobtopInto;
+
+                let Self {
+                    $(
+                        $field_name,
+                    )*
+                    $(
+                        $custom_field,
+                    )*
+                    $delegated
+                } = self;
+
+                let mut map = $delegated.unparse();//std::collections::HashMap::new();
+
+                $(
+                    __into_expr!(! map, $($tokens2)*);
+                )*
+
+                $(
+                    __into_expr!(@ map, $field_name, $($tokens)*);
+                )*
+
+                map
             }
         }
     };
