@@ -1,6 +1,9 @@
 //! Crate containing parsers for various Geometry Dash related data
 //!
 //! This crate is based on work by mgostIH and cos8o
+#![feature(trace_macros)]
+
+//trace_macros!(true);
 
 use crate::{error::ValueError, util::SelfZipExt};
 use std::collections::HashMap;

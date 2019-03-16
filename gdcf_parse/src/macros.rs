@@ -1,7 +1,6 @@
 macro_rules! __match_arm_expr {
     // Custom parser function
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse = $external: ident $(, $($__:tt)*)?) => {{
-        use $crate::convert::RobtopFrom;
+    (! $field_name: ident, $value: expr, index = $idx: expr, parse = $external: ident) => {{
         $field_name = match $external::robtop_from($value) {
             Err(err) => return Err(ValueError::Parse(stringify!($idx), $value, err)),
             Ok(v) => Some(v),
@@ -9,43 +8,72 @@ macro_rules! __match_arm_expr {
     }};
 
     // Custom parser that cannot fail
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $external: ident $(, $($__:tt)*)?) => {{
-        use $crate::convert::RobtopFromInfallible;
+    (! $field_name: ident, $value: expr, index = $idx: expr, parse_infallible = $external: ident) => {{
         $field_name = Some($external::robtop_from_infallible($value))
     }};
 
-    // No parsing
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, ignore $(, $($__:tt)*)?) => {{
-    }};
-
     // Built-in parsing
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr $(, $($__:tt)*)?) => {{
+    (! $field_name: ident, $value: expr, index = $idx: expr) => {{
         $field_name = parse(stringify!($idx), $value)?
     }};
 
-    // Custom parser function, but delegate original value upward
-    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse = $external: ident $(, $($__:tt)*)?) => {{
-        $f($idx, $value)?;
-        __match_arm_expr!(@ $f, $field_name, $value, index = $idx, parse = $external)
-    }};
+    (@  $_: expr, // Closure to propagate upward values to, irrelevant here
+        $field_name: ident, // Name of the field we're currently processing
+        $value: expr,       // The value to be parsed
+        index = $idx: expr, // The index at which we find this data in the response
 
-    // Custom parser that cannot fail, but delegate the value upward
-    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, parse_infallible = $external: ident $(, $($__:tt)*)?) => {{
-        $f(stringify!($idx), $value)?;
-        __match_arm_expr!(@ $f, $field_name, $value, index = $idx, parse_infallible = $external)
-    }};
+        noparse  // No parsing should happen
 
-    // No parsing, but delegate the value upward
-    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse $(, $($__:tt)*)?) => {{
-        $f(stringify!($idx), $value)?;
-        $field_name = Some($value);
-    }};
+        // Things for ignore for this macro
+        $(, extract = $___: path[$($____:tt)*])? // 'extract' only matters during unparse generation
+        $(, default)?  // 'default' only matters when __unwrap!
+        $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
+        $(, optional)?  // 'optional' only matters for __unwrap!
+    ) => {
+        $field_name = Some($value)
+    };
 
-    // Build-in parsing, but delegate the value upward
-    (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr $(, $($__:tt)*)?) => {{
+    (@  $_: expr, // Closure to propagate upward values to, irrelevant here
+        $field_name: ident, // Name of the field we're currently processing
+        $value: expr,       // The value to be parsed
+        index = $idx: expr, // The index at which we find this data in the response
+
+        ignore // The value should be ignored during parsing
+
+        // Things for ignore for this macro
+        $(, extract = $___: path[$($____:tt)*])? // 'extract' only matters during unparse generation
+        $(, default)?  // 'default' only matters when __unwrap!
+        $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
+        $(, optional)?  // 'optional' only matters for __unwrap!
+    ) => {{}};
+
+    (@  $_: expr, // Closure to propagate upward values to, irrelevant here
+        $field_name: ident, // Name of the field we're currently processing
+        $value: expr,       // The value to be parsed
+        index = $idx: expr // The index at which we find this data in the response
+
+        $(, parse_infallible = $p: ident)?  // External, infallible parser
+        $(, parse = $p2: ident)?  // External parser
+
+        // Things for ignore for this macro
+        $(, extract = $___: path[$($____:tt)*])? // 'extract' only matters during unparse generation
+        $(, default)?  // 'default' only matters when __unwrap!
+        $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
+        $(, optional)?  // 'optional' only matters for __unwrap!
+    ) => {
+        __match_arm_expr!(! $field_name, $value, index = $idx $(, parse_infallible = $p)? $(, parse = $p2)?)
+    };
+
+    // The same as above, but it was indicated that the value should be propagated upward
+    (@  $f: expr,
+        $field_name: ident, // Name of the field we're currently processing
+        $value: expr,
+        ^index = $idx: expr // The index at which we find this data in the response
+        $(, $($rest:tt)*)?  // We'll deal with the rest above
+    ) => {{
         $f(stringify!($idx), $value)?;
-        __match_arm_expr!(@ $f, $field_name, $value, index = $idx)
-    }};
+        __match_arm_expr!(@ $f, $field_name, $value, index = $idx $(, $($rest)*)?)
+    }}
 }
 
 // TODO: correct handling of optional values (check RobtopInto::can_omit)
@@ -166,6 +194,8 @@ macro_rules! parser {
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
+                use $crate::convert::RobtopFromInfallible;
+                use $crate::convert::RobtopFrom;
 
                 trace!("Parsing {}", stringify!($struct_name));
 
@@ -260,6 +290,8 @@ macro_rules! parser {
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
                 use $crate::util::parse;
+                use $crate::convert::RobtopFromInfallible;
+                use $crate::convert::RobtopFrom;
 
                 trace!("Parsing {}", stringify!($struct_name));
 

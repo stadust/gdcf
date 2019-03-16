@@ -84,9 +84,9 @@ fn extract_rating(rating: LevelRating) -> String {
                 DemonRating::Hard => 30,
                 DemonRating::Insane => 40,
                 DemonRating::Extreme => 50,
-                _ => 1971,
+                _ => 1971, // doesnt matter
             },
-        _ => 1971,
+        _ => 1971, // doesnt matter
     }
     .robtop_into()
 }
