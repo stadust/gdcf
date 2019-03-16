@@ -67,7 +67,7 @@ macro_rules! __into_expr {
     }};
 
     // Unparsing of helper variables
-    (! $map: expr, index = $idx: expr $(, parse = $_: ident)? $(, ignore)? $(, noparse)? $(, parse_infallible = $t: ident)?, extract = $extractor: ident($($arg: expr),*) $(, $($__:tt)*)?) => {{
+    (! $map: expr, index = $idx: expr $(, parse = $_: ident)? $(, ignore)? $(, noparse)? $(, parse_infallible = $t: ident)?, extract = $extractor: path[$($arg: expr),*] $(, $($__:tt)*)?) => {{
         $map.insert(stringify!($idx), $extractor($($arg,)*))
     }};
 
@@ -119,7 +119,7 @@ macro_rules! __unwrap {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, extract = $_: ty $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, extract = $_: path[$($field: expr),*] $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 }
@@ -155,7 +155,7 @@ macro_rules! parser {
     (@ $struct_name: ty
         [$(, $field_name: ident($($tokens:tt)*))*]
         [$(, $helper_field: ident($($tokens2:tt)*))*]
-        [$(, $custom_field: ident(custom = $func: path, depends_on = [$($field: expr),*]))*]
+        [$(, $custom_field: ident(custom = $func: path[$($field: expr),*]))*]
         [] []
     ) => {
         impl Parse for $struct_name {

@@ -38,7 +38,7 @@ impl Parse for ObjectData {
 parser! {
     PortalData => {
         checked(index = 13),
-        portal_type(custom = PortalType::from_id_str, depends_on = [id]),
+        portal_type(custom = PortalType::from_id_str[id]),
     },
     id(^index = 1, noparse),
 }

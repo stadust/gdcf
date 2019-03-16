@@ -39,9 +39,9 @@ parser! {
         description(index = 3, parse_infallible = Base64Converter, default),
         version(index = 5),
         creator(index = 6),
-        difficulty(custom = process_difficulty, depends_on = [rating, is_auto, is_demon]),
+        difficulty(custom = process_difficulty[rating, is_auto, is_demon]),
         downloads(index = 10),
-        main_song(custom = process_song, depends_on = [main_song_id, &custom_song]),
+        main_song(custom = process_song[main_song_id, &custom_song]),
         gd_version(index = 13),
         likes(index = 14),
         length(index = 15),
@@ -58,11 +58,11 @@ parser! {
         index_46(index = 46),
         index_47(index = 47),
     },
-    main_song_id(index = 12, extract = extract_main_song_id(main_song), default),
-    rating(index = 9, extract = extract_rating(difficulty)),
-    is_demon(index = 17, extract = extract_is_demon(difficulty), default),
-    is_auto(index = 25, extract = extract_is_auto(difficulty), default),
-    is_na(index = 8, ignore, extract = extract_is_na(difficulty)),
+    main_song_id(index = 12, extract = extract_main_song_id[main_song], default),
+    rating(index = 9, extract = extract_rating[difficulty]),
+    is_demon(index = 17, extract = extract_is_demon[difficulty], default),
+    is_auto(index = 25, extract = extract_is_auto[difficulty], default),
+    is_na(index = 8, ignore, extract = extract_is_na[difficulty]),
 }
 
 fn extract_main_song_id(main_song: Option<&'static MainSong>) -> String {
