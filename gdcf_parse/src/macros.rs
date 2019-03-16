@@ -22,13 +22,11 @@ macro_rules! __match_arm_expr {
         __match_arm_expr!(@ $_, $field_name, $value, index = $idx, parse_infallible = $external)
     }};
 
-    // no parsing at all
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, noparse) => {{
-        $field_name = Some($value)
+    // No parsing
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, ignore) => {{
     }};
 
-    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, noparse, $($__:tt)*) => {{
-        __match_arm_expr!(@ $_, $field_name, $value, index = $idx, noparse)
+    (@ $_: expr, $field_name: ident, $value: expr, index = $idx: expr, ignore, $($also_tokens:tt)*) => {{
     }};
 
     // Built-in parsing
@@ -63,12 +61,12 @@ macro_rules! __match_arm_expr {
     // No parsing, but delegate the value upward
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse) => {{
         $f(stringify!($idx), $value)?;
-        __match_arm_expr!(@ $f, $field_name, $value, index = $idx, noparse)
+        $field_name = Some($value);
     }};
 
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr, noparse, $($also_tokens:tt)*) => {{
         $f(stringify!($idx), $value)?;
-        __match_arm_expr!(@ $f, $field_name, $value, ^index = $idx, noparse)
+        $field_name = Some($value);
     }};
 
     // Build-in parsing, but delegate the value upward
@@ -80,6 +78,58 @@ macro_rules! __match_arm_expr {
     (@ $f: expr, $field_name: ident, $value: expr, ^index = $idx: expr) => {{
         __match_arm_expr!(@ $f, $field_name, $value, ^index = $idx)
     }};
+}
+
+macro_rules! __into_expr {
+    // Custom parser function
+    (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident) => {{
+        $map.insert(stringify!($idx), RobtopInto::<$external, _>::robtop_into($value))
+    }};
+
+    (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, $($__:tt)*) => {{
+        __into_expr!(@ $map, $value, index = $idx, parse = $external)
+    }};
+
+    // Custom parser that cannot fail
+    (@ $map: expr, $value: expr, index = $idx: expr, parse_infallible = $external: ident) => {{
+        __into_expr!(@ $map, $value, index = $idx, parse = $external)
+    }};
+
+    (@ $map: expr, $value: expr, index = $idx: expr, parse_infallible = $external: ident, $($__:tt)*) => {{
+        __into_expr!(@ $map, $value, index = $idx, parse = $external)
+    }};
+
+    // Built-in parsing
+    (@ $map: expr, $value: expr, index = $idx: expr) => {{
+        $map.insert(stringify!($idx), crate::util::unparse($value))
+    }};
+
+    (@ $map: expr, $value: expr, index = $idx: expr, $($__:tt)*) => {{
+        __into_expr!(@ $map, $value, index = $idx)
+    }};
+
+    // Unparsing of helper variables
+    (! $map: expr, index = $idx: expr, extract = $extractor: ident($($arg: expr),*)) => {{
+        println!("step 2");
+        $map.insert(stringify!($idx), $extractor($($arg,)*))
+    }};
+
+    (! $map: expr, index = $idx: expr $(, parse = $_: ident)? $(, ignore)? $(, noparse)? $(, parse_infallible = $t: ident)?, extract = $extractor: ident($($arg: expr),*) $(, $($__:tt)*)?) => {{
+        println!("step 1");
+        __into_expr!(! $map, index = $idx, extract = $extractor($($arg),*))
+    }};
+
+    (! $map: expr, ^index = $idx: expr $(, $($__:tt)*)?) => {{
+        /* we're ignoring a value because it gets propagated upward: */
+    }};
+
+    (! $($t:tt)*) => {{
+        compile_error!("Please specific an extractor via `extract = <...>` for help variables")
+    }};
+
+    (@ $($t:tt)*) => {
+        /* we're ignoring a value because it gets propagated upward: */
+    }
 }
 
 macro_rules! __index {
@@ -105,6 +155,10 @@ macro_rules! __unwrap {
         $field_name.unwrap_or_default()
     };
 
+    ($field_name: ident($(^)?index = $idx: expr, ignore $(, $($t:tt)*)?)) => {{
+        // do nothing on parse
+    }};
+
     ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, default = $default_func: path)) => {
         $field_name.unwrap_or_self($default_func)
     };
@@ -115,6 +169,17 @@ macro_rules! __unwrap {
 
     ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, parse = $_: ty $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
+    };
+
+    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, extract = $_: ty $(, $($crap:tt)*)?)) => {
+        __unwrap!($field_name(index = $idx $(, $($crap)*)?))
+    };
+}
+
+macro_rules! __declare {
+    ($field_name: ident, index = $idx: expr, ignore $(, $($t:tt)*)?) => {{}};
+    ($field_name: ident, $($t:tt)*) => {
+        let mut $field_name = None;
     };
 }
 
@@ -157,11 +222,11 @@ macro_rules! parser {
                 trace!("Parsing {}", stringify!($struct_name));
 
                 $(
-                    let mut $field_name = None;
+                    __declare!($field_name, $($tokens)*);
                 )*
 
                 $(
-                    let mut $helper_field = None;
+                    __declare!($helper_field, $($tokens2)*);
                 )*
 
                 for (idx, value) in iter.into_iter() {
@@ -194,8 +259,8 @@ macro_rules! parser {
                 })
             }
 
-            fn unparse(self) -> std::collections::HashMap<String, String> {
-                //use crate::convert::RobtopConvert;
+            fn unparse(self) -> std::collections::HashMap<&'static str, String> {
+                use crate::convert::RobtopInto;
 
                 let Self {
                     $(
@@ -208,9 +273,14 @@ macro_rules! parser {
 
                 let mut map = std::collections::HashMap::new();
 
-                /*$(
-                    map.insert(__index!($($tokens)*).to_string(), RobtopConvert::<_, String, str>::robtop_into($field_name));
-                )**/
+                $(
+                    __into_expr!(! map, $($tokens2)*);
+                )*
+
+                $(
+                    __into_expr!(@ map, $field_name, $($tokens)*);
+                    //map.insert(__index!($($tokens)*).to_string(), RobtopInto::robtop_into($field_name));
+                )*
 
                 map
             }

@@ -64,7 +64,7 @@ pub trait Parse: Sized {
         Self::parse_unindexed_iter(input.split(delimiter))
     }
 
-    fn unparse(self) -> HashMap<String, String> {
+    fn unparse(self) -> HashMap<&'static str, String> {
         HashMap::new()
     }
 }

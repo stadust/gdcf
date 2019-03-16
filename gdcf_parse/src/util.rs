@@ -1,4 +1,7 @@
-use crate::{convert::RobtopFrom, error::ValueError};
+use crate::{
+    convert::{RobtopFrom, RobtopInto},
+    error::ValueError,
+};
 use base64::{DecodeError, URL_SAFE};
 use percent_encoding::percent_decode;
 use std::{
@@ -68,4 +71,11 @@ where
     T::robtop_from(value)
         .map(Some)
         .map_err(|error| ValueError::Parse(idx, value, error))
+}
+
+pub fn unparse<T>(value: T) -> String
+where
+    T: RobtopInto<T, String>,
+{
+    value.robtop_into()
 }

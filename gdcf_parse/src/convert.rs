@@ -6,10 +6,10 @@ use gdcf_model::{
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::{borrow::Borrow, str::FromStr};
 
-pub trait RobtopInto<For, T> {
-    fn robtop_into(f: For) -> T;
+pub trait RobtopInto<Conv, T> {
+    fn robtop_into(self) -> T;
 
-    fn can_omit(f: &For) -> bool {
+    fn can_omit(&self) -> bool {
         false
     }
 }
@@ -23,16 +23,16 @@ pub trait RobtopFromInfallible<For, T> {
 }
 
 impl RobtopInto<bool, String> for bool {
-    fn robtop_into(b: bool) -> String {
-        match b {
+    fn robtop_into(self) -> String {
+        match self {
             true => "1",
             false => "0",
         }
         .to_string()
     }
 
-    fn can_omit(b: &bool) -> bool {
-        !*b
+    fn can_omit(&self) -> bool {
+        !*self
     }
 }
 
@@ -50,12 +50,12 @@ macro_rules! delegate_to_from_str {
     ($($t: ident),*) => {
         $(
             impl RobtopInto<$t, String> for $t {
-                fn robtop_into(t: $t) -> String {
-                    t.to_string()
+                fn robtop_into(self) -> String {
+                    self.to_string()
                 }
 
-                fn can_omit(t: &$t) -> bool {
-                    *t == $t::default()
+                fn can_omit(&self) -> bool {
+                    *self == $t::default()
                 }
             }
 
@@ -71,12 +71,12 @@ macro_rules! delegate_to_from_str {
 delegate_to_from_str!(i8, u8, i16, u16, i32, u32, i64, u64, usize, isize, f32, f64);
 
 impl RobtopInto<String, String> for String {
-    fn robtop_into(s: String) -> String {
-        s
+    fn robtop_into(self) -> String {
+        self
     }
 
-    fn can_omit(s: &String) -> bool {
-        s.is_empty()
+    fn can_omit(&self) -> bool {
+        self.is_empty()
     }
 }
 
@@ -96,8 +96,8 @@ macro_rules! delegate_to_from_str_no_omit {
             }
 
             impl RobtopInto<$t, String> for $t {
-                fn robtop_into(t: $t) -> String {
-                    t.to_string()
+                fn robtop_into(self) -> String {
+                    self.to_string()
                 }
             }
         )*
@@ -117,8 +117,8 @@ impl RobtopFrom<Featured, &str> for Featured {
 }
 
 impl RobtopInto<Featured, String> for Featured {
-    fn robtop_into(f: Featured) -> String {
-        match f {
+    fn robtop_into(self) -> String {
+        match self {
             Featured::Unfeatured => "-1".to_string(),
             Featured::NotFeatured => "0".to_string(),
             Featured::Featured(value) => value.to_string(),
@@ -140,8 +140,8 @@ impl RobtopFrom<LevelLength, &str> for LevelLength {
 }
 
 impl RobtopInto<LevelLength, String> for LevelLength {
-    fn robtop_into(length: LevelLength) -> String {
-        match length {
+    fn robtop_into(self) -> String {
+        match self {
             LevelLength::Tiny => "0",
             LevelLength::Short => "1",
             LevelLength::Medium => "2",
@@ -178,8 +178,8 @@ impl RobtopFrom<Password, &str> for Password {
 }
 
 impl RobtopInto<Password, String> for Password {
-    fn robtop_into(pass: Password) -> String {
-        let encrypted = match pass {
+    fn robtop_into(self) -> String {
+        let encrypted = match self {
             Password::NoCopy => return "0".to_string(),
             Password::FreeCopy => xor_decrypt("1", "26364"),
             Password::PasswordCopy(pw) => xor_decrypt(&format!("0{}", pw), "26364"),
@@ -203,8 +203,8 @@ impl RobtopFrom<Speed, &str> for Speed {
 }
 
 impl RobtopInto<Speed, String> for Speed {
-    fn robtop_into(speed: Speed) -> String {
-        match speed {
+    fn robtop_into(self) -> String {
+        match self {
             Speed::Slow => "0",
             Speed::Normal => "1",
             Speed::Medium => "2",
@@ -229,8 +229,8 @@ impl<D: Default, T> RobtopInto<Option<D>, T> for Option<D>
 where
     D: RobtopInto<D, T>,
 {
-    fn robtop_into(option: Option<D>) -> T {
-        D::robtop_into(match option {
+    fn robtop_into(self) -> T {
+        D::robtop_into(match self {
             None => D::default(),
             Some(d) => d,
         })
@@ -245,9 +245,9 @@ impl RobtopFrom<Vec<u8>, &str> for Base64BytesConverter {
     }
 }
 
-impl RobtopInto<Vec<u8>, String> for Base64BytesConverter {
-    fn robtop_into(f: Vec<u8>) -> String {
-        base64::encode_config(&f, base64::URL_SAFE)
+impl RobtopInto<Base64BytesConverter, String> for Vec<u8> {
+    fn robtop_into(self) -> String {
+        base64::encode_config(&self, base64::URL_SAFE)
     }
 }
 
@@ -259,10 +259,10 @@ impl RobtopFromInfallible<Option<String>, &str> for Base64Converter {
     }
 }
 
-impl RobtopInto<Option<String>, String> for Base64Converter {
-    fn robtop_into(f: Option<String>) -> String {
-        match f {
-            Some(desc) => base64::encode_config(&desc, base64::URL_SAFE),
+impl RobtopInto<Base64Converter, String> for Option<String> {
+    fn robtop_into(self) -> String {
+        match self {
+            Some(ref desc) => base64::encode_config(desc, base64::URL_SAFE),
             None => String::new(),
         }
     }
@@ -274,9 +274,9 @@ impl RobtopFrom<String, &str> for Base64Converter {
     }
 }
 
-impl RobtopInto<String, String> for Base64Converter {
-    fn robtop_into(f: String) -> String {
-        base64::encode_config(&f, base64::URL_SAFE)
+impl RobtopInto<Base64Converter, String> for String {
+    fn robtop_into(self) -> String {
+        base64::encode_config(&self, base64::URL_SAFE)
     }
 }
 
@@ -290,9 +290,9 @@ impl RobtopFrom<String, &str> for UrlConverter {
     }
 }
 
-impl RobtopInto<String, String> for UrlConverter {
-    fn robtop_into(f: String) -> String {
-        percent_encode(f.as_bytes(), SIMPLE_ENCODE_SET).to_string()
+impl RobtopInto<UrlConverter, String> for String {
+    fn robtop_into(self) -> String {
+        percent_encode(self.as_bytes(), SIMPLE_ENCODE_SET).to_string()
     }
 }
 
@@ -300,21 +300,21 @@ pub struct YoutubeConverter;
 pub struct TwitterConverter;
 pub struct TwitchConverter;
 
-impl RobtopInto<Option<String>, String> for YoutubeConverter {
-    fn robtop_into(url: Option<String>) -> String {
-        url.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
+impl RobtopInto<YoutubeConverter, String> for Option<String> {
+    fn robtop_into(self) -> String {
+        self.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
     }
 }
 
-impl RobtopInto<Option<String>, String> for TwitterConverter {
-    fn robtop_into(url: Option<String>) -> String {
-        url.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
+impl RobtopInto<TwitterConverter, String> for Option<String> {
+    fn robtop_into(self) -> String {
+        self.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
     }
 }
 
-impl RobtopInto<Option<String>, String> for TwitchConverter {
-    fn robtop_into(url: Option<String>) -> String {
-        url.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
+impl RobtopInto<TwitchConverter, String> for Option<String> {
+    fn robtop_into(self) -> String {
+        self.map(|url| url.rsplit('/').next().unwrap().to_string()).unwrap_or_default()
     }
 }
 

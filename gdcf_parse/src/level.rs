@@ -1,12 +1,12 @@
 use crate::{
-    convert::{Base64BytesConverter, Base64Converter},
+    convert::{Base64BytesConverter, Base64Converter, RobtopInto},
     error::ValueError,
     util::xor_decrypt,
     Parse,
 };
 use base64::{DecodeError, URL_SAFE};
 use gdcf_model::{
-    level::{Featured, Level, LevelLength, LevelRating, PartialLevel, Password},
+    level::{DemonRating, Featured, Level, LevelLength, LevelRating, PartialLevel, Password},
     song::{MainSong, MAIN_SONGS, UNKNOWN},
 };
 use std::num::ParseIntError;
@@ -58,10 +58,53 @@ parser! {
         index_46(index = 46),
         index_47(index = 47),
     },
-    main_song_id(index = 12, default),
-    rating(index = 9),
-    is_demon(index = 17, default),
-    is_auto(index = 25, default),
+    main_song_id(index = 12, extract = extract_main_song_id(main_song), default),
+    rating(index = 9, extract = extract_rating(difficulty)),
+    is_demon(index = 17, extract = extract_is_demon(difficulty), default),
+    is_auto(index = 25, extract = extract_is_auto(difficulty), default),
+    is_na(index = 8, ignore, extract = extract_is_na(difficulty)),
+}
+
+fn extract_main_song_id(main_song: Option<&'static MainSong>) -> String {
+    main_song.map(|s| s.main_song_id).unwrap_or_default().robtop_into()
+}
+
+fn extract_rating(rating: LevelRating) -> String {
+    match rating {
+        LevelRating::NotAvailable => 0,
+        LevelRating::Easy => 10,
+        LevelRating::Normal => 20,
+        LevelRating::Hard => 30,
+        LevelRating::Harder => 40,
+        LevelRating::Insane => 50,
+        LevelRating::Demon(demon) =>
+            match demon {
+                DemonRating::Easy => 10,
+                DemonRating::Medium => 20,
+                DemonRating::Hard => 30,
+                DemonRating::Insane => 40,
+                DemonRating::Extreme => 50,
+                _ => 1971,
+            },
+        _ => 1971,
+    }
+    .robtop_into()
+}
+
+fn extract_is_demon(rating: LevelRating) -> String {
+    match rating {
+        LevelRating::Demon(_) => true,
+        _ => false,
+    }
+    .robtop_into()
+}
+
+fn extract_is_auto(rating: LevelRating) -> String {
+    (rating == LevelRating::Auto).robtop_into()
+}
+
+fn extract_is_na(rating: LevelRating) -> String {
+    (rating == LevelRating::NotAvailable).robtop_into()
 }
 
 parser! {

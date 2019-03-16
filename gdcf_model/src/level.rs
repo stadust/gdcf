@@ -199,8 +199,6 @@ pub enum Password {
     PasswordCopy(String),
 }
 
-// TODO: figure out a way to make the raw_type annotation not take the type by string.
-
 /// Struct representing partial levels. These are returned to
 /// [`LevelsRequest`](::api::request::level::LevelsRequest)s and only
 /// contain metadata
@@ -402,6 +400,23 @@ where
     /// ## GD Internals:
     /// This value is provided at index `47` and seems to be an integer
     pub index_47: String,
+}
+
+impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
+    pub fn is_auto(&self) -> bool {
+        self.difficulty == LevelRating::Auto
+    }
+
+    pub fn is_na(&self) -> bool {
+        self.difficulty == LevelRating::NotAvailable
+    }
+
+    pub fn is_demon(&self) -> bool {
+        match self.difficulty {
+            LevelRating::Demon(_) => true,
+            _ => false
+        }
+    }
 }
 
 /// Struct representing full levels, extending [`PartialLevel`] with the fields
