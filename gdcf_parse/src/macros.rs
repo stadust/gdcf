@@ -119,7 +119,7 @@ macro_rules! __index {
 }
 
 macro_rules! __unwrap {
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr)) => {
         $field_name.ok_or(ValueError::NoValue(stringify!($idx)))?
     };
 
@@ -135,19 +135,23 @@ macro_rules! __unwrap {
         // do nothing on parse
     }};
 
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, default = $default_func: path)) => {
+    ($field_name: ident($(^)?index = $idx: expr, default = $default_func: path)) => {
         $field_name.unwrap_or_self($default_func)
     };
 
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, parse_infallible = $_: ty $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr, parse_infallible = $_: ty $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, parse = $_: ty $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr, parse = $_: ty $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 
-    ($field_name: ident($(^)?index = $idx: expr $(,noparse)?, extract = $_: path[$($field: expr),*] $(, $($crap:tt)*)?)) => {
+    ($field_name: ident($(^)?index = $idx: expr, noparse $(, $($crap:tt)*)?)) => {
+        __unwrap!($field_name(index = $idx $(, $($crap)*)?))
+    };
+
+    ($field_name: ident($(^)?index = $idx: expr, extract = $_: path[$($field: expr),*] $(, $($crap:tt)*)?)) => {
         __unwrap!($field_name(index = $idx $(, $($crap)*)?))
     };
 }
