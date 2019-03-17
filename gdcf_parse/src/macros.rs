@@ -76,8 +76,6 @@ macro_rules! __match_arm_expr {
     }}
 }
 
-// TODO: correct handling of optional values (check RobtopInto::can_omit)
-
 macro_rules! __into_expr {
     // Custom parser function
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, optional $(, $($__:tt)*)?) => {{

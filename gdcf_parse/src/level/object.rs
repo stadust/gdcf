@@ -6,6 +6,7 @@ use gdcf_model::level::data::{
     trigger::ColorTriggerData,
     ObjectData,
 };
+use std::collections::HashMap;
 
 impl Parse for ObjectData {
     fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
@@ -31,6 +32,15 @@ impl Parse for ObjectData {
 
                 Ok(ObjectData::None)
             },
+        }
+    }
+
+    fn unparse(self) -> HashMap<&'static str, String> {
+        match self {
+            ObjectData::None => HashMap::default(),
+            ObjectData::Portal(portal_data) => portal_data.unparse(),
+            ObjectData::Text(text_data) => text_data.unparse(),
+            ObjectData::ColorTrigger(color_trigger_data) => color_trigger_data.unparse(),
         }
     }
 }

@@ -31,6 +31,7 @@ pub trait Parse: Sized {
     where
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>;
+    fn unparse(self) -> HashMap<&'static str, String>;
 
     fn parse_iter<'a>(iter: impl Iterator<Item = &'a str> + Clone) -> Result<Self, ValueError<'a>> {
         Self::parse(iter.self_zip(), |i, v| {
@@ -65,9 +66,5 @@ pub trait Parse: Sized {
 
     fn parse_unindexed_str2<'a>(input: &'a str, delimiter: &'a str) -> Result<Self, ValueError<'a>> {
         Self::parse_unindexed_iter(input.split(delimiter))
-    }
-
-    fn unparse(self) -> HashMap<&'static str, String> {
-        HashMap::new()
     }
 }
