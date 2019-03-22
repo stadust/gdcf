@@ -191,7 +191,7 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
         }
     }
 }
-/*
+
 impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
     R: Request + Send + Sync + 'static,
@@ -210,7 +210,7 @@ where
                 } else {
                     info!("Cached entry for request {} is up-to-date!", request);
 
-                    return GdcfFuture::up_to_date(cached)
+                    return GdcfFuture::UpToDate(cached)
                 },
 
             Err(ref error) if error.is_cache_miss() => {
@@ -254,7 +254,7 @@ where
         }
     }
 }
-*/
+
 #[derive(Debug)]
 pub struct Gdcf<A, C>
 where
