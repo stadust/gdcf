@@ -171,6 +171,8 @@ impl std::fmt::Display for Secondary {
 // a User
 
 use crate::error::{ApiError, CacheError};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C::Err>;
@@ -221,7 +223,9 @@ where
             Err(error) => return GdcfFuture::cache_error(error),
         };
 
-        let request_hash = self.cache.hash(&request);
+        let mut hasher = DefaultHasher::new();
+        request.hash(&mut hasher);
+        let request_hash = hasher.finish();
 
         let mut cache = self.cache();
 
@@ -314,7 +318,7 @@ where
 
                         match lookup {
                             // The custom song is cached, replace the ID with actual song object and change generic type
-                            Ok(song) => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_song(inner, Some(song.extract())))),
+                            Ok(song) => GdcfFuture::up_to_date(cached.map(|inner| exchange::level_song(inner, Some(song)))),
 
                             // The custom song isn't cached, make a request that's sure to put it into the cache, then perform the exchange
                             Err(ref err) if err.is_cache_miss() => {
@@ -327,7 +331,7 @@ where
                                         .and_then(move |_| {
                                             let song = gdcf.cache().lookup_song(custom_song_id).map_err(GdcfError::Cache)?;
 
-                                            Ok(exchange::level_song(cached, Some(song.extract())))
+                                            Ok(exchange::level_song(cached, Some(song)))
                                         }),
                                 )
                             },
@@ -348,7 +352,7 @@ where
                             None => Some(cached.map(|inner| exchange::level_song(inner, None))),
                             Some(custom_song_id) =>
                                 match self.cache().lookup_song(custom_song_id) {
-                                    Ok(song) => Some(cached.map(|inner| exchange::level_song(inner, Some(song.extract())))),
+                                    Ok(song) => Some(cached.map(|inner| exchange::level_song(inner, Some(song)))),
 
                                     Err(ref err) if err.is_cache_miss() => None,
 
@@ -381,14 +385,14 @@ where
                                             .and_then(move |_| {
                                                 let song = gdcf.cache().lookup_song(song_id).map_err(GdcfError::Cache)?;
 
-                                                Ok(exchange::level_song(level, Some(song.extract())))
+                                                Ok(exchange::level_song(level, Some(song)))
                                             }),
                                     )
                                 },
 
                                 Err(error) => Either::B(err(GdcfError::Cache(error))),
 
-                                Ok(song) => Either::B(ok(exchange::level_song(level, Some(song.extract())))),
+                                Ok(song) => Either::B(ok(exchange::level_song(level, Some(song)))),
                             }
                         } else {
                             Either::B(ok(exchange::level_song(level, None)))
@@ -422,7 +426,7 @@ where
                 let built = match partial_level.custom_song {
                     Some(custom_song_id) =>
                         match cache.lookup_song(custom_song_id) {
-                            Ok(song) => exchange::partial_level_song(partial_level, Some(song.extract())),
+                            Ok(song) => exchange::partial_level_song(partial_level, Some(song)),
 
                             Err(err) =>
                                 if err.is_cache_miss() {
@@ -474,7 +478,7 @@ where
                 // here. I THINK it's impossible to have an outdated creator while not having the level request
                 // outdated we well.
                 vec.push(match cache.lookup_creator(partial_level.creator) {
-                    Ok(creator) => exchange::partial_level_user(partial_level, creator.extract()),
+                    Ok(creator) => exchange::partial_level_user(partial_level, creator),
 
                     // For very old levels where the players never registered, the accounts got lost somehow. LevelsRequest containing such
                     // levels don't contain any creator info about those levels. This again implies that the cache miss, which should be
@@ -529,7 +533,7 @@ where
                     Ok(creator) => {
                         info!("Level {} up-to-date, returning cached version!", cached.inner());
 
-                        GdcfFuture::up_to_date(cached.map(|inner| exchange::level_user(inner, creator.extract())))
+                        GdcfFuture::up_to_date(cached.map(|inner| exchange::level_user(inner, creator)))
                     },
 
                     Err(ref err) if err.is_cache_miss() => {
@@ -546,7 +550,7 @@ where
                                     let lookup = gdcf.cache().lookup_creator(cached.base.creator);
 
                                     match lookup {
-                                        Ok(creator) => Ok(exchange::level_user(cached, creator.extract())),
+                                        Ok(creator) => Ok(exchange::level_user(cached, creator)),
 
                                         Err(ref err) if err.is_cache_miss() => {
                                             let creator = Creator::deleted(cached.base.creator);
@@ -570,7 +574,7 @@ where
                 let cached = match cached {
                     Some(cached) =>
                         match self.cache().lookup_creator(cached.inner().base.creator) {
-                            Ok(creator) => Some(cached.map(|inner| exchange::level_user(inner, creator.extract()))),
+                            Ok(creator) => Some(cached.map(|inner| exchange::level_user(inner, creator))),
 
                             Err(ref err) if err.is_cache_miss() => None, /* NOTE: here we cannot decide whether the creator isn't
                                                                            * cached, or */
@@ -594,7 +598,7 @@ where
                         let lookup = gdcf.cache().lookup_creator(level.base.creator);
 
                         match lookup {
-                            Ok(creator) => Either::B(ok(exchange::level_user(level, creator.extract()))),
+                            Ok(creator) => Either::B(ok(exchange::level_user(level, creator))),
 
                             Err(ref err) if err.is_cache_miss() =>
                                 Either::A(
@@ -603,7 +607,7 @@ where
                                             let lookup = gdcf.cache().lookup_creator(level.base.creator);
 
                                             match lookup {
-                                                Ok(creator) => Ok(exchange::level_user(level, creator.extract())),
+                                                Ok(creator) => Ok(exchange::level_user(level, creator)),
 
                                                 Err(ref err) if err.is_cache_miss() => {
                                                     let creator = Creator::deleted(level.base.creator);

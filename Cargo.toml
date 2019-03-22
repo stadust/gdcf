@@ -2,8 +2,7 @@
 members = [
     "gdcf",
     "gdrs",
-    "gdcf_dbcache",
     "gdcf_model",
     "gdcf_parse",
-    "pm_gdcf_dbcache"
+    "gdcf_diesel"
 ]

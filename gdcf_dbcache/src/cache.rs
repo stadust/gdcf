@@ -16,7 +16,7 @@ use crate::{
 use chrono::{Duration, Utc};
 use gdcf::{
     api::request::{LevelRequest, LevelsRequest, UserRequest},
-    cache::{Cache, CacheConfig, CachedObject, CanCache, Lookup},
+    cache::{Cache, CachedObject, CanCache, Lookup},
     Secondary,
 };
 use gdcf_model::{
