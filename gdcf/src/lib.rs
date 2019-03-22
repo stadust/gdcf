@@ -114,7 +114,7 @@ use crate::{
         request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache, CachedObject, CanCache},
+    cache::{Cache, CachedObject},
     error::GdcfError,
 };
 use futures::{
@@ -168,7 +168,10 @@ impl std::fmt::Display for Secondary {
 // TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
 // a User
 
-use crate::error::{ApiError, CacheError};
+use crate::{
+    cache::{CanCache, Lookup, RequestHash, Store},
+    error::{ApiError, CacheError},
+};
 use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
@@ -194,7 +197,7 @@ impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
     R: Request + Send + Sync + 'static,
     A: ApiClient + MakeRequest<R>,
-    C: Cache + CanCache<R>,
+    C: Cache + Store<Creator, Key = u64> + Store<NewgroundsSong, Key = u64> + CanCache<R>,
 {
     fn process_request(&self, request: R) -> GdcfFuture<R::Result, A::Err, C> {
         info!("Processing request {}", request);
@@ -230,16 +233,20 @@ where
             match response {
                 Response::Exact(what_we_want) =>
                     cache
-                        .store(&what_we_want, request_hash)
+                        .store(&what_we_want, RequestHash(request_hash))
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
                     for object in &excess {
-                        cache.store_secondary(object).map_err(GdcfError::Cache)?;
+                        match object {
+                            Secondary::NewgroundsSong(song) => cache.store(song, song.song_id),
+                            Secondary::Creator(creator) => cache.store(creator, creator.user_id),
+                        }
+                        .map_err(GdcfError::Cache)?
                     }
 
                     cache
-                        .store(&what_we_want, request_hash)
+                        .store(&what_we_want, RequestHash(request_hash))
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache)
                 },
@@ -669,7 +676,7 @@ where
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
-    C: Cache,
+    C: Cache + Store<NewgroundsSong, Key = u64> + Store<Creator, Key = u64>,
 {
     pub fn new(client: A, cache: C) -> Gdcf<A, C> {
         Gdcf { client, cache }
@@ -771,7 +778,10 @@ pub enum GdcfFuture<T, A: ApiError, C: Cache> {
     Empty,
     CacheError(C::Err),
     Uncached(Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>),
-    Outdated(CachedObject<T>, Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>),
+    Outdated(
+        CachedObject<T>,
+        Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>,
+    ),
     UpToDate(CachedObject<T>),
 }
 

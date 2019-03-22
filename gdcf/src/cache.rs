@@ -1,25 +1,34 @@
-use crate::{error::CacheError, Secondary};
+use crate::{api::request::Request, error::CacheError, Secondary};
 use chrono::NaiveDateTime;
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
-pub type Lookup<T, E> = Result<CachedObject<T>, E>;
+pub type Lookup2<T, E> = Result<CachedObject<T>, E>;
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type Err: CacheError;
-
-    fn lookup_song(&self, newground_id: u64) -> Result<NewgroundsSong, Self::Err>;
-    fn lookup_creator(&self, user_id: u64) -> Result<Creator, Self::Err>;
-
-    /// Stores an arbitrary [`Secondary`] in this [`Cache`]
-    fn store_secondary(&mut self, obj: &Secondary) -> Result<(), Self::Err>;
+    type CacheEntryMeta;
 
     fn is_expired<T>(&self, object: &CachedObject<T>) -> bool;
 }
 
-pub trait CanCache<R: crate::api::request::Request>: Cache {
-    fn lookup(&self, request: &R) -> Lookup<R::Result, Self::Err>;
-    fn store(&mut self, object: &R::Result, request_hash: u64) -> Result<(), Self::Err>;
+pub trait Lookup<Obj>: Cache {
+    type Key;
+
+    fn lookup(&self, id: &Self::Key) -> Lookup2<Obj, Self::Err>; //Result<(Obj, Self::CacheEntryMeta), Self::Err>;
 }
+
+pub trait Store<Obj>: Cache {
+    type Key;
+
+    fn store(&mut self, obj: &Obj, key: Self::Key) -> Result<(), Self::Err>;
+}
+
+#[derive(Debug)]
+pub struct RequestHash(pub u64);
+
+pub trait CanCache<R: Request>: Cache + Lookup<R::Result, Key = R> + Store<R::Result, Key = RequestHash> {}
+
+impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result, Key = R> + Store<R::Result, Key = RequestHash> {}
 
 #[derive(Debug)]
 pub struct CachedObject<T> {
