@@ -1,0 +1,25 @@
+[package]
+name = "gdcf_diesel"
+version = "0.1.0"
+authors = ["stadust <43299462+stadust@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+chrono = "0.4.6"
+diesel_migrations = "1.4.0"
+r2d2 = "0.8.3"
+gdcf = { path = "../gdcf" }
+failure = "0.1.5"
+
+[dependencies.diesel]
+version = "1.4.1"
+features = ["chrono", "r2d2"]
+
+[dependencies.gdcf_model]
+path = "../gdcf_model"
+
+[features]
+default = ["sqlite"]
+
+pg = ["diesel/postgres"]
+sqlite = ["diesel/sqlite"]
