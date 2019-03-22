@@ -1,4 +1,5 @@
 use diesel::{
+    associations::{HasTable, Identifiable},
     backend::Backend,
     deserialize::FromSqlRow,
     dsl::Eq,
@@ -8,6 +9,22 @@ use diesel::{
 use gdcf_model::user::Creator;
 
 pub struct CreatorDB(Creator);
+
+impl HasTable for CreatorDB {
+    type Table = creator::table;
+
+    fn table() -> Self::Table {
+        creator::table
+    }
+}
+
+impl<'a> Identifiable for &'a CreatorDB {
+    type Id = &'a u64;
+
+    fn id(self) -> Self::Id {
+        &self.0.user_id
+    }
+}
 
 table! {
     creator (user_id) {

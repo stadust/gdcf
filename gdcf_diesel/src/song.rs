@@ -5,8 +5,26 @@ use diesel::{
     ExpressionMethods, Insertable,
 };
 use gdcf_model::song::NewgroundsSong;
+use diesel::associations::{Identifiable, HasTable};
+use core::borrow::Borrow;
 
 pub struct NewgroundsSongDB(NewgroundsSong);
+
+impl HasTable for NewgroundsSongDB {
+    type Table = newgrounds_song::table;
+
+    fn table() -> Self::Table {
+        newgrounds_song::table
+    }
+}
+
+impl<'a> Identifiable for &'a NewgroundsSongDB {
+    type Id = &'a u64;
+
+    fn id(self) -> Self::Id {
+        &self.0.song_id
+    }
+}
 
 table! {
     newgrounds_song (song_id) {
