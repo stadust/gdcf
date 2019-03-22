@@ -47,15 +47,14 @@ impl<T> CachedObject<T> {
     pub fn map<U>(self, f: impl FnOnce(T) -> U) -> CachedObject<U> {
         CachedObject {
             last_cached_at: self.last_cached_at,
-            obj: f(self.obj)
+            obj: f(self.obj),
         }
     }
 
-    pub fn try_map<R, E>(self, f: impl FnOnce(T) -> Result<R, E>) -> Result<CachedObject<R>, E>
-    {
+    pub fn try_map<R, E>(self, f: impl FnOnce(T) -> Result<R, E>) -> Result<CachedObject<R>, E> {
         Ok(CachedObject {
             last_cached_at: self.last_cached_at,
-            obj: f(self.obj)?
+            obj: f(self.obj)?,
         })
     }
 }

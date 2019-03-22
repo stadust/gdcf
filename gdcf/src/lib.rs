@@ -171,8 +171,7 @@ impl std::fmt::Display for Secondary {
 // a User
 
 use crate::error::{ApiError, CacheError};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
+use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C::Err>;
@@ -237,8 +236,8 @@ where
                         .map(move |_| what_we_want)
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
-                    for object in excess {
-                        cache.store_secondary(&object).map_err(GdcfError::Cache)?;
+                    for object in &excess {
+                        cache.store_secondary(object).map_err(GdcfError::Cache)?;
                     }
 
                     cache
