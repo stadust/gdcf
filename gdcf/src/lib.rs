@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    unused_imports,
+    //unused_imports,
     unused_parens
 )]
 
@@ -191,7 +191,7 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
         }
     }
 }
-
+/*
 impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
     R: Request + Send + Sync + 'static,
@@ -254,7 +254,7 @@ where
         }
     }
 }
-
+*/
 #[derive(Debug)]
 pub struct Gdcf<A, C>
 where
@@ -263,6 +263,13 @@ where
 {
     client: A,
     cache: C,
+}
+
+impl<A, C> Gdcf<A, C>
+where
+    A: ApiClient,
+    C: Cache,
+{
 }
 
 impl<A, C> Clone for Gdcf<A, C>
@@ -277,7 +284,7 @@ where
         }
     }
 }
-
+/*
 impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
 where
     Self: ProcessRequest<A, C, LevelRequest, Level<u64, User>>,
@@ -404,8 +411,8 @@ where
         }
     }
 }
-
-impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
+*/
+/*impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
 where
     Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, User>>>,
     A: ApiClient + MakeRequest<LevelsRequest>,
@@ -456,7 +463,7 @@ where
         GdcfFuture::new(cached, inner.map(|fut| fut.and_then(processor)))
     }
 }
-
+*//*
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, Creator>>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelsRequest>,
@@ -506,7 +513,7 @@ where
         GdcfFuture::new(cached, inner.map(|fut| fut.and_then(processor)))
     }
 }
-
+*//*
 impl<A, C> ProcessRequest<A, C, LevelRequest, Level<u64, Creator>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
@@ -631,7 +638,7 @@ where
         }
     }
 }
-
+*/
 // TODO: impl ProcessRequest<LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf
 
 // TODO: impl ProcessRequest<LevelRequest, Level<u64, User>> for Gdcf
@@ -680,7 +687,7 @@ where
     pub fn client(&self) -> A {
         self.client.clone()
     }
-
+    /*
     /// Processes the given [`LevelRequest`]
     ///
     /// The `User` and `Song` type parameters determine, which sequence of requests should be made
@@ -761,67 +768,38 @@ where
         C: CanCache<UserRequest>,
     {
         self.process_request(request)
-    }
+    }*/
 }
 
 #[allow(missing_debug_implementations)]
-pub struct GdcfFuture<T, A: ApiError, C: CacheError> {
-    // invariant: at least one of the fields is not `None`
-    pub cached: Option<CachedObject<T>>,
-    pub inner: Option<Box<dyn Future<Item = T, Error = GdcfError<A, C>> + Send + 'static>>,
+pub enum GdcfFuture<T, A: ApiError, C: CacheError> {
+    Empty,
+    CacheError(C),
+    Uncached(Box<dyn Future<Item = T, Error = GdcfError<A, C>> + Send + 'static>),
+    Outdated(CachedObject<T>, Box<dyn Future<Item = T, Error = GdcfError<A, C>> + Send + 'static>),
+    UpToDate(CachedObject<T>),
 }
 
 impl<T, A: ApiError, C: CacheError> GdcfFuture<T, A, C> {
-    fn new<F>(cached: Option<CachedObject<T>>, f: Option<F>) -> Self
-    where
-        F: Future<Item = T, Error = GdcfError<A, C>> + Send + 'static,
-    {
-        GdcfFuture {
-            cached,
-            inner: match f {
-                None => None,
-                Some(f) => Some(Box::new(f)),
-            },
-        }
-    }
-
-    fn up_to_date(object: CachedObject<T>) -> Self {
-        GdcfFuture {
-            cached: Some(object),
-            inner: None,
-        }
-    }
-
     fn outdated<F>(object: CachedObject<T>, f: F) -> Self
     where
         F: Future<Item = T, Error = GdcfError<A, C>> + Send + 'static,
     {
-        GdcfFuture::new(Some(object), Some(f))
+        GdcfFuture::Outdated(object, Box::new(f))
     }
 
     fn absent<F>(f: F) -> Self
     where
         F: Future<Item = T, Error = GdcfError<A, C>> + Send + 'static,
     {
-        GdcfFuture::new(None, Some(f))
+        GdcfFuture::Uncached(Box::new(f))
     }
 
     fn cache_error(error: C) -> Self
     where
         T: Send + 'static,
     {
-        GdcfFuture::new(None, Some(err(GdcfError::Cache(error))))
-    }
-
-    fn error(error: GdcfError<A, C>) -> Self
-    where
-        T: Send + 'static,
-    {
-        GdcfFuture::new(None, Some(err(error)))
-    }
-
-    pub fn cached(&self) -> &Option<CachedObject<T>> {
-        &self.cached
+        GdcfFuture::CacheError(error)
     }
 }
 
@@ -830,9 +808,15 @@ impl<T, A: ApiError, C: CacheError> Future for GdcfFuture<T, A, C> {
     type Item = T;
 
     fn poll(&mut self) -> Result<Async<T>, GdcfError<A, C>> {
-        match self.inner {
-            Some(ref mut fut) => fut.poll(),
-            None => Ok(Async::Ready(self.cached.take().unwrap().extract())),
+        match self {
+            GdcfFuture::Uncached(future) => future.poll(),
+            GdcfFuture::Outdated(_, future) => future.poll(),
+            GdcfFuture::Empty => panic!("Cannot poll resolved future"),
+            fut => match std::mem::replace(fut, GdcfFuture::Empty) {
+                GdcfFuture::CacheError(error) => Err(GdcfError::Cache(error)),
+                GdcfFuture::UpToDate(inner) => Ok(Async::Ready(inner.extract())),
+                _ => unreachable!()
+            }
         }
     }
 }
