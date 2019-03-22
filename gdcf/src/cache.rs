@@ -23,8 +23,8 @@ pub trait CanCache<R: crate::api::request::Request>: Cache {
 
 #[derive(Debug)]
 pub struct CachedObject<T> {
-    last_cached_at: NaiveDateTime,
-    obj: T,
+    pub last_cached_at: NaiveDateTime,
+    pub obj: T,
 }
 
 impl<T> CachedObject<T> {
