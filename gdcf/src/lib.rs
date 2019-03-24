@@ -114,7 +114,7 @@ use crate::{
         request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache, CachedObject},
+    cache::{Cache},
     error::GdcfError,
 };
 use futures::{
@@ -173,6 +173,7 @@ use crate::{
     error::{ApiError, CacheError},
 };
 use std::{collections::hash_map::DefaultHasher, hash::Hasher};
+use crate::cache::CacheEntry;
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C>;
@@ -203,15 +204,15 @@ where
         info!("Processing request {}", request);
 
         let cached = match self.cache.lookup(&request) {
-            Ok(cached) =>
-                if self.cache.is_expired(&cached) {
+            Ok(entry) =>
+                if self.cache.is_expired(&entry) {
                     info!("Cache entry for request {} is expired!", request);
 
-                    Some(cached)
+                    Some(entry)
                 } else {
                     info!("Cached entry for request {} is up-to-date!", request);
 
-                    return GdcfFuture::UpToDate(cached)
+                    return GdcfFuture::UpToDate(entry)
                 },
 
             Err(ref error) if error.is_cache_miss() => {
@@ -779,14 +780,14 @@ pub enum GdcfFuture<T, A: ApiError, C: Cache> {
     CacheError(C::Err),
     Uncached(Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>),
     Outdated(
-        CachedObject<T>,
+        CacheEntry<T, C>,
         Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>,
     ),
-    UpToDate(CachedObject<T>),
+    UpToDate(CacheEntry<T, C>),
 }
 
 impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
-    fn outdated<F>(object: CachedObject<T>, f: F) -> Self
+    fn outdated<F>(object: CacheEntry<T, C>, f: F) -> Self
     where
         F: Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static,
     {
@@ -833,7 +834,7 @@ impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
             fut =>
                 match std::mem::replace(fut, GdcfFuture::Empty) {
                     GdcfFuture::CacheError(error) => Err(GdcfError::Cache(error)),
-                    GdcfFuture::UpToDate(inner) => Ok(Async::Ready(inner.extract())),
+                    GdcfFuture::UpToDate(inner) => Ok(Async::Ready(inner.into_inner())),
                     _ => unreachable!(),
                 },
         }

@@ -1,20 +1,20 @@
 use crate::{api::request::Request, error::CacheError, Secondary};
 use chrono::NaiveDateTime;
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-
-pub type Lookup2<T, E> = Result<CachedObject<T>, E>;
+use std::ops::Deref;
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type Err: CacheError;
     type CacheEntryMeta;
 
-    fn is_expired<T>(&self, object: &CachedObject<T>) -> bool;
+    fn store_secondary(&self, object: &Secondary) -> Result<(), Self::Err>;
 }
 
 pub trait Lookup<Obj>: Cache {
     type Key;
 
-    fn lookup(&self, id: &Self::Key) -> Lookup2<Obj, Self::Err>; //Result<(Obj, Self::CacheEntryMeta), Self::Err>;
+    fn lookup(&self, id: &Self::Key) -> Result<CacheEntry<Obj, Self>, Self::Err>;
+    fn is_expired(&self, entry: &CacheEntry<Obj, Self>) -> bool;
 }
 
 pub trait Store<Obj>: Cache {
@@ -30,40 +30,18 @@ pub trait CanCache<R: Request>: Cache + Lookup<R::Result, Key = R> + Store<R::Re
 
 impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result, Key = R> + Store<R::Result, Key = RequestHash> {}
 
-#[derive(Debug)]
-pub struct CachedObject<T> {
-    pub last_cached_at: NaiveDateTime,
-    pub obj: T,
+#[derive(Debug, PartialEq)]
+pub struct CacheEntry<T, C: Cache> {
+    object: T,
+    metadata: C::CacheEntryMeta,
 }
 
-impl<T> CachedObject<T> {
-    pub fn new(obj: T, last: NaiveDateTime) -> Self {
-        CachedObject { last_cached_at: last, obj }
+impl<T, C: Cache> CacheEntry<T, C> {
+    pub fn meta(&self) -> &C::CacheEntryMeta {
+        &self.metadata
     }
 
-    pub fn last_cached_at(&self) -> NaiveDateTime {
-        self.last_cached_at
-    }
-
-    pub fn extract(self) -> T {
-        self.obj
-    }
-
-    pub fn inner(&self) -> &T {
-        &self.obj
-    }
-
-    pub fn map<U>(self, f: impl FnOnce(T) -> U) -> CachedObject<U> {
-        CachedObject {
-            last_cached_at: self.last_cached_at,
-            obj: f(self.obj),
-        }
-    }
-
-    pub fn try_map<R, E>(self, f: impl FnOnce(T) -> Result<R, E>) -> Result<CachedObject<R>, E> {
-        Ok(CachedObject {
-            last_cached_at: self.last_cached_at,
-            obj: f(self.obj)?,
-        })
+    pub fn into_inner(self) -> T {
+        self.object
     }
 }
