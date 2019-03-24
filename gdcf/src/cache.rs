@@ -5,7 +5,7 @@ use std::ops::Deref;
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type Err: CacheError;
-    type CacheEntryMeta;
+    type CacheEntryMeta: CacheEntryMeta;
 
     fn store_secondary(&self, object: &Secondary) -> Result<(), Self::Err>;
 }
@@ -14,7 +14,6 @@ pub trait Lookup<Obj>: Cache {
     type Key;
 
     fn lookup(&self, id: &Self::Key) -> Result<CacheEntry<Obj, Self>, Self::Err>;
-    fn is_expired(&self, entry: &CacheEntry<Obj, Self>) -> bool;
 }
 
 pub trait Store<Obj>: Cache {
@@ -44,4 +43,12 @@ impl<T, C: Cache> CacheEntry<T, C> {
     pub fn into_inner(self) -> T {
         self.object
     }
+
+    pub fn is_expired(&self) -> bool {
+        self.metadata.is_expired()
+    }
+}
+
+pub trait CacheEntryMeta {
+    fn is_expired(&self) -> bool;
 }

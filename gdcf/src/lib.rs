@@ -114,7 +114,7 @@ use crate::{
         request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache},
+    cache::{Cache, CacheEntryMeta},
     error::GdcfError,
 };
 use futures::{
@@ -169,11 +169,10 @@ impl std::fmt::Display for Secondary {
 // a User
 
 use crate::{
-    cache::{CanCache, Lookup, RequestHash, Store},
+    cache::{CacheEntry, CanCache, Lookup, RequestHash, Store},
     error::{ApiError, CacheError},
 };
 use std::{collections::hash_map::DefaultHasher, hash::Hasher};
-use crate::cache::CacheEntry;
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C>;
@@ -205,7 +204,7 @@ where
 
         let cached = match self.cache.lookup(&request) {
             Ok(entry) =>
-                if self.cache.is_expired(&entry) {
+                if entry.is_expired() {
                     info!("Cache entry for request {} is expired!", request);
 
                     Some(entry)
