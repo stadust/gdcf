@@ -20,7 +20,11 @@ pub use self::{
     user::UserRequest,
 };
 use gdcf_model::GameVersion;
-use std::{fmt::Display, hash::Hash};
+use std::{
+    collections::hash_map::DefaultHasher,
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
 pub mod level;
 pub mod user;
@@ -97,6 +101,12 @@ impl Default for BaseRequest {
 /// above-mentioned compatibility
 pub trait Request: Display + Default + Hash + Clone + Send + Sync + 'static {
     type Result: Send + Sync + 'static;
+
+    fn key(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
+    }
 }
 
 pub trait PaginatableRequest: Request {

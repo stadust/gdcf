@@ -11,28 +11,28 @@ pub trait Cache: Clone + Send + Sync + 'static {
 }
 
 pub trait Lookup<Obj>: Cache {
-    type Key;
-
-    fn lookup(&self, id: &Self::Key) -> Result<CacheEntry<Obj, Self>, Self::Err>;
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Obj, Self>, Self::Err>;
 }
 
 pub trait Store<Obj>: Cache {
-    type Key;
-
-    fn store(&mut self, obj: &Obj, key: Self::Key) -> Result<(), Self::Err>;
+    fn store(&mut self, obj: &Obj, key: u64) -> Result<Self::CacheEntryMeta, Self::Err>;
 }
 
 #[derive(Debug)]
 pub struct RequestHash(pub u64);
 
-pub trait CanCache<R: Request>: Cache + Lookup<R::Result, Key = R> + Store<R::Result, Key = RequestHash> {}
+pub trait CanCache<R: Request>: Cache + Lookup<R::Result> + Store<R::Result> {
+    fn lookup_request(&self, request: &R) -> Result<CacheEntry<R::Result, Self>, Self::Err> {
+        self.lookup(request.key())
+    }
+}
 
-impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result, Key = R> + Store<R::Result, Key = RequestHash> {}
+impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<R::Result> {}
 
 #[derive(Debug, PartialEq)]
 pub struct CacheEntry<T, C: Cache> {
-    object: T,
-    metadata: C::CacheEntryMeta,
+    pub(crate) object: T,
+    pub(crate) metadata: C::CacheEntryMeta,
 }
 
 impl<T, C: Cache> CacheEntry<T, C> {
