@@ -49,6 +49,6 @@ impl<T, C: Cache> CacheEntry<T, C> {
     }
 }
 
-pub trait CacheEntryMeta {
+pub trait CacheEntryMeta: Send + Sync + 'static {
     fn is_expired(&self) -> bool;
 }

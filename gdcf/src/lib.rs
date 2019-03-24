@@ -210,7 +210,10 @@ where
 {
     fn process<R>(
         &self, request: R,
-    ) -> Result<EitherOrBoth<CacheEntry<R::Result, C>, impl Future<Item = R::Result, Error = GdcfError<A::Err, C::Err>>>, C::Err>
+    ) -> Result<
+        EitherOrBoth<CacheEntry<R::Result, C>, impl Future<Item = CacheEntry<R::Result, C>, Error = GdcfError<A::Err, C::Err>>>,
+        C::Err,
+    >
     where
         R: Request,
         A: MakeRequest<R>,
@@ -244,7 +247,16 @@ where
 
         let future = self.client().make(request).map_err(GdcfError::Api).and_then(move |response| {
             match response {
-                Response::Exact(what_we_want) => cache.store(&what_we_want, key).map(move |_| what_we_want).map_err(GdcfError::Cache),
+                Response::Exact(what_we_want) =>
+                    cache
+                        .store(&what_we_want, key)
+                        .map(move |entry_info| {
+                            CacheEntry {
+                                object: what_we_want,
+                                metadata: entry_info,
+                            }
+                        })
+                        .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
                     for object in &excess {
                         match object {
@@ -254,7 +266,15 @@ where
                         .map_err(GdcfError::Cache)?;
                     }
 
-                    cache.store(&what_we_want, key).map(move |_| what_we_want).map_err(GdcfError::Cache)
+                    cache
+                        .store(&what_we_want, key)
+                        .map(move |entry_info| {
+                            CacheEntry {
+                                object: what_we_want,
+                                metadata: entry_info,
+                            }
+                        })
+                        .map_err(GdcfError::Cache)
                 },
             }
         });
@@ -787,10 +807,10 @@ where
 pub enum GdcfFuture<T, A: ApiError, C: Cache> {
     Empty,
     CacheError(C::Err),
-    Uncached(Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>),
+    Uncached(Box<dyn Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static>),
     Outdated(
         CacheEntry<T, C>,
-        Box<dyn Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static>,
+        Box<dyn Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static>,
     ),
     UpToDate(CacheEntry<T, C>),
 }
@@ -804,14 +824,14 @@ enum EitherOrBoth<A, B> {
 impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     fn outdated<F>(object: CacheEntry<T, C>, f: F) -> Self
     where
-        F: Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static,
+        F: Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
     {
         GdcfFuture::Outdated(object, Box::new(f))
     }
 
     fn absent<F>(f: F) -> Self
     where
-        F: Future<Item = T, Error = GdcfError<A, C::Err>> + Send + 'static,
+        F: Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
     {
         GdcfFuture::Uncached(Box::new(f))
     }
@@ -875,8 +895,8 @@ impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
 
     fn poll(&mut self) -> Result<Async<T>, Self::Error> {
         match self {
-            GdcfFuture::Uncached(future) => future.poll(),
-            GdcfFuture::Outdated(_, future) => future.poll(),
+            GdcfFuture::Uncached(future) => future.poll().map(|a| a.map(|i| i.into_inner())),
+            GdcfFuture::Outdated(_, future) => future.poll().map(|a| a.map(|i| i.into_inner())),
             GdcfFuture::Empty => panic!("Cannot poll resolved future"),
             fut =>
                 match std::mem::replace(fut, GdcfFuture::Empty) {
