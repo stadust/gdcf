@@ -344,26 +344,66 @@ where
     }
 }
 
+impl<A, C, Song> ProcessRequest<A, C, LevelRequest, Level<Song, Option<Creator>>> for Gdcf<A, C>
+where
+    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelRequest> + CanCache<LevelsRequest> + Lookup<Creator>,
+    Song: PartialEq + Send + Clone + 'static,
+    Gdcf<A, C>: ProcessRequest<A, C, LevelRequest, Level<Song, u64>>,
+{
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<Song, Option<Creator>>, <A as ApiClient>::Err, C> {
+        let cache = self.cache();
+        let cache2 = self.cache();
+        let gdcf = self.clone();
+
+        let lookup = move |level: &Level<Song, u64>| cache.lookup(level.base.creator).map(Some);
+        let refresh = move |level: &Level<Song, u64>| {
+            let user_id = level.base.creator;
+
+            gdcf.refresh(LevelsRequest::default().with_id(level.base.level_id))
+                .and_then(move |_| {
+                    match cache2.lookup(user_id) {
+                        Err(ref err) if err.is_cache_miss() => Ok(None),
+                        Err(err) => Err(GdcfError::Cache(err)),
+                        Ok(obj) => Ok(Some(obj)),
+                    }
+                })
+        };
+
+        self.level(request).chain(lookup, refresh, exchange::level_user)
+    }
+}
+
 impl<A, C, Song> ProcessRequest<A, C, LevelRequest, Level<Song, Option<User>>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<UserRequest>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelRequest> + CanCache<UserRequest>,
     Song: PartialEq + Send + Clone + 'static,
-    Gdcf<A, C>: ProcessRequest<A, C, LevelRequest, Level<Song, u64>>,
+    Gdcf<A, C>: ProcessRequest<A, C, LevelRequest, Level<Song, Option<Creator>>>,
 {
     fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<Song, Option<User>>, <A as ApiClient>::Err, C> {
         let cache = self.cache();
         let gdcf = self.clone();
 
-        let lookup = move |level: &Level<Song, u64>| cache.lookup(level.base.creator).map(Some);
-        let refresh = move |level: &Level<Song, u64>| {
-            gdcf.refresh(UserRequest::new(level.base.creator)).then(|result| {
-                match result {
-                    Err(GdcfError::Api(ref err)) if err.is_no_result() => Ok(None),
-                    Err(err) => Err(err),
-                    Ok(thing) => Ok(Some(thing)),
-                }
-            })
+        let lookup = move |level: &Level<Song, Option<Creator>>| {
+            level
+                .base
+                .creator
+                .as_ref()
+                .and_then(|creator| creator.account_id)
+                .map(|account_id| cache.lookup(account_id))
+                .transpose()
+        };
+
+        let refresh = move |level: &Level<Song, Option<Creator>>| {
+            gdcf.refresh(UserRequest::new(level.base.creator.as_ref().unwrap().account_id.unwrap()))
+                .then(|result| {
+                    match result {
+                        Err(GdcfError::Api(ref err)) if err.is_no_result() => Ok(None),
+                        Err(err) => Err(err),
+                        Ok(thing) => Ok(Some(thing)),
+                    }
+                })
         };
 
         self.level(request).chain(lookup, refresh, exchange::level_user)

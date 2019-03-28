@@ -59,7 +59,7 @@ pub(crate) fn partial_level_song<User: PartialEq>(
     }
 }
 
-pub(crate) fn partial_level_user<Song: PartialEq, User: PartialEq>(
+pub(crate) fn partial_level_user<T: PartialEq, Song: PartialEq, User: PartialEq>(
     PartialLevel {
         level_id,
         name,
@@ -84,7 +84,7 @@ pub(crate) fn partial_level_user<Song: PartialEq, User: PartialEq>(
         index_46,
         index_47,
         ..
-    }: PartialLevel<Song, u64>,
+    }: PartialLevel<Song, T>,
     creator: User,
 ) -> PartialLevel<Song, User> {
     PartialLevel {
@@ -136,7 +136,7 @@ pub(crate) fn level_song<User: PartialEq>(
     }
 }
 
-pub(crate) fn level_user<User: PartialEq, Song: PartialEq>(
+pub(crate) fn level_user<T: PartialEq, User: PartialEq, Song: PartialEq>(
     Level {
         base,
         level_data,
@@ -144,7 +144,7 @@ pub(crate) fn level_user<User: PartialEq, Song: PartialEq>(
         time_since_update,
         time_since_upload,
         index_36,
-    }: Level<Song, u64>,
+    }: Level<Song, T>,
     user: User,
 ) -> Level<Song, User> {
     Level {
