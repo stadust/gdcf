@@ -114,7 +114,7 @@ use crate::{
         request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache, CacheEntry, CacheEntryMeta, CanCache, Lookup, RequestHash, Store},
+    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, CacheError, GdcfError},
 };
 use futures::{
@@ -127,7 +127,7 @@ use gdcf_model::{
     user::{Creator, User, DELETED},
 };
 use log::{info, warn};
-use std::{collections::hash_map::DefaultHasher, hash::Hasher, mem};
+use std::{ mem};
 
 #[macro_use]
 mod macros;
@@ -208,6 +208,50 @@ where
     A: ApiClient,
     C: Cache + Store<Creator> + Store<NewgroundsSong>,
 {
+    fn refresh<R>(&self, request: R) -> impl Future<Item = CacheEntry<R::Result, C>, Error = GdcfError<A::Err, C::Err>>
+    where
+        R: Request,
+        A: MakeRequest<R>,
+        C: CanCache<R>,
+    {
+        let mut cache = self.cache();
+        let key = request.key();
+
+        self.client().make(request).map_err(GdcfError::Api).and_then(move |response| {
+            match response {
+                Response::Exact(what_we_want) =>
+                    cache
+                        .store(&what_we_want, key)
+                        .map(move |entry_info| {
+                            CacheEntry {
+                                object: what_we_want,
+                                metadata: entry_info,
+                            }
+                        })
+                        .map_err(GdcfError::Cache),
+                Response::More(what_we_want, excess) => {
+                    for object in &excess {
+                        match object {
+                            Secondary::NewgroundsSong(song) => cache.store(song, song.song_id),
+                            Secondary::Creator(creator) => cache.store(creator, creator.user_id),
+                        }
+                        .map_err(GdcfError::Cache)?;
+                    }
+
+                    cache
+                        .store(&what_we_want, key)
+                        .map(move |entry_info| {
+                            CacheEntry {
+                                object: what_we_want,
+                                metadata: entry_info,
+                            }
+                        })
+                        .map_err(GdcfError::Cache)
+                },
+            }
+        })
+    }
+
     fn process<R>(
         &self, request: R,
     ) -> Result<
@@ -242,42 +286,7 @@ where
             Err(error) => return Err(error),
         };
 
-        let key = request.key();
-        let mut cache = self.cache();
-
-        let future = self.client().make(request).map_err(GdcfError::Api).and_then(move |response| {
-            match response {
-                Response::Exact(what_we_want) =>
-                    cache
-                        .store(&what_we_want, key)
-                        .map(move |entry_info| {
-                            CacheEntry {
-                                object: what_we_want,
-                                metadata: entry_info,
-                            }
-                        })
-                        .map_err(GdcfError::Cache),
-                Response::More(what_we_want, excess) => {
-                    for object in &excess {
-                        match object {
-                            Secondary::NewgroundsSong(song) => cache.store(song, song.song_id),
-                            Secondary::Creator(creator) => cache.store(creator, creator.user_id),
-                        }
-                        .map_err(GdcfError::Cache)?;
-                    }
-
-                    cache
-                        .store(&what_we_want, key)
-                        .map(move |entry_info| {
-                            CacheEntry {
-                                object: what_we_want,
-                                metadata: entry_info,
-                            }
-                        })
-                        .map_err(GdcfError::Cache)
-                },
-            }
-        });
+        let future = self.refresh(request);
 
         Ok(match cached {
             Some(value) => EitherOrBoth::Both(value, future),
@@ -301,24 +310,40 @@ where
         }
     }
 }
-/*
-impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
+
+impl<A, C> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, u64>> for Gdcf<A, C>
 where
-    A: ApiClient + MakeRequest<LevelRequest>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelRequest>,
-    User: PartialEq,
+    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelRequest> + CanCache<LevelsRequest> + Lookup<NewgroundsSong>,
 {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, <A as ApiClient>::Err, C> {
-        match self.level(request) {
-            GdcfFuture::Empty => GdcfFuture::Empty,
-            GdcfFuture::CacheError(err) => GdcfFuture::CacheError(err),
-            GdcfFuture::Uncached(_) => {},
-            GdcfFuture::Outdated(..) => {},
-            GdcfFuture::UpToDate(_) => {},
-        }
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, u64>, <A as ApiClient>::Err, C> {
+        let (cache1, cache2) = (self.cache(), self.cache());
+        let gdcf = self.clone();
+
+        // T = Level<u64, u64>
+        // I = Option<NewgroundsSong>
+        // U = Level<NewgroundsSong, u64>
+
+        let lookup = move |level: &Level<u64, u64>| {
+            match level.base.custom_song {
+                Some(song_id) => cache1.lookup(song_id).map(Some),
+                None => Ok(None),
+            }
+        };
+
+        let refresh = move |level: &Level<u64, u64>| {
+            let song_id = level.base.custom_song.unwrap();
+
+            gdcf.refresh(LevelsRequest::default().with_id(level.base.level_id))
+                .and_then(move |_| cache2.lookup(song_id).map_err(GdcfError::Cache))
+                .map(Some)
+        };
+        let combinator = |level: Level<u64, u64>, song: Option<NewgroundsSong>| exchange::level_song(level, song);
+
+        self.level(request).chain(lookup, refresh, combinator)
     }
 }
-*/
+
 /*
 impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
 where
@@ -814,12 +839,6 @@ pub enum GdcfFuture<T, A: ApiError, C: Cache> {
     ),
     UpToDate(CacheEntry<T, C>),
 }
-/*
-enum EitherOrBoth<A, B> {
-    A(A),
-    B(B),
-    Both(A, B)
-}*/
 
 impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     fn outdated<F>(object: CacheEntry<T, C>, f: F) -> Self
@@ -843,50 +862,89 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         GdcfFuture::CacheError(error)
     }
 
-    /*fn and_then<U, F, Fut>(self, f: F) -> GdcfFuture<U, A, C>
+    fn chain<I, U, Look, Req, Comb, Fut>(self, lookup: Look, request: Req, combinator: Comb) -> GdcfFuture<U, A, C>
     where
-        Fut: Future<Item = U, Error = GdcfError<A, C::Err>>,
-        F: Fn(T) -> Either<Result<U, C::Err>, Fut>,
+        T: Clone + Send + 'static,
+        U: Send + 'static,
+        I: Clone + Send + 'static,
+        Look: FnOnce(&T) -> Result<Option<CacheEntry<I, C>>, C::Err> + Send + 'static,
+        Req: FnOnce(&T) -> Fut + Send + 'static,
+        Comb: Fn(T, Option<I>) -> U + Send + Sync + 'static,
+        Fut: Future<Item = Option<CacheEntry<I, C>>, Error = GdcfError<A, C::Err>> + Send + 'static,
     {
-        match self {
-            GdcfFuture::Empty => GdcfFuture::Empty,
-            GdcfFuture::CacheError(error) => GdcfFuture::CacheError(error),
-            GdcfFuture::UpToDate(CacheEntry { object, metadata }) =>
-                match f(object) {
-                    Either::A(Ok(object)) => GdcfFuture::UpToDate(CacheEntry { object, metadata }),
-                    Either::A(Err(err)) => GdcfFuture::CacheError(err),
-                    Either::B(future) => GdcfFuture::
-                },
-            _ => unimplemented!(),
-        }
-    }*/
+        let combine = move |entry: CacheEntry<T, C>, other: Option<CacheEntry<I, C>>| {
+            CacheEntry {
+                object: combinator(entry.object, other.map(|inner| inner.object)),
+                metadata: entry.metadata,
+            }
+        };
 
-    /*fn map_then<U>(self, map: impl Fn(T) -> Result<U, C::Err>, and_then: impl Fn(T) -> GdcfFuture<U, A, C>) -> GdcfFuture<U, A, C> {
         match self {
             GdcfFuture::Empty => GdcfFuture::Empty,
-            GdcfFuture::CacheError(error) => GdcfFuture::CacheError(error),
-            GdcfFuture::UpToDate(CacheEntry { object, metadata }) =>
-                match map(object) {
-                    Ok(object) => GdcfFuture::UpToDate(CacheEntry { object, metadata }),
-                    Err(ref err) if err.is_cache_miss() => and_then(object),
+            GdcfFuture::CacheError(err) => GdcfFuture::CacheError(err),
+            GdcfFuture::UpToDate(unmapped) =>
+                match lookup(unmapped.inner()) {
+                    Ok(add_on) =>
+                        if add_on.is_none() || add_on.as_ref().unwrap().is_expired() {
+                            GdcfFuture::Outdated(
+                                combine(unmapped.clone(), add_on),
+                                Box::new(request(&unmapped.object).map(move |intermediate| combine(unmapped, intermediate))),
+                            )
+                        } else {
+                            GdcfFuture::UpToDate(combine(unmapped, add_on))
+                        },
+
+                    Err(ref err) if err.is_cache_miss() =>
+                        GdcfFuture::Uncached(Box::new(
+                            request(&unmapped.object).map(move |intermediate| combine(unmapped, intermediate)),
+                        )),
+
                     Err(err) => GdcfFuture::CacheError(err),
                 },
-            _ => unimplemented!(),
-        }
-    }*/
+            GdcfFuture::Uncached(future) =>
+                GdcfFuture::Uncached(Box::new(future.and_then(move |unmapped| {
+                    match lookup(unmapped.inner()) {
+                        Ok(add_on) => {
+                            // TODO: handling of result.is_expired()
 
-    /*fn and_then<F, U>(self, f: F) -> GdcfFuture<U, A, C>
-    where
-        F: Fn(T) -> GdcfFuture<U, A, C>,
-    {
-        match self {
-            GdcfFuture::Empty => GdcfFuture::Empty,
-            GdcfFuture::CacheError(error) => GdcfFuture::CacheError(error),
-            GdcfFuture::UpToDate(CachedObject{obj, last_cached_at}) => f(cached),
-            GdcfFuture::Uncached(future) => GdcfFuture::Uncached(future.and_then(|t| f(t))),
-            _ => unimplemented!(),
+                            Either::A(ok(combine(unmapped, add_on)))
+                        },
+
+                        Err(ref err) if err.is_cache_miss() =>
+                            Either::B(request(unmapped.inner()).map(move |intermediate| combine(unmapped, intermediate))),
+
+                        Err(error) => Either::A(err(GdcfError::Cache(error))),
+                    }
+                }))),
+            GdcfFuture::Outdated(unmapped, future) =>
+                match lookup(unmapped.inner()) {
+                    Ok(add_on) =>
+                        if unmapped.is_expired() {
+                            let request_future = request(unmapped.inner());
+
+                            GdcfFuture::Outdated(
+                                combine(unmapped, add_on),
+                                Box::new(
+                                    future
+                                        .and_then(move |unmapped| request_future.map(move |intermediate| combine(unmapped, intermediate))),
+                                ),
+                            )
+                        } else {
+                            GdcfFuture::Outdated(
+                                combine(unmapped, add_on.clone()),
+                                Box::new(future.map(move |unmapped| combine(unmapped, add_on))),
+                            )
+                        },
+
+                    Err(ref err) if err.is_cache_miss() =>
+                        GdcfFuture::Uncached(Box::new(
+                            request(unmapped.inner()).map(move |intermediate| combine(unmapped, intermediate)),
+                        )),
+
+                    Err(err) => GdcfFuture::CacheError(err),
+                },
         }
-    }*/
+    }
 }
 
 impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
