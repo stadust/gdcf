@@ -339,9 +339,8 @@ where
                     }
                 })
         };
-        let combinator = |level: Level<u64, u64>, song: Option<NewgroundsSong>| exchange::level_song(level, song);
 
-        self.level(request).chain(lookup, refresh, combinator)
+        self.level(request).chain(lookup, refresh, exchange::level_song)
     }
 }
 
@@ -366,9 +365,8 @@ where
                 }
             })
         };
-        let combinator = |level: Level<Song, u64>, user: Option<User>| exchange::level_user(level, user);
 
-        self.level(request).chain(lookup, refresh, combinator)
+        self.level(request).chain(lookup, refresh, exchange::level_user)
     }
 }
 
