@@ -127,7 +127,7 @@ use gdcf_model::{
     user::{Creator, User, DELETED},
 };
 use log::{info, warn};
-use std::{ mem};
+use std::mem;
 
 #[macro_use]
 mod macros;
@@ -320,10 +320,6 @@ where
         let (cache1, cache2) = (self.cache(), self.cache());
         let gdcf = self.clone();
 
-        // T = Level<u64, u64>
-        // I = Option<NewgroundsSong>
-        // U = Level<NewgroundsSong, u64>
-
         let lookup = move |level: &Level<u64, u64>| {
             match level.base.custom_song {
                 Some(song_id) => cache1.lookup(song_id).map(Some),
@@ -335,8 +331,13 @@ where
             let song_id = level.base.custom_song.unwrap();
 
             gdcf.refresh(LevelsRequest::default().with_id(level.base.level_id))
-                .and_then(move |_| cache2.lookup(song_id).map_err(GdcfError::Cache))
-                .map(Some)
+                .and_then(move |_| {
+                    match cache2.lookup(song_id) {
+                        Err(ref err) if err.is_cache_miss() => Ok(None),
+                        Err(err) => Err(GdcfError::Cache(err)),
+                        Ok(obj) => Ok(Some(obj)),
+                    }
+                })
         };
         let combinator = |level: Level<u64, u64>, song: Option<NewgroundsSong>| exchange::level_song(level, song);
 
@@ -344,130 +345,32 @@ where
     }
 }
 
-/*
-impl<A, C, User> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, User>> for Gdcf<A, C>
+impl<A, C, Song> ProcessRequest<A, C, LevelRequest, Level<Song, Option<User>>> for Gdcf<A, C>
 where
-    Self: ProcessRequest<A, C, LevelRequest, Level<u64, User>>,
-    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
-    C: Cache + CanCache<LevelRequest> + CanCache<LevelsRequest>,
-    User: PartialEq + Send + 'static,
+    A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<UserRequest>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelRequest> + CanCache<UserRequest>,
+    Song: PartialEq + Send + Clone + 'static,
+    Gdcf<A, C>: ProcessRequest<A, C, LevelRequest, Level<Song, u64>>,
 {
-    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<NewgroundsSong, User>, A::Err, C> {
-        info!(
-            "Processing request {} with 'NewgroundsSong' as Song type for arbitrary User type",
-            request
-        );
-
-        // When simply downloading a level, we do not get its song, only the song ID. The song itself is
-        // only provided for a LevelsRequest
-
-        let raw = self.level::<u64, User>(request);
+    fn process_request(&self, request: LevelRequest) -> GdcfFuture<Level<Song, Option<User>>, <A as ApiClient>::Err, C> {
+        let cache = self.cache();
         let gdcf = self.clone();
 
-        // TODO: reintroduce debugging statements
+        let lookup = move |level: &Level<Song, u64>| cache.lookup(level.base.creator).map(Some);
+        let refresh = move |level: &Level<Song, u64>| {
+            gdcf.refresh(UserRequest::new(level.base.creator)).then(|result| {
+                match result {
+                    Err(GdcfError::Api(ref err)) if err.is_no_result() => Ok(None),
+                    Err(err) => Err(err),
+                    Ok(thing) => Ok(Some(thing)),
+                }
+            })
+        };
+        let combinator = |level: Level<Song, u64>, user: Option<User>| exchange::level_user(level, user);
 
-        match raw {
-            GdcfFuture::UpToDate(cached) =>
-            // In this case, we have the level cached and up-to-date
-                match cached.inner().base.custom_song {
-                    // Level uses a main song, we dont need to do anything apart from changing the generic type
-                    None => GdcfFuture::UpToDate(cached.map(|inner| exchange::level_song(inner, None))),
-
-                    // Level uses a custom song.
-                    Some(custom_song_id) => {
-                        // We cannot do the lookup in the match because then the cache would be locked for the entire match
-                        // block which would deadlock because of the `process_request` call in it.
-                        let lookup = self.cache().lookup_song(custom_song_id);
-
-                        match lookup {
-                            // The custom song is cached, replace the ID with actual song object and change generic type
-                            Ok(song) => GdcfFuture::UpToDate(cached.map(|inner| exchange::level_song(inner, Some(song)))),
-
-                            // The custom song isn't cached, make a request that's sure to put it into the cache, then perform the exchange
-                            Err(ref err) if err.is_cache_miss() => {
-                                let cached = cached.extract();
-
-                                warn!("The level requested was cached, but not its song, performing a request to retrieve it!");
-
-                                GdcfFuture::absent(
-                                    self.levels::<u64, u64>(LevelsRequest::default().with_id(cached.base.level_id))
-                                        .and_then(move |_| {
-                                            let song = gdcf.cache().lookup_song(custom_song_id).map_err(GdcfError::Cache)?;
-
-                                            Ok(exchange::level_song(cached, Some(song)))
-                                        }),
-                                )
-                            },
-
-                            // Cache lookup failed, create future that resolves to error instantly
-                            Err(err) => GdcfFuture::cache_error(err),
-                        }
-                    },
-                },
-
-            GdcfFuture { cached, inner: Some(f) } => {
-                // In this case we have it cached, but not up to date, or not cached at all
-                let cached = match cached {
-                    Some(cached) =>
-                    // If we have it cached, we need to update the cached value either with its custom song from the cache, if that exists.
-                    // If it doesn't, we will end up creating a future that does not contain any cached object.
-                        match cached.inner().base.custom_song {
-                            None => Some(cached.map(|inner| exchange::level_song(inner, None))),
-                            Some(custom_song_id) =>
-                                match self.cache().lookup_song(custom_song_id) {
-                                    Ok(song) => Some(cached.map(|inner| exchange::level_song(inner, Some(song)))),
-
-                                    Err(ref err) if err.is_cache_miss() => None,
-
-                                    Err(err) => return GdcfFuture::cache_error(err),
-                                },
-                        },
-                    None => None, // Level itself wasn't cached already
-                };
-
-                GdcfFuture::new(
-                    cached,
-                    Some(f.and_then(move |level| {
-                        if let Some(song_id) = level.base.custom_song {
-                            // We cannot do the lookup in the match because then the cache would be locked for the entire match
-                            // block which would deadlock because of the `process_request` call in it.
-                            let lookup = gdcf.cache().lookup_song(song_id);
-
-                            match lookup {
-                                // Here we must have this logic inside of the future. If we were to lookup the song_id we got from the
-                                // (potentially) cached object, it might be outdated, leaving us with an up-to-date level object that
-                                // contains a NewgroundsSong object, which does not represent the song the level uses (because the song was
-                                // changed between now and the last time the level was cached)
-                                Err(ref err) if err.is_cache_miss() => {
-                                    warn!(
-                                        "The level the song for the requested level was not cached, performing a request to retrieve it!"
-                                    );
-
-                                    Either::A(
-                                        gdcf.levels::<u64, u64>(LevelsRequest::default().with_id(level.base.level_id))
-                                            .and_then(move |_| {
-                                                let song = gdcf.cache().lookup_song(song_id).map_err(GdcfError::Cache)?;
-
-                                                Ok(exchange::level_song(level, Some(song)))
-                                            }),
-                                    )
-                                },
-
-                                Err(error) => Either::B(err(GdcfError::Cache(error))),
-
-                                Ok(song) => Either::B(ok(exchange::level_song(level, Some(song)))),
-                            }
-                        } else {
-                            Either::B(ok(exchange::level_song(level, None)))
-                        }
-                    })),
-                )
-            },
-
-            _ => unreachable!(),
-        }
+        self.level(request).chain(lookup, refresh, combinator)
     }
-}*/
+}
 
 /*impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
 where
@@ -841,27 +744,6 @@ pub enum GdcfFuture<T, A: ApiError, C: Cache> {
 }
 
 impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
-    fn outdated<F>(object: CacheEntry<T, C>, f: F) -> Self
-    where
-        F: Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
-    {
-        GdcfFuture::Outdated(object, Box::new(f))
-    }
-
-    fn absent<F>(f: F) -> Self
-    where
-        F: Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
-    {
-        GdcfFuture::Uncached(Box::new(f))
-    }
-
-    fn cache_error(error: C::Err) -> Self
-    where
-        T: Send + 'static,
-    {
-        GdcfFuture::CacheError(error)
-    }
-
     fn chain<I, U, Look, Req, Comb, Fut>(self, lookup: Look, request: Req, combinator: Comb) -> GdcfFuture<U, A, C>
     where
         T: Clone + Send + 'static,
