@@ -1,10 +1,8 @@
 use crate::{api::request::Request, error::CacheError, Secondary};
 
 pub trait Cache: Clone + Send + Sync + 'static {
-    type Err: CacheError;
     type CacheEntryMeta: CacheEntryMeta;
-
-    fn store_secondary(&self, object: &Secondary) -> Result<(), Self::Err>;
+    type Err: CacheError;
 }
 
 pub trait Lookup<Obj>: Cache {

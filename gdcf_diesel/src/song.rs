@@ -1,12 +1,12 @@
+use core::borrow::Borrow;
 use diesel::{
+    associations::{HasTable, Identifiable},
     backend::Backend,
     deserialize::{FromSqlRow, Queryable},
     sql_types::*,
     ExpressionMethods, Insertable,
 };
 use gdcf_model::song::NewgroundsSong;
-use diesel::associations::{Identifiable, HasTable};
-use core::borrow::Borrow;
 
 pub struct NewgroundsSongDB(NewgroundsSong);
 

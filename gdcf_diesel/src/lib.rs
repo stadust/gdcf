@@ -12,7 +12,7 @@ extern crate diesel_migrations;
 use crate::song::newgrounds_song;
 use diesel::{r2d2::ConnectionManager, Connection, Insertable, RunQueryDsl};
 use failure::Fail;
-use gdcf::{cache::CachedObject, error::CacheError, Secondary};
+use gdcf::{cache::CacheEntryMeta, error::CacheError, Secondary};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use r2d2::Pool;
 
@@ -109,29 +109,16 @@ impl CacheError for Error {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct EntryMeta;
+
+impl CacheEntryMeta for EntryMeta {
+    fn is_expired(&self) -> bool {
+        unimplemented!()
+    }
+}
+
 impl gdcf::cache::Cache for Cache<DB> {
+    type CacheEntryMeta = EntryMeta;
     type Err = Error;
-
-    fn lookup_song(&self, newground_id: u64) -> Result<NewgroundsSong, Self::Err> {
-        unimplemented!()
-    }
-
-    fn lookup_creator(&self, user_id: u64) -> Result<Creator, Self::Err> {
-        unimplemented!()
-    }
-
-    fn store_secondary(&mut self, obj: &Secondary) -> Result<(), Self::Err> {
-        let connection = self.0.get()?;
-
-        match obj {
-            Secondary::Creator(creator) => creator.insert_into(crate::creator::creator::table).execute(&connection)?,
-            Secondary::NewgroundsSong(song) => song.insert_into(newgrounds_song::table).execute(&connection)?,
-        };
-
-        Ok(())
-    }
-
-    fn is_expired<U>(&self, object: &CachedObject<U>) -> bool {
-        unimplemented!()
-    }
 }
