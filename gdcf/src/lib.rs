@@ -683,14 +683,16 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
             GdcfFuture::CacheError(err) => GdcfFuture::CacheError(err),
             GdcfFuture::UpToDate(unmapped) =>
                 match lookup(unmapped.inner()) {
-                    Ok(add_on) =>
-                        if add_on.is_none() || add_on.as_ref().unwrap().is_expired() {
+                    Ok(None) => GdcfFuture::UpToDate(combine(unmapped, None)),
+
+                    Ok(Some(add_on)) =>
+                        if add_on.is_expired() {
                             GdcfFuture::Outdated(
-                                combine(unmapped.clone(), add_on),
+                                combine(unmapped.clone(), Some(add_on)),
                                 Box::new(request(&unmapped.object).map(move |intermediate| combine(unmapped, intermediate))),
                             )
                         } else {
-                            GdcfFuture::UpToDate(combine(unmapped, add_on))
+                            GdcfFuture::UpToDate(combine(unmapped, Some(add_on)))
                         },
 
                     Err(ref err) if err.is_cache_miss() =>
@@ -703,6 +705,8 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
             GdcfFuture::Uncached(future) =>
                 GdcfFuture::Uncached(Box::new(future.and_then(move |unmapped| {
                     match lookup(unmapped.inner()) {
+                        Ok(None) => Either::A(ok(combine(unmapped, None))),
+
                         Ok(add_on) => {
                             // TODO: handling of result.is_expired()
 
