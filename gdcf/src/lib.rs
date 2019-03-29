@@ -754,7 +754,7 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     fn multi_chain<I, U, Look, Req, Comb, Fut>(self, lookup: Look, request: Req, combinator: Comb) -> GdcfFuture<Vec<U>, A, C>
     where
         T: Clone + Send + 'static,
-        U: Send + 'static,
+        U: Clone + Send + 'static,
         I: Clone + Send + 'static,
         Look: Fn(&T) -> Result<Option<CacheEntry<I, C>>, C::Err> + Send + 'static,
         Req: Fn(&T) -> Fut + Send + 'static,
@@ -774,31 +774,40 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
                 let mut futures = Vec::new();
 
                 let mut outdated = false;
-                let mut uncached = false;
 
                 for object in unmapped {
-                    if match lookup(&object) {
-                        Ok(add_on) => {
-                            let b = add_on.is_none() || add_on.as_ref().unwrap().is_expired();
-                            if !b {
-                                futures.push(Either::B(ok(combine(object.clone(), add_on.clone()))))
-                            }
-                            objects.push(combine(object.clone(), add_on));
-                            b
-                        },
+                    match match lookup(&object) {
+                        Ok(None) => (None, Some(combine(object, None))),
 
-                        Err(ref err) if err.is_cache_miss() => {
-                            uncached = true;
+                        Ok(Some(add_on)) =>
+                            if !add_on.is_expired() {
+                                (None, Some(combine(object, Some(add_on))))
+                            } else {
+                                (Some(object.clone()), Some(combine(object, Some(add_on))))
+                            },
 
-                            true
-                        },
+                        Err(ref err) if err.is_cache_miss() => (Some(object), None),
 
                         Err(err) => return GdcfFuture::CacheError(err),
                     } {
-                        futures.push(Either::A(request(&object).map(move |intermediate| combine(object, intermediate))));
+                        (None, Some(combined)) => {
+                            // Ehh, we can probably prevent some clones here by only constructing the futures later or sth
+                            futures.push(Either::B(ok(combined.clone())));
+                            objects.push(combined);
+                        },
+                        (Some(object), combined) => {
+                            outdated = true;
+
+                            if let Some(combined) = combined {
+                                objects.push(combined);
+                            }
+                            futures.push(Either::A(request(&object).map(move |intermediate| combine(object, intermediate))))
+                        },
+                        _ => unreachable!(),
                     }
                 }
 
+                let uncached = objects.len() != futures.len();
                 let mdc = metadata.clone();
                 let joined_future = join_all(futures).map(move |results| {
                     CacheEntry {
