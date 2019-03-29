@@ -410,6 +410,28 @@ where
     }
 }
 
+impl<A, C, Song> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, Option<Creator>>>> for Gdcf<A, C>
+where
+    A: ApiClient + MakeRequest<LevelsRequest>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelsRequest> + Lookup<Creator>,
+    Song: PartialEq + Send + Clone + 'static,
+    Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, u64>>>,
+{
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, Option<Creator>>>, <A as ApiClient>::Err, C> {
+        let cache = self.cache();
+
+        let lookup = move |level: &PartialLevel<Song, u64>| cache.lookup(level.creator).map(Some);
+
+        // All creators are provided along with the `LevelsRequest` response. A cache miss above means that
+        // the GD servers failed to provide the creator - there's nothing we can do about it, so we just
+        // return a future that resolves to `None` here (making a LevelsRequest would obviously lead to an
+        // infinite loop of sorts)
+        let refresh = move |level: &PartialLevel<Song, u64>| ok(None);
+
+        self.levels(request).multi_chain(lookup, refresh, exchange::partial_level_user)
+    }
+}
+
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, u64>>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelsRequest>,
@@ -417,8 +439,7 @@ where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, u64>>>,
 {
     fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, u64>>, <A as ApiClient>::Err, C> {
-        let (cache, cache2) = (self.cache(), self.cache());
-        let gdcf = self.clone();
+        let cache = self.cache();
 
         let lookup = move |level: &PartialLevel<u64, u64>| {
             match level.custom_song {
@@ -427,125 +448,16 @@ where
             }
         };
 
-        let refresh = move |level: &PartialLevel<u64, u64>| {
-            let song_id = level.custom_song.unwrap();
-            let inner_clone = cache2.clone();
-
-            gdcf.refresh(LevelsRequest::default().with_id(level.level_id)).and_then(move |_| {
-                match inner_clone.lookup(song_id) {
-                    Err(ref err) if err.is_cache_miss() => Ok(None),
-                    Err(err) => Err(GdcfError::Cache(err)),
-                    Ok(obj) => Ok(Some(obj)),
-                }
-            })
-        };
+        // All songs are provided along with the `LevelsRequest` response. A cache miss above means that
+        // the GD servers failed to provide the song - there's nothing we can do about it, so we just
+        // return a future that resolves to `None` here (making a LevelsRequest would obviously lead to an
+        // infinite loop of sorts)
+        let refresh = move |level: &PartialLevel<u64, u64>| ok(None);
 
         self.levels(request).multi_chain(lookup, refresh, exchange::partial_level_song)
     }
 }
 
-/*impl<A, C, User> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<NewgroundsSong, User>>> for Gdcf<A, C>
-where
-    Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, User>>>,
-    A: ApiClient + MakeRequest<LevelsRequest>,
-    C: Cache + CanCache<LevelsRequest>,
-    User: PartialEq + Send + 'static,
-{
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<NewgroundsSong, User>>, A::Err, C::Err> {
-        info!("Processing request {} with 'NewgroundsSong' as Song type", request);
-
-        let GdcfFuture { cached, inner } = self.process_request(request);
-        let cache = self.cache.clone();
-
-        let processor = move |levels: Vec<PartialLevel<u64, User>>| {
-            let mut vec = Vec::new();
-
-            for partial_level in levels {
-                let built = match partial_level.custom_song {
-                    Some(custom_song_id) =>
-                        match cache.lookup_song(custom_song_id) {
-                            Ok(song) => exchange::partial_level_song(partial_level, Some(song)),
-
-                            Err(err) =>
-                                if err.is_cache_miss() {
-                                    exchange::partial_level_song(partial_level, Some(SERVER_SIDED_DATA_INCONSISTENCY_ERROR()))
-                                } else {
-                                    return Err(GdcfError::Cache(err))
-                                },
-                        },
-
-                    None => exchange::partial_level_song(partial_level, None),
-                };
-
-                vec.push(built);
-            }
-
-            Ok(vec)
-        };
-
-        let cached = match cached {
-            Some(cached) =>
-                match cached.try_map(processor.clone()) {
-                    Ok(cached) => Some(cached),
-                    Err(err) => return GdcfFuture::error(err),
-                },
-            None => None,
-        };
-
-        GdcfFuture::new(cached, inner.map(|fut| fut.and_then(processor)))
-    }
-}
-*//*
-impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, Creator>>> for Gdcf<A, C>
-where
-    A: ApiClient + MakeRequest<LevelsRequest>,
-    C: Cache + CanCache<LevelsRequest>,
-{
-    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<u64, Creator>>, A::Err, C::Err> {
-        info!("Processing request {} with 'Creator' as User type", request);
-
-        let GdcfFuture { cached, inner } = self.process_request(request);
-        let cache = self.cache.clone();
-
-        let processor = move |levels: Vec<PartialLevel<u64, u64>>| {
-            let mut vec = Vec::new();
-
-            for partial_level in levels {
-                // Note that we do not need to check if the cache value is out-of-date here, because we only
-                // request creators that we put into the cache by the very request whose result we're processing
-                // here. I THINK it's impossible to have an outdated creator while not having the level request
-                // outdated we well.
-                vec.push(match cache.lookup_creator(partial_level.creator) {
-                    Ok(creator) => exchange::partial_level_user(partial_level, creator),
-
-                    // For very old levels where the players never registered, the accounts got lost somehow. LevelsRequest containing such
-                    // levels don't contain any creator info about those levels. This again implies that the cache miss, which should be
-                    // impossible, is such a case.
-                    Err(err) =>
-                        if err.is_cache_miss() {
-                            exchange::partial_level_user(partial_level, DELETED())
-                        } else {
-                            return Err(GdcfError::Cache(err))
-                        },
-                })
-            }
-
-            Ok(vec)
-        };
-
-        let cached = match cached {
-            Some(cached) =>
-                match cached.try_map(processor.clone()) {
-                    Ok(cached) => Some(cached),
-                    Err(err) => return GdcfFuture::error(err),
-                },
-            None => None,
-        };
-
-        GdcfFuture::new(cached, inner.map(|fut| fut.and_then(processor)))
-    }
-}
-*/
 // TODO: impl ProcessRequest<LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf
 
 impl<A, C> Gdcf<A, C>
