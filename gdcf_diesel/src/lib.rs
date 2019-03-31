@@ -1,5 +1,10 @@
+#[deny(unused_must_use)]
+
+#[macro_use]
+mod meta;
 mod creator;
 mod song;
+mod wrap;
 
 // diesel devs refuse to make their macros work with the new rust 2018 import mechanics, so this
 // shit is necessary
@@ -9,18 +14,47 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use crate::song::newgrounds_song;
-use diesel::{r2d2::ConnectionManager, Connection, Insertable, RunQueryDsl};
+use crate::{
+    meta::{DatabaseEntry, Entry},
+    song::newgrounds_song,
+    wrap::Wrapped,
+};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use diesel::{query_source::Table, r2d2::ConnectionManager, Connection, Insertable, RunQueryDsl};
 use failure::Fail;
-use gdcf::{cache::CacheEntryMeta, error::CacheError, Secondary};
-use gdcf_model::{song::NewgroundsSong, user::Creator};
+use gdcf::{
+    cache::{CacheEntry, CacheEntryMeta, Lookup, Store},
+    error::CacheError,
+    Secondary,
+};
+use gdcf_model::{level::PartialLevel, song::NewgroundsSong, user::Creator};
 use r2d2::Pool;
 
-pub struct Cache<T: Connection + 'static>(Pool<ConnectionManager<T>>);
+pub struct Cache<T: Connection + 'static> {
+    pool: Pool<ConnectionManager<T>>,
+    expire_after: Duration,
+}
+
+impl<T: Connection + 'static> Cache<T> {
+    fn entry(&self, db_entry: DatabaseEntry) -> Entry {
+        let now = Utc::now();
+        let then = DateTime::<Utc>::from_utc(db_entry.cached_at, Utc);
+        let expired = now - then > self.expire_after;
+
+        Entry {
+            expired,
+            key: db_entry.key as u64,
+            cached_at: db_entry.cached_at,
+        }
+    }
+}
 
 impl<T: Connection + 'static> Clone for Cache<T> {
     fn clone(&self) -> Self {
-        Cache(self.0.clone())
+        Cache {
+            pool: self.pool.clone(),
+            expire_after: self.expire_after,
+        }
     }
 }
 
@@ -55,6 +89,7 @@ mod postgres {
 #[cfg(feature = "sqlite")]
 mod sqlite {
     use super::Cache;
+    use chrono::Duration;
     use diesel::{r2d2::ConnectionManager, sqlite::SqliteConnection};
     use r2d2::Pool;
     use std::path::Path;
@@ -63,15 +98,21 @@ mod sqlite {
 
     impl Cache<SqliteConnection> {
         pub fn in_memory() -> Result<Self, r2d2::Error> {
-            Pool::new(ConnectionManager::new(":memory:")).map(Self)
+            Ok(Self {
+                pool: Pool::new(ConnectionManager::new(":memory:"))?,
+                expire_after: Duration::seconds(60),
+            })
         }
 
         pub fn sqlite(path: String) -> Result<Self, r2d2::Error> {
-            Pool::new(ConnectionManager::new(path)).map(Self)
+            Ok(Self {
+                pool: Pool::new(ConnectionManager::new(path))?,
+                expire_after: Duration::seconds(60),
+            })
         }
 
         pub fn initialize(&self) -> Result<(), diesel_migrations::RunMigrationsError> {
-            embedded_migrations::run(&self.0.get().unwrap())
+            embedded_migrations::run(&self.pool.get().unwrap())
         }
     }
 }
@@ -109,16 +150,70 @@ impl CacheError for Error {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct EntryMeta;
+impl gdcf::cache::Cache for Cache<DB> {
+    type CacheEntryMeta = Entry;
+    type Err = Error;
+}
 
-impl CacheEntryMeta for EntryMeta {
-    fn is_expired(&self) -> bool {
+#[cfg(feature = "pg")]
+macro_rules! upsert {
+    ($self: expr, $object: expr, $table: expr, $column: expr) => {{
+        use diesel::{pg::upsert::*, query_builder::AsChangeset};
+
+        diesel::insert_into($table)
+            .values($object)
+            .on_conflict($column)
+            .do_update()
+            .set(Wrapped($object))
+            .execute(&$self.pool.get()?)?;
+    }};
+}
+
+#[cfg(feature = "sqlite")]
+macro_rules! upsert {
+    ($self: expr, $object: expr, $table: expr, $_: expr) => {
+        diesel::replace_into($table).values($object).execute(&$self.pool.get()?)?;
+    };
+}
+
+macro_rules! store_simply {
+    ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
+        impl Store<$to_store_ty> for Cache<DB> {
+            fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
+                let entry = Entry::new(key);
+
+                entry.insert_into($meta::table).execute(&self.pool.get()?)?;
+
+                upsert!(self, object, $table::table, $table::$primary);
+
+                Ok(entry)
+            }
+        }
+    };
+}
+
+use crate::creator::creator as cr;
+use crate::creator::creator_meta as cr_m;
+use crate::song::newgrounds_song as nr;
+use crate::song::song_meta as nr_m;
+
+store_simply!(Creator, cr, cr_m, user_id);
+store_simply!(NewgroundsSong, nr, nr_m, song_id);
+
+impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
         unimplemented!()
     }
 }
 
-impl gdcf::cache::Cache for Cache<DB> {
-    type CacheEntryMeta = EntryMeta;
-    type Err = Error;
+impl Store<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
+    fn store(&mut self, obj: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+        unimplemented!()
+    }
+}
+
+impl Lookup<NewgroundsSong> for Cache<DB> {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<NewgroundsSong, Self>, Self::Err> {
+        unimplemented!()
+    }
 }

@@ -503,8 +503,6 @@ where
     pub fn level<Song, User>(&self, request: LevelRequest) -> GdcfFuture<Level<Song, User>, A::Err, C>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
-        A: MakeRequest<LevelRequest>,
-        C: CanCache<LevelRequest>,
         Song: PartialEq,
         User: PartialEq,
     {
@@ -529,8 +527,6 @@ where
     pub fn levels<Song, User>(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
-        A: MakeRequest<LevelsRequest>,
-        C: CanCache<LevelsRequest>,
         Song: PartialEq,
         User: PartialEq,
     {
@@ -553,8 +549,7 @@ where
     /// Processes the given [`UserRequest`]
     pub fn user(&self, request: UserRequest) -> GdcfFuture<User, A::Err, C>
     where
-        A: MakeRequest<UserRequest>,
-        C: CanCache<UserRequest>,
+        Self: ProcessRequest<A, C, UserRequest, User>,
     {
         self.process_request(request)
     }

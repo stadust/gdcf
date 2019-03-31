@@ -1,16 +1,16 @@
+use crate::wrap::Wrapped;
 use core::borrow::Borrow;
 use diesel::{
     associations::{HasTable, Identifiable},
     backend::Backend,
     deserialize::{FromSqlRow, Queryable},
+    query_builder::AsChangeset,
     sql_types::*,
     ExpressionMethods, Insertable,
 };
 use gdcf_model::song::NewgroundsSong;
 
-pub struct NewgroundsSongDB(NewgroundsSong);
-
-impl HasTable for NewgroundsSongDB {
+impl HasTable for Wrapped<NewgroundsSong> {
     type Table = newgrounds_song::table;
 
     fn table() -> Self::Table {
@@ -18,7 +18,7 @@ impl HasTable for NewgroundsSongDB {
     }
 }
 
-impl<'a> Identifiable for &'a NewgroundsSongDB {
+impl<'a> Identifiable for &'a Wrapped<NewgroundsSong> {
     type Id = &'a u64;
 
     fn id(self) -> Self::Id {
@@ -40,6 +40,8 @@ table! {
     }
 }
 
+meta_table!(song_meta, song_id);
+
 type NewgroundsSongRow = (u64, String, u64, String, f64, Option<String>, Option<String>, String, String);
 type NewgroundsSongSqlType = (Int8, Text, Int8, Double, Nullable<Text>, Nullable<Text>, Text, Text);
 type NewgroundsSongValues<'a> = (
@@ -54,14 +56,30 @@ type NewgroundsSongValues<'a> = (
     diesel::dsl::Eq<newgrounds_song::song_link, &'a str>,
 );
 
-impl<DB: Backend> Queryable<NewgroundsSongSqlType, DB> for NewgroundsSongDB
+fn values(song: &NewgroundsSong) -> NewgroundsSongValues {
+    use newgrounds_song::columns::*;
+
+    (
+        song_id.eq(song.song_id as i64),
+        song_name.eq(&song.name[..]),
+        index_3.eq(song.index_3 as i64),
+        song_artist.eq(&song.artist[..]),
+        filesize.eq(song.filesize),
+        index_6.eq(song.index_6.as_ref().map(AsRef::as_ref)),
+        index_7.eq(song.index_6.as_ref().map(AsRef::as_ref)),
+        index_8.eq(&song.index_8[..]),
+        song_link.eq(&song.link[..]),
+    )
+}
+
+impl<DB: Backend> Queryable<NewgroundsSongSqlType, DB> for Wrapped<NewgroundsSong>
 where
     NewgroundsSongRow: FromSqlRow<NewgroundsSongSqlType, DB>,
 {
     type Row = NewgroundsSongRow;
 
     fn build(row: Self::Row) -> Self {
-        NewgroundsSongDB(NewgroundsSong {
+        Wrapped(NewgroundsSong {
             song_id: row.0,
             name: row.1,
             index_3: row.2,
@@ -79,18 +97,15 @@ impl<'a> Insertable<newgrounds_song::table> for &'a NewgroundsSong {
     type Values = <NewgroundsSongValues<'a> as Insertable<newgrounds_song::table>>::Values;
 
     fn values(self) -> Self::Values {
-        use newgrounds_song::columns::*;
-        (
-            song_id.eq(self.song_id as i64),
-            song_name.eq(&self.name[..]),
-            index_3.eq(self.index_3 as i64),
-            song_artist.eq(&self.artist[..]),
-            filesize.eq(self.filesize),
-            index_6.eq(self.index_6.as_ref().map(AsRef::as_ref)),
-            index_7.eq(self.index_6.as_ref().map(AsRef::as_ref)),
-            index_8.eq(&self.index_8[..]),
-            song_link.eq(&self.link[..]),
-        )
-            .values()
+        values(self).values()
+    }
+}
+
+impl<'a> AsChangeset for Wrapped<&'a NewgroundsSong> {
+    type Changeset = <NewgroundsSongValues<'a> as AsChangeset>::Changeset;
+    type Target = newgrounds_song::table;
+
+    fn as_changeset(self) -> Self::Changeset {
+        values(&self.0).as_changeset()
     }
 }

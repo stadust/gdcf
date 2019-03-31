@@ -414,7 +414,7 @@ impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
     pub fn is_demon(&self) -> bool {
         match self.difficulty {
             LevelRating::Demon(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }
