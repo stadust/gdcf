@@ -10,14 +10,6 @@ use diesel::{
 };
 use gdcf_model::user::Creator;
 
-impl HasTable for Wrapped<Creator> {
-    type Table = creator::table;
-
-    fn table() -> Self::Table {
-        creator::table
-    }
-}
-
 impl<'a> Identifiable for &'a Wrapped<Creator> {
     type Id = &'a u64;
 
@@ -26,25 +18,19 @@ impl<'a> Identifiable for &'a Wrapped<Creator> {
     }
 }
 
-table! {
-    creator (user_id) {
-        user_id -> Int8,
-        name -> Text,
-        account_id -> Nullable<Int8>,
+diesel_stuff! {
+    creator (user_id, Creator) {
+        (user_id, Int8, i64, i64),
+        (name, Text, String, &'a str),
+        (account_id, Nullable<Int8>, Option<i64>, Option<i64>)
     }
 }
-
 meta_table!(creator_meta, user_id);
 
-type CreatorRow = (i64, String, Option<i64>);
-type CreatorSqlType = (Int8, Text, Nullable<Int8>);
-type CreatorValues<'a> = (
-    Eq<creator::user_id, i64>,
-    Eq<creator::name, &'a str>,
-    Eq<creator::account_id, Option<i64>>,
-);
+store_simply!(Creator, creator, creator_meta, user_id);
+lookup_simply!(Creator, creator, creator_meta, user_id);
 
-fn values(creator: &Creator) -> CreatorValues {
+fn values(creator: &Creator) -> Values {
     use creator::columns::*;
 
     (
@@ -54,11 +40,11 @@ fn values(creator: &Creator) -> CreatorValues {
     )
 }
 
-impl<DB: Backend> Queryable<CreatorSqlType, DB> for Wrapped<Creator>
+impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<Creator>
 where
-    CreatorRow: FromSqlRow<CreatorSqlType, DB>,
+    Row: FromSqlRow<SqlType, DB>,
 {
-    type Row = CreatorRow;
+    type Row = Row;
 
     fn build(row: Self::Row) -> Self {
         Wrapped(Creator {
@@ -66,22 +52,5 @@ where
             name: row.1,
             account_id: row.2.map(|i| i as u64),
         })
-    }
-}
-
-impl<'a> Insertable<creator::table> for &'a Creator {
-    type Values = <CreatorValues<'a> as Insertable<creator::table>>::Values;
-
-    fn values(self) -> Self::Values {
-        values(self).values()
-    }
-}
-
-impl<'a> AsChangeset for Wrapped<&'a Creator> {
-    type Changeset = <CreatorValues<'a> as AsChangeset>::Changeset;
-    type Target = creator::table;
-
-    fn as_changeset(self) -> Self::Changeset {
-        values(&self.0).as_changeset()
     }
 }

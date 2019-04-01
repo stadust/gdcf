@@ -384,8 +384,8 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `45`, although only for levels uploaded
-    /// in version 2.1 or later. For all older levels this is always `0`
-    pub object_amount: u32,
+    /// in version 2.1 or later. For all older levels this is always `None`
+    pub object_amount: Option<u32>,
 
     /// According to the GDPS source this is always `1`, although that is
     /// evidently wrong

@@ -1,7 +1,11 @@
 #[deny(unused_must_use)]
 #[macro_use]
 mod meta;
+#[macro_use]
+mod macros;
 mod creator;
+mod partial_level;
+mod level;
 mod song;
 mod wrap;
 
@@ -14,12 +18,13 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use crate::{
+    creator::{creator as cr, creator_meta as cr_m},
     meta::{DatabaseEntry, Entry},
-    song::newgrounds_song,
+    song::{newgrounds_song as nr, song_meta as nr_m},
     wrap::Wrapped,
 };
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use diesel::{query_source::Table, r2d2::ConnectionManager, Connection, Insertable, RunQueryDsl};
+use diesel::{query_dsl::QueryDsl, query_source::Table, r2d2::ConnectionManager, Connection, ExpressionMethods, Insertable, RunQueryDsl};
 use failure::Fail;
 use gdcf::{
     cache::{CacheEntry, CacheEntryMeta, Lookup, Store},
@@ -153,74 +158,6 @@ impl gdcf::cache::Cache for Cache<DB> {
     type CacheEntryMeta = Entry;
     type Err = Error;
 }
-
-#[cfg(feature = "pg")]
-macro_rules! upsert {
-    ($self: expr, $object: expr, $table: expr, $column: expr) => {{
-        use diesel::{pg::upsert::*, query_builder::AsChangeset};
-
-        diesel::insert_into($table)
-            .values($object)
-            .on_conflict($column)
-            .do_update()
-            .set(Wrapped($object))
-            .execute(&$self.pool.get()?)?;
-    }};
-}
-
-#[cfg(feature = "sqlite")]
-macro_rules! upsert {
-    ($self: expr, $object: expr, $table: expr, $_: expr) => {
-        diesel::replace_into($table).values($object).execute(&$self.pool.get()?)?;
-    };
-}
-
-macro_rules! store_simply {
-    ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
-        impl Store<$to_store_ty> for Cache<DB> {
-            fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
-                let entry = Entry::new(key);
-
-                entry.insert_into($meta::table).execute(&self.pool.get()?)?;
-
-                upsert!(self, object, $table::table, $table::$primary);
-
-                Ok(entry)
-            }
-        }
-    };
-}
-
-macro_rules! lookup_simply {
-    ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
-        impl Lookup<$to_lookup_ty> for Cache<DB> {
-            fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Self>, Self::Err> {
-                let connection = self.pool.get()?;
-                let entry = $meta_table::table
-                    .filter($meta_table::$primary_column.eq(key as i64))
-                    .get_result(&connection)?;
-                let entry = self.entry(entry);
-                let wrapped: Wrapped<$to_lookup_ty> = $object_table::table
-                    .filter($object_table::$primary_column.eq(key as i64))
-                    .get_result(&connection)?;
-
-                Ok(CacheEntry::new(wrapped.0, entry))
-            }
-        }
-    };
-}
-
-use crate::{
-    creator::{creator as cr, creator_meta as cr_m},
-    song::{newgrounds_song as nr, song_meta as nr_m},
-};
-use diesel::{query_dsl::QueryDsl, ExpressionMethods};
-
-store_simply!(Creator, cr, cr_m, user_id);
-lookup_simply!(Creator, cr, cr_m, user_id);
-
-store_simply!(NewgroundsSong, nr, nr_m, song_id);
-lookup_simply!(NewgroundsSong, nr, nr_m, song_id);
 
 impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
