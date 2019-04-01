@@ -36,7 +36,7 @@ table! {
 
 meta_table!(creator_meta, user_id);
 
-type CreatorRow = (u64, String, Option<u64>);
+type CreatorRow = (i64, String, Option<i64>);
 type CreatorSqlType = (Int8, Text, Nullable<Int8>);
 type CreatorValues<'a> = (
     Eq<creator::user_id, i64>,
@@ -62,9 +62,9 @@ where
 
     fn build(row: Self::Row) -> Self {
         Wrapped(Creator {
-            user_id: row.0,
+            user_id: row.0 as u64,
             name: row.1,
-            account_id: row.2,
+            account_id: row.2.map(|i| i as u64),
         })
     }
 }

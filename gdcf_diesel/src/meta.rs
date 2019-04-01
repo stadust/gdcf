@@ -1,4 +1,10 @@
 use chrono::{NaiveDateTime, Utc};
+use diesel::{
+    backend::Backend,
+    deserialize::FromSqlRow,
+    sql_types::{BigInt, Timestamp},
+    Queryable,
+};
 use gdcf::cache::CacheEntryMeta;
 
 #[derive(Debug, Clone, Copy)]
@@ -32,10 +38,24 @@ impl CacheEntryMeta for Entry {
     }
 }
 
-#[derive(Queryable)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct DatabaseEntry {
     pub(crate) key: u64,
     pub(crate) cached_at: NaiveDateTime,
+}
+
+impl<DB: Backend> Queryable<(BigInt, Timestamp), DB> for DatabaseEntry
+where
+    (i64, NaiveDateTime): FromSqlRow<(BigInt, Timestamp), DB>,
+{
+    type Row = (i64, NaiveDateTime);
+
+    fn build(row: Self::Row) -> Self {
+        DatabaseEntry {
+            key: row.0 as u64,
+            cached_at: row.1,
+        }
+    }
 }
 
 macro_rules! meta_table {

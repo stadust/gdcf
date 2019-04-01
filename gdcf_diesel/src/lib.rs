@@ -1,5 +1,4 @@
 #[deny(unused_must_use)]
-
 #[macro_use]
 mod meta;
 mod creator;
@@ -144,7 +143,7 @@ impl From<diesel::result::Error> for Error {
 impl CacheError for Error {
     fn is_cache_miss(&self) -> bool {
         match self {
-            Error::CacheMiss => true,
+            Error::CacheMiss | Error::Database(diesel::result::Error::NotFound) => true,
             _ => false,
         }
     }
@@ -192,13 +191,36 @@ macro_rules! store_simply {
     };
 }
 
-use crate::creator::creator as cr;
-use crate::creator::creator_meta as cr_m;
-use crate::song::newgrounds_song as nr;
-use crate::song::song_meta as nr_m;
+macro_rules! lookup_simply {
+    ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
+        impl Lookup<$to_lookup_ty> for Cache<DB> {
+            fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Self>, Self::Err> {
+                let connection = self.pool.get()?;
+                let entry = $meta_table::table
+                    .filter($meta_table::$primary_column.eq(key as i64))
+                    .get_result(&connection)?;
+                let entry = self.entry(entry);
+                let wrapped: Wrapped<$to_lookup_ty> = $object_table::table
+                    .filter($object_table::$primary_column.eq(key as i64))
+                    .get_result(&connection)?;
+
+                Ok(CacheEntry::new(wrapped.0, entry))
+            }
+        }
+    };
+}
+
+use crate::{
+    creator::{creator as cr, creator_meta as cr_m},
+    song::{newgrounds_song as nr, song_meta as nr_m},
+};
+use diesel::{query_dsl::QueryDsl, ExpressionMethods};
 
 store_simply!(Creator, cr, cr_m, user_id);
+lookup_simply!(Creator, cr, cr_m, user_id);
+
 store_simply!(NewgroundsSong, nr, nr_m, song_id);
+lookup_simply!(NewgroundsSong, nr, nr_m, song_id);
 
 impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
@@ -208,12 +230,6 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
 
 impl Store<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
     fn store(&mut self, obj: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
-        unimplemented!()
-    }
-}
-
-impl Lookup<NewgroundsSong> for Cache<DB> {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<NewgroundsSong, Self>, Self::Err> {
         unimplemented!()
     }
 }

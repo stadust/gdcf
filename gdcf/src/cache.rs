@@ -28,6 +28,10 @@ pub struct CacheEntry<T, C: Cache> {
 }
 
 impl<T, C: Cache> CacheEntry<T, C> {
+    pub fn new(object: T, metadata: C::CacheEntryMeta) -> Self {
+        Self { object, metadata }
+    }
+
     pub fn meta(&self) -> &C::CacheEntryMeta {
         &self.metadata
     }

@@ -42,8 +42,8 @@ table! {
 
 meta_table!(song_meta, song_id);
 
-type NewgroundsSongRow = (u64, String, u64, String, f64, Option<String>, Option<String>, String, String);
-type NewgroundsSongSqlType = (Int8, Text, Int8, Double, Nullable<Text>, Nullable<Text>, Text, Text);
+type NewgroundsSongRow = (i64, String, i64, String, f64, Option<String>, Option<String>, String, String);
+type NewgroundsSongSqlType = (Int8, Text, Int8, Text, Double, Nullable<Text>, Nullable<Text>, Text, Text);
 type NewgroundsSongValues<'a> = (
     diesel::dsl::Eq<newgrounds_song::song_id, i64>,
     diesel::dsl::Eq<newgrounds_song::song_name, &'a str>,
@@ -80,9 +80,9 @@ where
 
     fn build(row: Self::Row) -> Self {
         Wrapped(NewgroundsSong {
-            song_id: row.0,
+            song_id: row.0 as u64,
             name: row.1,
-            index_3: row.2,
+            index_3: row.2 as u64,
             artist: row.3,
             filesize: row.4,
             index_6: row.5,
