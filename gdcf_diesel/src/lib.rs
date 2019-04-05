@@ -176,9 +176,10 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
         let levels = partial_level::table
             .inner_join(request_results::table.on(partial_level::level_id.eq(request_results::level_id)))
             .filter(request_results::request_hash.eq(key as i64))
+            .select(partial_level::all_columns)
             .load(&connection)?
-            .into_iter()  // the next line is just fucking what the fuck
-            .map(|row: (_, (i64, i64))| Wrapped::<PartialLevel<u64, u64>>::build(row.0).0)
+            .into_iter()
+            .map(|row: Wrapped<_>| row.0)
             .collect();
 
         Ok(CacheEntry::new(levels, self.entry(entry)))
