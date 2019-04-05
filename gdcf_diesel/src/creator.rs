@@ -1,12 +1,10 @@
-use crate::{meta::DatabaseEntry, wrap::Wrapped};
+use crate::wrap::Wrapped;
 use diesel::{
-    associations::{HasTable, Identifiable},
+    associations::Identifiable,
     backend::Backend,
     deserialize::FromSqlRow,
-    dsl::Eq,
-    query_builder::AsChangeset,
     sql_types::{Int8, Nullable, Text},
-    ExpressionMethods, Insertable, Queryable,
+    ExpressionMethods, Queryable,
 };
 use gdcf_model::user::Creator;
 

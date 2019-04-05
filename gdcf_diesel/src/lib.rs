@@ -4,8 +4,8 @@ mod meta;
 #[macro_use]
 mod macros;
 mod creator;
-mod partial_level;
 mod level;
+mod partial_level;
 mod song;
 mod wrap;
 
@@ -159,14 +159,54 @@ impl gdcf::cache::Cache for Cache<DB> {
     type Err = Error;
 }
 
+// TODO: in the future we can probably make these macro-generated as well, but for now we only have
+// one of them, so its fine
+
 impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
-        unimplemented!()
+        use crate::partial_level::*;
+        use diesel::{JoinOnDsl, Queryable};
+
+        let connection = self.pool.get()?;
+
+        let entry: DatabaseEntry = level_list_meta::table
+            .filter(level_list_meta::request_hash.eq(key as i64))
+            .get_result(&connection)?;
+
+        let levels = partial_level::table
+            .inner_join(request_results::table.on(partial_level::level_id.eq(request_results::level_id)))
+            .filter(request_results::request_hash.eq(key as i64))
+            .load(&connection)?
+            .into_iter()  // the next line is just fucking what the fuck
+            .map(|row: (_, (i64, i64))| Wrapped::<PartialLevel<u64, u64>>::build(row.0).0)
+            .collect();
+
+        Ok(CacheEntry::new(levels, self.entry(entry)))
     }
 }
 
 impl Store<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
-    fn store(&mut self, obj: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
-        unimplemented!()
+    fn store(&mut self, partial_levels: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+        use crate::partial_level::*;
+
+        let conn = self.pool.get()?;
+
+        diesel::delete(request_results::table)
+            .filter(request_results::request_hash.eq(key as i64))
+            .execute(&conn)?;
+
+        for level in partial_levels {
+            self.store(level, level.level_id)?;
+
+            diesel::insert_into(request_results::table)
+                .values((level.level_id, key))
+                .execute(&conn)?;
+        }
+
+        let entry = Entry::new(key);
+
+        upsert!(self, entry, level_list_meta::table, level_list_meta::request_hash);
+
+        Ok(entry)
     }
 }

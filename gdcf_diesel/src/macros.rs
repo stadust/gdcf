@@ -23,15 +23,14 @@ macro_rules! store_simply {
     ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
         fn __impl_store() {
             use crate::{meta::Entry, Cache, DB};
-            use diesel::{Insertable, RunQueryDsl};
+            use diesel::RunQueryDsl;
             use gdcf::cache::Store;
 
             impl Store<$to_store_ty> for Cache<DB> {
                 fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
                     let entry = Entry::new(key);
 
-                    entry.insert_into($meta::table).execute(&self.pool.get()?)?;
-
+                    upsert!(self, entry, $meta::table, $meta::$primary);
                     upsert!(self, object, $table::table, $table::$primary);
 
                     Ok(entry)
