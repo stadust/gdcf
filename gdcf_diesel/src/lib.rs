@@ -63,7 +63,7 @@ impl<T: Connection + 'static> Clone for Cache<T> {
 }
 
 // this means we cannot enable two features at once. Since diesel doesn't allow writing database
-// agnostic code, the alternative to this is wrapping everything in macaros (like we used to do in
+// agnostic code, the alternative to this is wrapping everything in macros (like we used to do in
 // gdcf_dbcache). That's a crappy alternative. We dont do that there
 #[cfg(feature = "pg")]
 type DB = diesel::pg::PgConnection;
