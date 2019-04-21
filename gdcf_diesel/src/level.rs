@@ -1,8 +1,24 @@
-use diesel::ExpressionMethods;
+use crate::{meta::Entry, wrap::Wrapped, Cache, DB};
+use diesel::{backend::Backend, deserialize::FromSqlRow, ExpressionMethods, Queryable, RunQueryDsl};
+use gdcf::cache::{CacheEntry, Lookup, Store};
 use gdcf_model::level::{Level, Password};
+use log::debug;
+use std::fmt::Display;
+
+// Daily reminder that diesel is a piece of shit
+
+#[derive(Debug, Clone)]
+pub(crate) struct SemiLevel {
+    level_id: u64,
+    level_data: Vec<u8>,
+    level_password: Password,
+    time_since_upload: String,
+    time_since_update: String,
+    index_36: String,
+}
 
 diesel_stuff! {
-    level (level_id, Level<u64, u64>) {
+    level (level_id, SemiLevel) {
         (level_id, Int8, i64, i64),
         (level_data, Binary, Vec<u8>, &'a [u8]),
         (level_password, Nullable<Text>, Option<String>, Option<&'a str>),
@@ -12,13 +28,39 @@ diesel_stuff! {
     }
 }
 
-fn values(level: &Level<u64, u64>) -> Values {
+impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<SemiLevel>
+where
+    Row: FromSqlRow<SqlType, DB>,
+{
+    type Row = Row;
+
+    fn build(row: Self::Row) -> Self {
+        Wrapped(SemiLevel {
+            level_id: row.0 as u64,
+            level_data: row.1,
+            level_password: match row.2 {
+                None => Password::NoCopy,
+                Some(pw) =>
+                    if pw == "1" {
+                        Password::FreeCopy
+                    } else {
+                        Password::PasswordCopy(pw)
+                    },
+            },
+            time_since_upload: row.3,
+            time_since_update: row.4,
+            index_36: row.5,
+        })
+    }
+}
+
+fn values(level: &SemiLevel) -> Values {
     use level::columns::*;
 
     (
-        level_id.eq(level.base.level_id as i64),
+        level_id.eq(level.level_id as i64),
         level_data.eq(&level.level_data[..]),
-        level_password.eq(match level.password {
+        level_password.eq(match level.level_password {
             Password::NoCopy => None,
             Password::FreeCopy => Some("1"),
             Password::PasswordCopy(ref password) => Some(password.as_ref()),
@@ -27,4 +69,71 @@ fn values(level: &Level<u64, u64>) -> Values {
         time_since_update.eq(&level.time_since_update),
         index_36.eq(&level.index_36),
     )
+}
+
+impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
+    type Values = <Values<'a> as diesel::Insertable<level::table>>::Values;
+
+    fn values(self) -> Self::Values {
+        use self::values;
+        use level::columns::*;
+
+        (
+            level_id.eq(self.base.level_id as i64),
+            level_data.eq(&self.level_data[..]),
+            level_password.eq(match self.password {
+                Password::NoCopy => None,
+                Password::FreeCopy => Some("1"),
+                Password::PasswordCopy(ref password) => Some(password.as_ref()),
+            }),
+            time_since_upload.eq(&self.time_since_upload),
+            time_since_update.eq(&self.time_since_update),
+            index_36.eq(&self.index_36),
+        )
+            .values()
+    }
+}
+
+impl Display for SemiLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "rest data of level {}", self.level_id)
+    }
+}
+
+meta_table!(level_meta, level_id);
+
+lookup_simply!(SemiLevel, level, level_meta, level_id);
+
+impl Lookup<Level<u64, u64>> for Cache<DB> {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Self>, Self::Err> {
+        let CacheEntry { object: semi, metadata }: CacheEntry<SemiLevel, _> = self.lookup(key)?;
+        let partial = self.lookup(semi.level_id)?.into_inner();
+
+        Ok(CacheEntry {
+            object: Level {
+                base: partial,
+                level_data: semi.level_data,
+                password: semi.level_password,
+                time_since_upload: semi.time_since_upload,
+                time_since_update: semi.time_since_update,
+                index_36: semi.index_36,
+            },
+            metadata,
+        })
+    }
+}
+
+impl Store<Level<u64, u64>> for Cache<DB> {
+    fn store(&mut self, obj: &Level<u64, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+        self.store(&obj.base, obj.base.level_id)?;
+
+        debug!("Storing {}", obj);
+
+        let entry = Entry::new(key);
+
+        upsert!(self, entry, level_meta::table, level_meta::level_id);
+        upsert!(self, obj, level::table, level::level_id);
+
+        Ok(entry)
+    }
 }

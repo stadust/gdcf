@@ -25,9 +25,12 @@ macro_rules! store_simply {
             use crate::{meta::Entry, Cache, DB};
             use diesel::RunQueryDsl;
             use gdcf::cache::Store;
+            use log::debug;
 
             impl Store<$to_store_ty> for Cache<DB> {
                 fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
+                    debug!("Storing {}", object);
+
                     let entry = Entry::new(key);
 
                     upsert!(self, entry, $meta::table, $meta::$primary);

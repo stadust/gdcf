@@ -23,8 +23,8 @@ impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct CacheEntry<T, C: Cache> {
-    pub(crate) object: T,
-    pub(crate) metadata: C::CacheEntryMeta,
+    pub object: T,
+    pub metadata: C::CacheEntryMeta,
 }
 
 impl<T, C: Cache> CacheEntry<T, C> {
