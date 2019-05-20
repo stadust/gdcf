@@ -28,16 +28,6 @@ meta_table!(creator_meta, user_id);
 store_simply!(Creator, creator, creator_meta, user_id);
 lookup_simply!(Creator, creator, creator_meta, user_id);
 
-/*fn values(creator: &Creator) -> Values {
-    use creator::columns::*;
-
-    (
-        user_id.eq(creator.user_id as i64),
-        name.eq(&creator.name[..]),
-        account_id.eq(creator.account_id.map(|i| i as i64)),
-    )
-}*/
-
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<Creator>
 where
     Row: FromSqlRow<SqlType, DB>,

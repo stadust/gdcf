@@ -54,15 +54,7 @@ meta_table!(profile_meta, user_id);
 
 store_simply!(User, profile, profile_meta, user_id);
 lookup_simply!(User, profile, profile_meta, user_id);
-/*
-fn values(profile: &User) -> Values {
-    use profile::columns::*;
 
-    (
-        username.eq(&profile.name[..]),
-    )
-}
-*/
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<User>
 where
     Row: FromSqlRow<SqlType, DB>,
