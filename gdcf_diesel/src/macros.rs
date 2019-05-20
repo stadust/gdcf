@@ -101,38 +101,11 @@ macro_rules! __for_queryable {
     ($value: expr, u64) => {
         $value as u64
     };
-    ($value: expr, i8) => {
-        $value
-    };
-    ($value: expr, i16) => {
-        $value
-    };
-    ($value: expr, i32) => {
-        $value
-    };
-    ($value: expr, i64) => {
-        $value
-    };
-    ($value: expr, f32) => {
-        $value
-    };
-    ($value: expr, f64) => {
-        $value
-    };
-    ($value: expr, bool) => {
-        $value
-    };
-    ($value: expr, String) => {
-        $value
-    };
     ($value: expr, Option<MainSong>) => {
         $value.map(|i| From::from(i as u8))
     };
     ($value: expr, Option<$t: ident>) => {
         $value.map(|inner| __for_queryable!(inner, $t))
-    };
-    ($value: expr, Vec<u8>) => {
-        $value
     };
     ($value: expr, LevelRating) => {
         LevelRating::from($value)
@@ -157,6 +130,9 @@ macro_rules! __for_queryable {
     ($value: expr, GameVersion) => {{
         GameVersion::from($value as u8)
     }};
+    ($value: expr, $($t:tt)*) => {
+        $value
+    };
 }
 
 macro_rules! __for_values {
