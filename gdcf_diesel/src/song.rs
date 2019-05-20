@@ -36,7 +36,7 @@ meta_table!(song_meta, song_id);
 
 store_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
 lookup_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
-
+/*
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<NewgroundsSong>
 where
     Row: FromSqlRow<SqlType, DB>,
@@ -57,3 +57,4 @@ where
         })
     }
 }
+*/

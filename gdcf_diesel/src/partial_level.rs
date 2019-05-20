@@ -39,7 +39,7 @@ meta_table!(partial_level_meta, level_id);
 
 store_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
 lookup_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
-
+/*
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<PartialLevel<u64, u64>>
 where
     Row: FromSqlRow<SqlType, DB>,
@@ -73,7 +73,7 @@ where
             index_47: row.22,
         })
     }
-}
+}*/
 
 table! {
     request_results (level_id, request_hash) {

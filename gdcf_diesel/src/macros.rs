@@ -88,6 +88,77 @@ macro_rules! __row_type {
     (MainSong) => {i16};
 }
 
+macro_rules! __for_queryable {
+    ($value: expr, u8) => {
+        $value as u8
+    };
+    ($value: expr, u16) => {
+        $value as u16
+    };
+    ($value: expr, u32) => {
+        $value as u32
+    };
+    ($value: expr, u64) => {
+        $value as u64
+    };
+    ($value: expr, i8) => {
+        $value
+    };
+    ($value: expr, i16) => {
+        $value
+    };
+    ($value: expr, i32) => {
+        $value
+    };
+    ($value: expr, i64) => {
+        $value
+    };
+    ($value: expr, f32) => {
+        $value
+    };
+    ($value: expr, f64) => {
+        $value
+    };
+    ($value: expr, bool) => {
+        $value
+    };
+    ($value: expr, String) => {
+        $value
+    };
+    ($value: expr, Option<MainSong>) => {
+        $value.map(|i| From::from(i as u8))
+    };
+    ($value: expr, Option<$t: ident>) => {
+        $value.map(|inner| __for_queryable!(inner, $t))
+    };
+    ($value: expr, Vec<u8>) => {
+        $value
+    };
+    ($value: expr, LevelRating) => {
+        LevelRating::from($value)
+    };
+    ($value: expr, LevelLength) => {
+        LevelLength::from($value)
+    };
+    ($value: expr, Password) => {
+        match $value {
+            None => Password::NoCopy,
+            Some(pw) =>
+                if pw == "1" {
+                    Password::FreeCopy
+                } else {
+                    Password::PasswordCopy(pw)
+                },
+        }
+    };
+    ($value: expr, Featured) => {{
+        Featured::from($value)
+    }};
+    ($value: expr, GameVersion) => {{
+        GameVersion::from($value as u8)
+    }};
+}
+
 macro_rules! __for_values {
     ($value: expr, u8) => {
         $value as i16
@@ -125,16 +196,14 @@ macro_rules! __for_values {
     ($value: expr, String) => {
         &$value[..]
     };
-    ($value: expr, Option<String>) => {
-        {
-            // Compiler couldn't figure out some mysterious type 'T'
-            // So now they're all annotated
-            // This whole thing is pretty weird tbh
-            let v: &Option<String> = &$value;
-            let v: Option<&String> = v.as_ref();
-            v.map(|inner: &String| &inner[..])
-        }
-    };
+    ($value: expr, Option<String>) => {{
+        // Compiler couldn't figure out some mysterious type 'T'
+        // So now they're all annotated
+        // This whole thing is pretty weird tbh
+        let v: &Option<String> = &$value;
+        let v: Option<&String> = v.as_ref();
+        v.map(|inner: &String| &inner[..])
+    }};
     ($value: expr, Option<MainSong>) => {
         $value.map(|song| song.main_song_id as i16)
     };
@@ -248,6 +317,40 @@ macro_rules! diesel_stuff {
                 use self::values;
 
                 values(self).values()
+            }
+        }
+
+        /*
+        Alright, so
+
+        Wrapped( $rust_ty {
+            ...
+        })
+
+        doesn't work because macro variables are weird like that, so we need this very noisy workaround
+        */
+        trait __ConstructExt {
+            fn __construct(row: Row) -> Self;
+        }
+
+        impl __ConstructExt for $rust_ty {
+            fn __construct(($($field_name),*): Row) -> Self {
+                Self {
+                    $(
+                        $field_name: __for_queryable!($field_name, $($rust_type)*)
+                    ),*
+                }
+            }
+        }
+
+        impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<$rust_ty>
+        where
+            Row: FromSqlRow<SqlType, DB>,
+        {
+            type Row = Row;
+
+            fn build(row: Self::Row) -> Self {
+                Wrapped(<$rust_ty>::__construct(row))
             }
         }
 

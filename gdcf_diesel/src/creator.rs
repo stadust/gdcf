@@ -27,7 +27,7 @@ meta_table!(creator_meta, user_id);
 
 store_simply!(Creator, creator, creator_meta, user_id);
 lookup_simply!(Creator, creator, creator_meta, user_id);
-
+/*
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<Creator>
 where
     Row: FromSqlRow<SqlType, DB>,
@@ -42,3 +42,4 @@ where
         })
     }
 }
+*/
