@@ -54,15 +54,3 @@ meta_table!(profile_meta, user_id);
 
 store_simply!(User, profile, profile_meta, user_id);
 lookup_simply!(User, profile, profile_meta, user_id);
-/*
-impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<User>
-where
-    Row: FromSqlRow<SqlType, DB>,
-{
-    type Row = Row;
-
-    fn build(row: Self::Row) -> Self {
-        unimplemented!()
-    }
-}
-*/

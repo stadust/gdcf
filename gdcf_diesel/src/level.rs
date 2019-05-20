@@ -27,32 +27,6 @@ diesel_stuff! {
         (index_36, index_36, String)
     }
 }
-/*
-impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<SemiLevel>
-where
-    Row: FromSqlRow<SqlType, DB>,
-{
-    type Row = Row;
-
-    fn build(row: Self::Row) -> Self {
-        Wrapped(SemiLevel {
-            level_id: row.0 as u64,
-            level_data: row.1,
-            level_password: match row.2 {
-                None => Password::NoCopy,
-                Some(pw) =>
-                    if pw == "1" {
-                        Password::FreeCopy
-                    } else {
-                        Password::PasswordCopy(pw)
-                    },
-            },
-            time_since_upload: row.3,
-            time_since_update: row.4,
-            index_36: row.5,
-        })
-    }
-}*/
 
 impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
     type Values = <Values<'a> as diesel::Insertable<level::table>>::Values;

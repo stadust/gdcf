@@ -27,19 +27,3 @@ meta_table!(creator_meta, user_id);
 
 store_simply!(Creator, creator, creator_meta, user_id);
 lookup_simply!(Creator, creator, creator_meta, user_id);
-/*
-impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<Creator>
-where
-    Row: FromSqlRow<SqlType, DB>,
-{
-    type Row = Row;
-
-    fn build(row: Self::Row) -> Self {
-        Wrapped(Creator {
-            user_id: row.0 as u64,
-            name: row.1,
-            account_id: row.2.map(|i| i as u64),
-        })
-    }
-}
-*/

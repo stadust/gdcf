@@ -39,41 +39,6 @@ meta_table!(partial_level_meta, level_id);
 
 store_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
 lookup_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
-/*
-impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<PartialLevel<u64, u64>>
-where
-    Row: FromSqlRow<SqlType, DB>,
-{
-    type Row = Row;
-
-    fn build(row: Self::Row) -> Self {
-        Wrapped(PartialLevel {
-            level_id: row.0 as u64,
-            name: row.1,
-            description: row.2,
-            version: row.3 as u32,
-            creator: row.4 as u64,
-            difficulty: LevelRating::from(row.5),
-            downloads: row.6 as u32,
-            main_song: row.7.map(|i| From::from(i as u8)),
-            gd_version: GameVersion::from(row.8 as u8),
-            likes: row.9,
-            length: LevelLength::from(row.10),
-            stars: row.11 as u8,
-            featured: Featured::from(row.12),
-            copy_of: row.13.map(|i| i as u64),
-            custom_song: row.14.map(|i| i as u64),
-            coin_amount: row.15 as u8,
-            coins_verified: row.16,
-            stars_requested: row.17.map(|i| i as u8),
-            is_epic: row.18,
-            index_43: row.19,
-            object_amount: row.20.map(|i| i as u32),
-            index_46: row.21,
-            index_47: row.22,
-        })
-    }
-}*/
 
 table! {
     request_results (level_id, request_hash) {
