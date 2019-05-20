@@ -20,15 +20,15 @@ impl<'a> Identifiable for &'a Wrapped<NewgroundsSong> {
 
 diesel_stuff! {
     newgrounds_song (song_id, NewgroundsSong) {
-        (song_id, Int8, i64, i64),
-        (song_name, Text, String, &'a String),
-        (index_3, Int8, i64, i64),
-        (song_artist, Text, String, &'a String),
-        (filesize, Double, f64, f64),
-        (index_6, Nullable<Text>, Option<String>, &'a Option<String>),
-        (index_7, Nullable<Text>, Option<String>, &'a Option<String>),
-        (index_8, Text, String, &'a String),
-        (song_link, Text, String, &'a String)
+        (song_id, song_id, u64),
+        (song_name, name, String),
+        (index_3, index_3,  u64),
+        (song_artist, artist, String),
+        (filesize, filesize, f64),
+        (index_6, index_6, Option<String>),
+        (index_7, index_7, Option<String>),
+        (index_8, index_8, String),
+        (song_link, link, String)
     }
 }
 
@@ -36,22 +36,6 @@ meta_table!(song_meta, song_id);
 
 store_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
 lookup_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
-
-fn values(song: &NewgroundsSong) -> Values {
-    use newgrounds_song::columns::*;
-
-    (
-        song_id.eq(song.song_id as i64),
-        song_name.eq(&song.name),
-        index_3.eq(song.index_3 as i64),
-        song_artist.eq(&song.artist),
-        filesize.eq(song.filesize),
-        index_6.eq(&song.index_6),
-        index_7.eq(&song.index_7),
-        index_8.eq(&song.index_8),
-        song_link.eq(&song.link),
-    )
-}
 
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<NewgroundsSong>
 where

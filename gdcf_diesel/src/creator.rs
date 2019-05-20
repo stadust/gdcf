@@ -18,9 +18,9 @@ impl<'a> Identifiable for &'a Wrapped<Creator> {
 
 diesel_stuff! {
     creator (user_id, Creator) {
-        (user_id, Int8, i64, i64),
-        (name, Text, String, &'a str),
-        (account_id, Nullable<Int8>, Option<i64>, Option<i64>)
+        (user_id, user_id, u64),
+        (name, name, String),
+        (account_id, account_id, Option<u64>)
     }
 }
 meta_table!(creator_meta, user_id);
@@ -28,7 +28,7 @@ meta_table!(creator_meta, user_id);
 store_simply!(Creator, creator, creator_meta, user_id);
 lookup_simply!(Creator, creator, creator_meta, user_id);
 
-fn values(creator: &Creator) -> Values {
+/*fn values(creator: &Creator) -> Values {
     use creator::columns::*;
 
     (
@@ -36,7 +36,7 @@ fn values(creator: &Creator) -> Values {
         name.eq(&creator.name[..]),
         account_id.eq(creator.account_id.map(|i| i as i64)),
     )
-}
+}*/
 
 impl<DB: Backend> Queryable<SqlType, DB> for Wrapped<Creator>
 where

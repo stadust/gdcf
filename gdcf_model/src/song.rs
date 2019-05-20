@@ -23,7 +23,8 @@ pub fn SERVER_SIDED_DATA_INCONSISTENCY_ERROR() -> NewgroundsSong {
 ///
 /// This data is not provided by the API and needs to be manually kept up to
 /// date
-#[derive(Debug, Eq, PartialEq, Clone)]
+/// TODO: Use that this is Copy
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct MainSong {
     /// The ID of this [`MainSong`]

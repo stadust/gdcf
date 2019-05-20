@@ -19,12 +19,12 @@ pub(crate) struct SemiLevel {
 
 diesel_stuff! {
     level (level_id, SemiLevel) {
-        (level_id, Int8, i64, i64),
-        (level_data, Binary, Vec<u8>, &'a [u8]),
-        (level_password, Nullable<Text>, Option<String>, Option<&'a str>),
-        (time_since_upload, Text, String, &'a String),
-        (time_since_update, Text, String, &'a String),
-        (index_36, Text, String, &'a String)
+        (level_id, level_id, u64),
+        (level_data, level_data, Vec<u8>),
+        (level_password, level_password, Password),
+        (time_since_upload, time_since_upload, String),
+        (time_since_update, time_since_update, String),
+        (index_36, index_36, String)
     }
 }
 
@@ -54,23 +54,6 @@ where
     }
 }
 
-fn values(level: &SemiLevel) -> Values {
-    use level::columns::*;
-
-    (
-        level_id.eq(level.level_id as i64),
-        level_data.eq(&level.level_data[..]),
-        level_password.eq(match level.level_password {
-            Password::NoCopy => None,
-            Password::FreeCopy => Some("1"),
-            Password::PasswordCopy(ref password) => Some(password.as_ref()),
-        }),
-        time_since_upload.eq(&level.time_since_upload),
-        time_since_update.eq(&level.time_since_update),
-        index_36.eq(&level.index_36),
-    )
-}
-
 impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
     type Values = <Values<'a> as diesel::Insertable<level::table>>::Values;
 
@@ -86,9 +69,9 @@ impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
                 Password::FreeCopy => Some("1"),
                 Password::PasswordCopy(ref password) => Some(password.as_ref()),
             }),
-            time_since_upload.eq(&self.time_since_upload),
-            time_since_update.eq(&self.time_since_update),
-            index_36.eq(&self.index_36),
+            time_since_upload.eq(&self.time_since_upload[..]),
+            time_since_update.eq(&self.time_since_update[..]),
+            index_36.eq(&self.index_36[..]),
         )
             .values()
     }

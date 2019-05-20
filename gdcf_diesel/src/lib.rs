@@ -1,4 +1,6 @@
-#[deny(unused_must_use)]
+#![recursion_limit = "128"]
+#![deny(unused_must_use)]
+#![allow(unused_imports)]
 #[macro_use]
 mod meta;
 #[macro_use]
@@ -8,6 +10,7 @@ mod level;
 mod partial_level;
 mod song;
 mod wrap;
+mod profile;
 
 // diesel devs refuse to make their macros work with the new rust 2018 import mechanics, so this
 // shit is necessary
@@ -20,7 +23,6 @@ extern crate diesel_migrations;
 use crate::{
     creator::{creator as cr, creator_meta as cr_m},
     meta::{DatabaseEntry, Entry},
-    song::{newgrounds_song as nr, song_meta as nr_m},
     wrap::Wrapped,
 };
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};

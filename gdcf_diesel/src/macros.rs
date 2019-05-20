@@ -19,6 +19,157 @@ macro_rules! upsert {
     };
 }
 
+macro_rules! __diesel_type {
+    (i64) => {Int8};
+    (u64) => {Int8};
+    (i32) => {Int4};
+    (u32) => {Int4};
+    (i16) => {Int2};
+    (u16) => {Int2};
+    (i8) => {Int2};
+    (u8) => {Int2};
+    (f64) => {Double};
+    (bool) => {Bool};
+    (String) => {Text};
+    (Option<$t: ident>) => {Nullable<__diesel_type!($t)>};
+    (Vec<u8>) => {Binary};
+    (LevelRating) => {Text};
+    (LevelLength) => {Text};
+    (Password) => {Nullable<Text>};
+    (Featured) => {Int4};
+    (GameVersion) => {Int2};
+    (MainSong) => {Int2};
+}
+
+macro_rules! __ref_if_not_copy {
+    (i64) => {i64};
+    (i32) => {i32};
+    (i16) => {i16};
+    (i8) => {i16};
+    (u64) => {i64};
+    (u32) => {i32};
+    (u16) => {i16};
+    (u8) => {i16};
+    (f64) => {f64};
+    (f32)  => {f32};
+    (bool) => {bool};
+    (String) => {&'a str};
+    (Option<String>) => {Option<&'a str>};
+    (Option<$t: ident>) => {Option<__ref_if_not_copy!($t)>};
+    (Vec<u8>) => {&'a [u8]};
+    (LevelRating) => {String};
+    (LevelLength) => {String};
+    (Password) => {Option<&'a str>};
+    (Featured) => {i32};
+    (GameVersion) => {i16};
+    (MainSong) => {i16};
+}
+
+macro_rules! __row_type {
+    (i64) => {i64};
+    (i32) => {i32};
+    (i16) => {i16};
+    (i8) => {i16};
+    (u64) => {i64};
+    (u32) => {i32};
+    (u16) => {i16};
+    (u8) => {i16};
+    (f64) => {f64};
+    (f32)  => {f32};
+    (bool) => {bool};
+    (String) => {String};
+    (Option<$t: ident>) => {Option<__row_type!($t)>};
+    (Vec<u8>) => {Vec<u8>};
+    (LevelRating) => {String};
+    (LevelLength) => {String};
+    (Password) => {Option<String>};
+    (Featured) => {i32};
+    (GameVersion) => {i16};
+    (MainSong) => {i16};
+}
+
+macro_rules! __for_values {
+    ($value: expr, u8) => {
+        $value as i16
+    };
+    ($value: expr, u16) => {
+        $value as i16
+    };
+    ($value: expr, u32) => {
+        $value as i32
+    };
+    ($value: expr, u64) => {
+        $value as i64
+    };
+    ($value: expr, i8) => {
+        $value as i16
+    };
+    ($value: expr, i16) => {
+        $value
+    };
+    ($value: expr, i32) => {
+        $value
+    };
+    ($value: expr, i64) => {
+        $value
+    };
+    ($value: expr, f32) => {
+        $value
+    };
+    ($value: expr, f64) => {
+        $value
+    };
+    ($value: expr, bool) => {
+        $value
+    };
+    ($value: expr, String) => {
+        &$value[..]
+    };
+    ($value: expr, Option<String>) => {
+        {
+            // Compiler couldn't figure out some mysterious type 'T'
+            // So now they're all annotated
+            // This whole thing is pretty weird tbh
+            let v: &Option<String> = &$value;
+            let v: Option<&String> = v.as_ref();
+            v.map(|inner: &String| &inner[..])
+        }
+    };
+    ($value: expr, Option<MainSong>) => {
+        $value.map(|song| song.main_song_id as i16)
+    };
+    ($value: expr, Option<$t: ident>) => {
+        $value.map(|inner| __for_values!(inner, $t))
+    };
+    ($value: expr, Vec<u8>) => {
+        &$value[..]
+    };
+    ($value: expr, LevelRating) => {
+        $value.to_string()
+    };
+    ($value: expr, LevelLength) => {
+        $value.to_string()
+    };
+    ($value: expr, Password) => {
+        match $value {
+            Password::NoCopy => None,
+            Password::FreeCopy => Some("1"),
+            Password::PasswordCopy(ref password) => Some(password.as_ref()),
+        }
+    };
+    ($value: expr, Featured) => {{
+        let value: i32 = $value.into();
+        value // y'all gay
+    }};
+    ($value: expr, GameVersion) => {{
+        let byte: u8 = $value.into();
+        byte as i16
+    }};
+    ($value: expr, $($t:tt)*) => {
+        &$value
+    };
+}
+
 macro_rules! store_simply {
     ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
         fn __impl_store() {
@@ -69,10 +220,10 @@ macro_rules! lookup_simply {
 }
 
 macro_rules! diesel_stuff {
-    ($table_name: ident($primary_key: ident, $rust_ty: ty) {$(($column_name: ident, $diesel_type: ty, $rust_type: ty, $borrowed_rust_type: ty)),*}) => {
+    ($table_name: ident($primary_key: ident, $rust_ty: ty) {$(($column_name: ident, $field_name: ident, $($rust_type:tt)*)),*}) => {
         table! {
             $table_name($primary_key) {
-                $($column_name -> $diesel_type,)*
+                $($column_name -> __diesel_type!($($rust_type)*),)*
             }
         }
 
@@ -86,9 +237,9 @@ macro_rules! diesel_stuff {
 
         use diesel::sql_types::*;
 
-        type Row = ($($rust_type),*);
-        type Values<'a> = ($(diesel::dsl::Eq<$table_name::$column_name, $borrowed_rust_type>),*);
-        type SqlType = ($($diesel_type),*);
+        type Row = ($(__row_type!($($rust_type)*)),*);
+        type Values<'a> = ($(diesel::dsl::Eq<$table_name::$column_name, __ref_if_not_copy!($($rust_type)*)>),*);
+        type SqlType = ($(__diesel_type!($($rust_type)*)),*);
 
         impl<'a> diesel::Insertable<$table_name::table> for &'a $rust_ty {
             type Values = <Values<'a> as diesel::Insertable<$table_name::table>>::Values;
@@ -109,6 +260,16 @@ macro_rules! diesel_stuff {
 
                 values(&self.0).as_changeset()
             }
+        }
+
+        fn values(object: &$rust_ty) -> Values {
+            use $table_name::columns::*;
+
+            (
+                $(
+                    $column_name.eq(__for_values!(object.$field_name, $($rust_type)*))
+                ),*
+            )
         }
     };
 }
