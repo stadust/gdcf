@@ -76,3 +76,46 @@ CREATE TABLE level (
     index_36 TEXT,
     FOREIGN KEY (level_id) REFERENCES partial_level(level_id)
 );
+
+CREATE TABLE level_meta (
+    level_id INTEGER PRIMARY KEY,
+    cached_at INTEGER
+);
+
+CREATE TABLE profile (
+    username TEXT NOT NULL,
+    user_id INTEGER PRIMARY KEY,
+    stars INTEGER NOT NULL,
+    demons INTEGER NOT NULL,
+    creator_points INTEGER NOT NULL,
+    index_10 TEXT,
+    index_11 TEXT,
+    secret_coins INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    user_coins INTEGER NOT NULL,
+    index_18 TEXT,
+    index_19 TEXT,
+    youtube_url TEXT,
+    cube_index INTEGER NOT NULL,
+    ship_index INTEGER NOT NULL,
+    ball_index INTEGER NOT NULL,
+    ufo_index INTEGER NOT NULL,
+    wave_index INTEGER NOT NULL,
+    robot_index INTEGER NOT NULL,
+    has_glow BOOLEAN NOT NULL,
+    index_29 TEXT,
+    global_rank INTEGER,
+    index_31 TEXT,
+    spider_index INTEGER NOT NULL,
+    twitter_url TEXT,
+    twitch_url TEXT,
+    diamonds INTEGER NOT NULL,
+    death_effect_index INTEGER NOT NULL,
+    index_49 TEXT,
+    index_50 TEXT
+);
+
+CREATE TABLE profile_meta (
+    user_id INTEGER PRIMARY KEY,
+    cached_at INTEGER
+);

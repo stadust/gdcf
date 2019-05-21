@@ -34,9 +34,9 @@ There are multiple reasons why this makes sense:
 
 This crate is a reference implementation of an API client to use with the `gdcf` crate. It implements the serialization of requests and parses the responses with `gdcf_parse`. It implements automatic retry (with exponentiall backoff) for when the boomlings servers decide to act up.
 
-## `gdcf_dbcache`
+## `gdcf_diesel`
 
-This crate implement a postgres and an sqlite cache for use with `gdcf`. You probably really dont want to deal much with this crate, its the worst of the lot
+This crate implements a postgres and an sqlite cache for use with `gdcf`, based on diesel. Generally, the code in this crate is pretty ugly, 25% of it is a single macro, which generates around 90% of the final code. It gets the job done though and is better than the old, self-rolled sql query builder.
 
 ## Planned features
 

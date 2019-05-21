@@ -35,11 +35,13 @@ diesel_stuff! {
     }
 }
 
+// Metadata table storing information about when a partial level was cached
 meta_table!(partial_level_meta, level_id);
 
 store_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
 lookup_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
 
+// Metadata table associating the hashes of cached requests with the level ids the requested returned
 table! {
     request_results (level_id, request_hash) {
         level_id -> Int8,
@@ -63,6 +65,7 @@ impl Insertable<request_results::table> for (u64, u64) {
     }
 }
 
+// Metadata table storing information about when a whole request result set was cached
 meta_table!(level_list_meta, request_hash);
 
 allow_tables_to_appear_in_same_query!(request_results, partial_level);
