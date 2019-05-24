@@ -8,9 +8,9 @@ mod macros;
 mod creator;
 mod level;
 mod partial_level;
+mod profile;
 mod song;
 mod wrap;
-mod profile;
 
 // diesel devs refuse to make their macros work with the new rust 2018 import mechanics, so this
 // shit is necessary
@@ -83,7 +83,10 @@ mod postgres {
 
     impl Cache<PgConnection> {
         pub fn postgres(database_url: String) -> Result<Self, r2d2::Error> {
-            Pool::new(ConnectionManager::new(database_url)).map(Self)
+            Ok(Cache {
+                pool: Pool::new(ConnectionManager::new(database_url))?,
+                expire_after: Duration::minutes(60),
+            })
         }
 
         pub fn initialize(&self) -> Result<(), diesel_migrations::RunMigrationsError> {

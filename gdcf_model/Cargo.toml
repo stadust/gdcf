@@ -12,6 +12,7 @@ log = "^0.4.0"
 flate2 = "1.0.6"
 
 [features]
+default = ["serde_support"]
 serde_support = [
     "serde",
     "serde_derive"
