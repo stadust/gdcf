@@ -30,8 +30,8 @@ diesel_stuff! {
         (is_epic, is_epic, bool),
         (index_43, index_43, String),
         (object_amount, object_amount, Option<u32>),
-        (index_46, index_46, String),
-        (index_47, index_47, String)
+        (index_46, index_46, Option<String>),
+        (index_47, index_47, Option<String>)
     }
 }
 

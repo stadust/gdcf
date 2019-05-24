@@ -392,14 +392,14 @@ where
     ///
     /// ## GD Internals:
     /// This value is provided at index `46` and seems to be an integer
-    pub index_46: String,
+    pub index_46: Option<String>,
 
     /// According to the GDPS source, this is always `2`, although that is
     /// evidently wrong
     ///
     /// ## GD Internals:
     /// This value is provided at index `47` and seems to be an integer
-    pub index_47: String,
+    pub index_47: Option<String>,
 }
 
 impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
