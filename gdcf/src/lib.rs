@@ -458,6 +458,41 @@ where
     }
 }
 
+impl<A, C, Song> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, Option<User>>>> for Gdcf<A, C>
+where
+    A: ApiClient + MakeRequest<LevelsRequest> + MakeRequest<UserRequest>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<LevelsRequest> + CanCache<UserRequest> + Lookup<Creator>,
+    Song: PartialEq + Send + Clone + 'static,
+    Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, Option<Creator>>>>,
+{
+    fn process_request(&self, request: LevelsRequest) -> GdcfFuture<Vec<PartialLevel<Song, Option<User>>>, <A as ApiClient>::Err, C> {
+        let cache = self.cache();
+        let gdcf = self.clone();
+
+        let lookup = move |level: &PartialLevel<Song, Option<Creator>>| {
+            level
+                .creator
+                .as_ref()
+                .and_then(|creator| creator.account_id)
+                .map(|account_id| cache.lookup(account_id))
+                .transpose()
+        };
+
+        let refresh = move |level: &PartialLevel<Song, Option<Creator>>| {
+            gdcf.refresh(UserRequest::new(level.creator.as_ref().unwrap().account_id.unwrap()))
+                .then(|result| {
+                    match result {
+                        Err(GdcfError::Api(ref err)) if err.is_no_result() => Ok(None),
+                        Err(err) => Err(err),
+                        Ok(thing) => Ok(Some(thing)),
+                    }
+                })
+        };
+
+        self.levels(request).multi_chain(lookup, refresh, exchange::partial_level_user)
+    }
+}
+
 // TODO: impl ProcessRequest<LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf
 
 impl<A, C> Gdcf<A, C>

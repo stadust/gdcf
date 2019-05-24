@@ -25,7 +25,7 @@ diesel_stuff! {
         (creator_points, creator_points, u16),
         (index_10, index_10, String),
         (index_11, index_11, String),
-        (secret_coints, secret_coins, u8),
+        (secret_coins, secret_coins, u8),
         (account_id, account_id, u64),
         (user_coins, user_coins, u16),
         (index_18, index_18, String),
