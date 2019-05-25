@@ -12,7 +12,7 @@ CREATE TABLE newgrounds_song (
 
 CREATE TABLE song_meta (
     song_id BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE creator (
@@ -23,7 +23,7 @@ CREATE TABLE creator (
 
 CREATE TABLE creator_meta (
     user_id BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE partial_level (
@@ -54,12 +54,12 @@ CREATE TABLE partial_level (
 
 CREATE TABLE partial_level_meta (
     level_id BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE level_list_meta (
     request_hash BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE request_results (
@@ -69,7 +69,7 @@ CREATE TABLE request_results (
 
 CREATE TABLE level (
     level_id BIGINT PRIMARY KEY REFERENCES partial_level (level_id),
-    level_data BLOB NOT NULL,
+    level_data BYTEA NOT NULL,
     level_password TEXT,
     time_since_upload TEXT NOT NULL,
     time_since_update TEXT NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE level (
 
 CREATE TABLE level_meta (
     level_id BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE profile (
@@ -116,5 +116,5 @@ CREATE TABLE profile (
 
 CREATE TABLE profile_meta (
     user_id INTEGER PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIMEZONE
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
