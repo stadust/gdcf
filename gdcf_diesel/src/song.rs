@@ -1,12 +1,10 @@
 use crate::wrap::Wrapped;
-use core::borrow::Borrow;
 use diesel::{
-    associations::{HasTable, Identifiable},
+    associations::Identifiable,
     backend::Backend,
     deserialize::{FromSqlRow, Queryable},
-    query_builder::AsChangeset,
     sql_types::*,
-    ExpressionMethods, Insertable,
+    ExpressionMethods,
 };
 use gdcf_model::song::NewgroundsSong;
 

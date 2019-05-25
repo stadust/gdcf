@@ -1,4 +1,4 @@
-use diesel::{deserialize::Queryable, insertable::Insertable};
+use diesel::insertable::Insertable;
 
 pub(crate) struct Wrapped<T>(pub(crate) T);
 

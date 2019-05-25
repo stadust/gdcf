@@ -1,6 +1,6 @@
 #![recursion_limit = "128"]
 #![deny(unused_must_use)]
-#![allow(unused_imports)]
+#![deny(unused_imports)]
 #[macro_use]
 mod meta;
 #[macro_use]
@@ -21,27 +21,37 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use crate::{
-    creator::{creator as cr, creator_meta as cr_m},
     meta::{DatabaseEntry, Entry},
     wrap::Wrapped,
 };
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use diesel::{query_dsl::QueryDsl, query_source::Table, r2d2::ConnectionManager, Connection, ExpressionMethods, Insertable, RunQueryDsl};
+use chrono::{DateTime, Duration, Utc};
+use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
 use gdcf::{
-    cache::{CacheEntry, CacheEntryMeta, Lookup, Store},
+    cache::{CacheEntry, Lookup, Store},
     error::CacheError,
-    Secondary,
 };
-use gdcf_model::{level::PartialLevel, song::NewgroundsSong, user::Creator};
+use gdcf_model::level::PartialLevel;
 use r2d2::Pool;
 
-pub struct Cache<T: Connection + 'static> {
-    pool: Pool<ConnectionManager<T>>,
+// this means we cannot enable two features at once. Since diesel doesn't allow writing database
+// agnostic code, the alternative to this is wrapping everything in macros (like we used to do in
+// gdcf_dbcache). That's a crappy alternative. We dont do that there
+#[cfg(feature = "pg")]
+use diesel::pg::PgConnection;
+
+#[cfg(feature = "sqlite")]
+use diesel::sqlite::SqliteConnection;
+
+pub struct Cache {
+    #[cfg(feature = "pg")]
+    pool: Pool<ConnectionManager<PgConnection>>,
+    #[cfg(feature = "sqlite")]
+    pool: Pool<ConnectionManager<SqliteConnection>>,
     expire_after: Duration,
 }
 
-impl<T: Connection + 'static> Cache<T> {
+impl Cache {
     fn entry(&self, db_entry: DatabaseEntry) -> Entry {
         let now = Utc::now();
         let then = DateTime::<Utc>::from_utc(db_entry.cached_at, Utc);
@@ -55,7 +65,7 @@ impl<T: Connection + 'static> Cache<T> {
     }
 }
 
-impl<T: Connection + 'static> Clone for Cache<T> {
+impl Clone for Cache {
     fn clone(&self) -> Self {
         Cache {
             pool: self.pool.clone(),
@@ -64,30 +74,19 @@ impl<T: Connection + 'static> Clone for Cache<T> {
     }
 }
 
-// this means we cannot enable two features at once. Since diesel doesn't allow writing database
-// agnostic code, the alternative to this is wrapping everything in macros (like we used to do in
-// gdcf_dbcache). That's a crappy alternative. We dont do that there
-#[cfg(feature = "pg")]
-type DB = diesel::pg::PgConnection;
-
-#[cfg(feature = "sqlite")]
-type DB = diesel::sqlite::SqliteConnection;
-
 #[cfg(feature = "pg")]
 mod postgres {
     use super::Cache;
-    use crate::meta::Entry;
     use chrono::Duration;
-    use diesel::{connection::Connection, pg::PgConnection, r2d2::ConnectionManager};
-    use gdcf::error::CacheError;
+    use diesel::r2d2::ConnectionManager;
     use r2d2::Pool;
 
     embed_migrations!("migrations/postgres");
 
-    impl Cache<PgConnection> {
-        pub fn postgres(database_url: String) -> Result<Self, r2d2::Error> {
+    impl Cache {
+        pub fn postgres(database_url: impl Into<String>) -> Result<Self, r2d2::Error> {
             Ok(Cache {
-                pool: Pool::new(ConnectionManager::new(database_url))?,
+                pool: Pool::new(ConnectionManager::new(database_url.into()))?,
                 expire_after: Duration::minutes(60),
             })
         }
@@ -102,13 +101,12 @@ mod postgres {
 mod sqlite {
     use super::Cache;
     use chrono::Duration;
-    use diesel::{r2d2::ConnectionManager, sqlite::SqliteConnection};
+    use diesel::r2d2::ConnectionManager;
     use r2d2::Pool;
-    use std::path::Path;
 
     embed_migrations!("migrations/sqlite");
 
-    impl Cache<SqliteConnection> {
+    impl Cache {
         pub fn in_memory() -> Result<Self, r2d2::Error> {
             Ok(Self {
                 pool: Pool::new(ConnectionManager::new(":memory:"))?,
@@ -116,9 +114,9 @@ mod sqlite {
             })
         }
 
-        pub fn sqlite(path: String) -> Result<Self, r2d2::Error> {
+        pub fn sqlite(path: impl Into<String>) -> Result<Self, r2d2::Error> {
             Ok(Self {
-                pool: Pool::new(ConnectionManager::new(path))?,
+                pool: Pool::new(ConnectionManager::new(path.into()))?,
                 expire_after: Duration::seconds(60),
             })
         }
@@ -162,7 +160,7 @@ impl CacheError for Error {
     }
 }
 
-impl gdcf::cache::Cache for Cache<DB> {
+impl gdcf::cache::Cache for Cache {
     type CacheEntryMeta = Entry;
     type Err = Error;
 }
@@ -170,10 +168,10 @@ impl gdcf::cache::Cache for Cache<DB> {
 // TODO: in the future we can probably make these macro-generated as well, but for now we only have
 // one of them, so its fine
 
-impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
+impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
         use crate::partial_level::*;
-        use diesel::{JoinOnDsl, Queryable};
+        use diesel::JoinOnDsl;
 
         let connection = self.pool.get()?;
 
@@ -194,7 +192,7 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
     }
 }
 
-impl Store<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
+impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
     fn store(&mut self, partial_levels: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
 

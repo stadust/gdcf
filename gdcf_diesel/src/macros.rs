@@ -1,8 +1,6 @@
 #[cfg(feature = "pg")]
 macro_rules! upsert {
     ($self: expr, $object: expr, $table: expr, $column: expr) => {{
-        use diesel::{pg::upsert::*, query_builder::AsChangeset};
-
         diesel::insert_into($table)
             .values($object)
             .on_conflict($column)
@@ -227,12 +225,12 @@ macro_rules! __for_values {
 macro_rules! store_simply {
     ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
         fn __impl_store() {
-            use crate::{meta::Entry, Cache, DB};
+            use crate::{meta::Entry, Cache};
             use diesel::RunQueryDsl;
             use gdcf::cache::Store;
             use log::debug;
 
-            impl Store<$to_store_ty> for Cache<DB> {
+            impl Store<$to_store_ty> for Cache {
                 fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
                     debug!("Storing {}", object);
 
@@ -251,11 +249,11 @@ macro_rules! store_simply {
 macro_rules! lookup_simply {
     ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{meta::Entry, wrap::Wrapped, Cache, DB};
+            use crate::{wrap::Wrapped, Cache};
             use diesel::{QueryDsl, RunQueryDsl};
             use gdcf::cache::{CacheEntry, Lookup};
 
-            impl Lookup<$to_lookup_ty> for Cache<DB> {
+            impl Lookup<$to_lookup_ty> for Cache {
                 fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Self>, Self::Err> {
                     let connection = self.pool.get()?;
                     let entry = $meta_table::table
@@ -289,8 +287,6 @@ macro_rules! diesel_stuff {
             }
         }
 
-        use diesel::sql_types::*;
-
         type Row = ($(__row_type!($($rust_type)*)),*);
         type Values<'a> = ($(diesel::dsl::Eq<$table_name::$column_name, __ref_if_not_copy!($($rust_type)*)>),*);
         type SqlType = ($(__diesel_type!($($rust_type)*)),*);
@@ -304,6 +300,9 @@ macro_rules! diesel_stuff {
                 values(self).values()
             }
         }
+
+        #[allow(unused_imports)]
+        use diesel::sql_types::*;
 
         /*
         Alright, so

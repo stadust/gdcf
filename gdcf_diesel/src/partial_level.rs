@@ -1,8 +1,7 @@
 use crate::wrap::Wrapped;
-use diesel::{backend::Backend, deserialize::FromSqlRow, expression::AsExpression, insertable::Insertable, ExpressionMethods, Queryable};
+use diesel::{backend::Backend, deserialize::FromSqlRow, insertable::Insertable, ExpressionMethods, Queryable};
 use gdcf_model::{
     level::{Featured, LevelLength, LevelRating, PartialLevel},
-    song::MainSong,
     GameVersion,
 };
 

@@ -1,4 +1,4 @@
-use crate::{meta::Entry, wrap::Wrapped, Cache, DB};
+use crate::{meta::Entry, wrap::Wrapped, Cache};
 use diesel::{backend::Backend, deserialize::FromSqlRow, ExpressionMethods, Queryable, RunQueryDsl};
 use gdcf::cache::{CacheEntry, Lookup, Store};
 use gdcf_model::level::{Level, Password};
@@ -32,7 +32,6 @@ impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
     type Values = <Values<'a> as diesel::Insertable<level::table>>::Values;
 
     fn values(self) -> Self::Values {
-        use self::values;
         use level::columns::*;
 
         (
@@ -86,7 +85,7 @@ meta_table!(level_meta, level_id);
 
 lookup_simply!(SemiLevel, level, level_meta, level_id);
 
-impl Lookup<Level<u64, u64>> for Cache<DB> {
+impl Lookup<Level<u64, u64>> for Cache {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Self>, Self::Err> {
         let CacheEntry { object: semi, metadata }: CacheEntry<SemiLevel, _> = self.lookup(key)?;
         let partial = self.lookup(semi.level_id)?.into_inner();
@@ -105,7 +104,7 @@ impl Lookup<Level<u64, u64>> for Cache<DB> {
     }
 }
 
-impl Store<Level<u64, u64>> for Cache<DB> {
+impl Store<Level<u64, u64>> for Cache {
     fn store(&mut self, obj: &Level<u64, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         self.store(&obj.base, obj.base.level_id)?;
 
