@@ -622,6 +622,17 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         }
     }
 
+
+    pub fn deconstruct(self) -> Result<(Option<impl Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>>>, Option<CacheEntry<T, C>>), C::Err> {
+        match self {
+            GdcfFuture::Empty => Ok((None, None)),
+            GdcfFuture::CacheError(err) => Err(err),
+            GdcfFuture::Uncached(fut) => Ok((Some(fut), None)),
+            GdcfFuture::Outdated(entry, fut) => Ok((Some(fut), Some(entry))),
+            GdcfFuture::UpToDate(entry) => Ok((None, Some(entry)))
+        }
+    }
+
     fn chain<I, U, Look, Req, Comb, Fut>(self, lookup: Look, request: Req, combinator: Comb) -> GdcfFuture<U, A, C>
     where
         T: Clone + Send + 'static,
