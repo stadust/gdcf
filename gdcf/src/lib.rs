@@ -493,8 +493,6 @@ where
     }
 }
 
-// TODO: impl ProcessRequest<LevelsRequest, Vec<PartialLevel<u64, User>>> for Gdcf
-
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
@@ -603,6 +601,27 @@ pub enum GdcfFuture<T, A: ApiError, C: Cache> {
 }
 
 impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
+    pub fn is_err(&self) -> bool {
+        match self {
+            GdcfFuture::Empty | GdcfFuture::CacheError(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn cached(&self) -> Option<&CacheEntry<T, C>> {
+        match self {
+            GdcfFuture::Outdated(ref entry, _) | GdcfFuture::UpToDate(ref entry) => Some(entry),
+            _ => None,
+        }
+    }
+
+    pub fn inner_future(&self) -> Option<&impl Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>>> {
+        match self {
+            GdcfFuture::Uncached(ref fut) | GdcfFuture::Outdated(_, ref fut) => Some(fut),
+            _ => None,
+        }
+    }
+
     fn chain<I, U, Look, Req, Comb, Fut>(self, lookup: Look, request: Req, combinator: Comb) -> GdcfFuture<U, A, C>
     where
         T: Clone + Send + 'static,
