@@ -20,7 +20,7 @@ features = ["chrono", "r2d2"]
 path = "../gdcf_model"
 
 [features]
-default = ["sqlite"]
+default = ["pg"]
 
 pg = ["diesel/postgres"]
 sqlite = ["diesel/sqlite"]

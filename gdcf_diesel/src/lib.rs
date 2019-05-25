@@ -76,7 +76,10 @@ type DB = diesel::sqlite::SqliteConnection;
 #[cfg(feature = "pg")]
 mod postgres {
     use super::Cache;
+    use crate::meta::Entry;
+    use chrono::Duration;
     use diesel::{connection::Connection, pg::PgConnection, r2d2::ConnectionManager};
+    use gdcf::error::CacheError;
     use r2d2::Pool;
 
     embed_migrations!("migrations/postgres");
@@ -90,7 +93,7 @@ mod postgres {
         }
 
         pub fn initialize(&self) -> Result<(), diesel_migrations::RunMigrationsError> {
-            embedded_migrations::run(&self.0.get().unwrap())
+            embedded_migrations::run(&self.pool.get().unwrap())
         }
     }
 }
@@ -211,7 +214,7 @@ impl Store<Vec<PartialLevel<u64, u64>>> for Cache<DB> {
 
         let entry = Entry::new(key);
 
-        upsert!(self, entry, level_list_meta::table, level_list_meta::request_hash);
+        update_entry!(self, entry, level_list_meta::table, level_list_meta::request_hash);
 
         Ok(entry)
     }

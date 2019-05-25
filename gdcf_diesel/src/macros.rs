@@ -12,6 +12,15 @@ macro_rules! upsert {
     }};
 }
 
+macro_rules! update_entry {
+    ($self: expr, $entry: expr, $table: expr, $column: expr) => {{
+        use diesel::{ExpressionMethods, QueryDsl};
+
+        diesel::delete($table.filter($column.eq($entry.key as i64))).execute(&$self.pool.get()?)?;
+        diesel::insert_into($table).values($entry).execute(&$self.pool.get()?)?;
+    }};
+}
+
 #[cfg(feature = "sqlite")]
 macro_rules! upsert {
     ($self: expr, $object: expr, $table: expr, $_: expr) => {
@@ -229,7 +238,7 @@ macro_rules! store_simply {
 
                     let entry = Entry::new(key);
 
-                    upsert!(self, entry, $meta::table, $meta::$primary);
+                    update_entry!(self, entry, $meta::table, $meta::$primary);
                     upsert!(self, object, $table::table, $table::$primary);
 
                     Ok(entry)
