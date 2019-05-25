@@ -123,8 +123,8 @@ use futures::{
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
-    song::{NewgroundsSong, SERVER_SIDED_DATA_INCONSISTENCY_ERROR},
-    user::{Creator, User, DELETED},
+    song::NewgroundsSong,
+    user::{Creator, User},
 };
 use log::{info, warn};
 use std::mem;
@@ -622,14 +622,21 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         }
     }
 
-
-    pub fn deconstruct(self) -> Result<(Option<impl Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>>>, Option<CacheEntry<T, C>>), C::Err> {
+    pub fn deconstruct(
+        self,
+    ) -> Result<
+        (
+            Option<impl Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>>>,
+            Option<CacheEntry<T, C>>,
+        ),
+        C::Err,
+    > {
         match self {
             GdcfFuture::Empty => Ok((None, None)),
             GdcfFuture::CacheError(err) => Err(err),
             GdcfFuture::Uncached(fut) => Ok((Some(fut), None)),
             GdcfFuture::Outdated(entry, fut) => Ok((Some(fut), Some(entry))),
-            GdcfFuture::UpToDate(entry) => Ok((None, Some(entry)))
+            GdcfFuture::UpToDate(entry) => Ok((None, Some(entry))),
         }
     }
 

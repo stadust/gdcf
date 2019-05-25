@@ -4,7 +4,7 @@ use std::fmt::{Display, Error, Formatter};
 
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
-
+/*
 // FIXME: once const_string_new stabilized, turn this into a constant
 pub fn SERVER_SIDED_DATA_INCONSISTENCY_ERROR() -> NewgroundsSong {
     NewgroundsSong {
@@ -18,7 +18,7 @@ pub fn SERVER_SIDED_DATA_INCONSISTENCY_ERROR() -> NewgroundsSong {
         index_8: String::new(),
         link: String::new(),
     }
-}
+}*/
 /// Struct representing Geometry Dash's main songs.
 ///
 /// This data is not provided by the API and needs to be manually kept up to
