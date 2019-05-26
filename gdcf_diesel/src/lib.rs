@@ -132,6 +132,9 @@ pub enum Error {
     #[fail(display = "Not in database :(")]
     CacheMiss,
 
+    #[fail(display = "Entry marked as absent")]
+    MarkedAbsent,
+
     #[fail(display = "Database error: {}", _0)]
     Database(#[cause] diesel::result::Error),
 
@@ -155,6 +158,13 @@ impl CacheError for Error {
     fn is_cache_miss(&self) -> bool {
         match self {
             Error::CacheMiss | Error::Database(diesel::result::Error::NotFound) => true,
+            _ => false,
+        }
+    }
+
+    fn is_marked_absent(&self) -> bool {
+        match self {
+            Error::MarkedAbsent => true,
             _ => false,
         }
     }
