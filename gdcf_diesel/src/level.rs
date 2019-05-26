@@ -105,6 +105,10 @@ impl Lookup<Level<u64, u64>> for Cache {
 }
 
 impl Store<Level<u64, u64>> for Cache {
+    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+        unimplemented!()
+    }
+
     fn store(&mut self, obj: &Level<u64, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         self.store(&obj.base, obj.base.level_id)?;
 

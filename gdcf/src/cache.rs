@@ -11,6 +11,7 @@ pub trait Lookup<Obj>: Cache {
 
 pub trait Store<Obj>: Cache {
     fn store(&mut self, obj: &Obj, key: u64) -> Result<Self::CacheEntryMeta, Self::Err>;
+    fn mark_absent(&mut self, key: u64) -> Result<Self::CacheEntryMeta, Self::Err>;
 }
 
 pub trait CanCache<R: Request>: Cache + Lookup<R::Result> + Store<R::Result> {
@@ -51,4 +52,5 @@ impl<T, C: Cache> CacheEntry<T, C> {
 
 pub trait CacheEntryMeta: Clone + Send + Sync + 'static {
     fn is_expired(&self) -> bool;
+    fn is_absent(&self) -> bool;
 }

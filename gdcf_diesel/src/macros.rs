@@ -231,6 +231,14 @@ macro_rules! store_simply {
             use log::debug;
 
             impl Store<$to_store_ty> for Cache {
+                fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+                    let entry = Entry::absent(key);
+
+                    update_entry!(&self, entry, $meta::table, $meta::$primary);
+
+                    Ok(entry)
+                }
+
                 fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
                     debug!("Storing {}", object);
 
@@ -249,7 +257,7 @@ macro_rules! store_simply {
 macro_rules! lookup_simply {
     ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{wrap::Wrapped, Cache};
+            use crate::{wrap::Wrapped, Cache, Error};
             use diesel::{QueryDsl, RunQueryDsl};
             use gdcf::cache::{CacheEntry, Lookup};
 
@@ -260,6 +268,11 @@ macro_rules! lookup_simply {
                         .filter($meta_table::$primary_column.eq(key as i64))
                         .get_result(&connection)?;
                     let entry = self.entry(entry);
+
+                    if entry.absent {
+                        return Err(Error::MarkedAbsent(entry.cached_at))
+                    }
+
                     let wrapped: Wrapped<$to_lookup_ty> = $object_table::table
                         .filter($object_table::$primary_column.eq(key as i64))
                         .get_result(&connection)?;

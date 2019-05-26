@@ -24,7 +24,7 @@ use crate::{
     meta::{DatabaseEntry, Entry},
     wrap::Wrapped,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, Utc, NaiveDateTime};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
 use gdcf::{
@@ -61,6 +61,7 @@ impl Cache {
             expired,
             key: db_entry.key as u64,
             cached_at: db_entry.cached_at,
+            absent: db_entry.absent,
         }
     }
 }
@@ -133,7 +134,7 @@ pub enum Error {
     CacheMiss,
 
     #[fail(display = "Entry marked as absent")]
-    MarkedAbsent,
+    MarkedAbsent(NaiveDateTime),
 
     #[fail(display = "Database error: {}", _0)]
     Database(#[cause] diesel::result::Error),
@@ -162,9 +163,9 @@ impl CacheError for Error {
         }
     }
 
-    fn is_marked_absent(&self) -> bool {
+    fn is_absent(&self) -> bool {
         match self {
-            Error::MarkedAbsent => true,
+            Error::MarkedAbsent(_) => true,
             _ => false,
         }
     }
@@ -189,6 +190,10 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
             .filter(level_list_meta::request_hash.eq(key as i64))
             .get_result(&connection)?;
 
+        if entry.absent {
+            return Err(Error::MarkedAbsent(entry.cached_at))
+        }
+
         let levels = partial_level::table
             .inner_join(request_results::table.on(partial_level::level_id.eq(request_results::level_id)))
             .filter(request_results::request_hash.eq(key as i64))
@@ -203,6 +208,16 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
 }
 
 impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
+    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+        use crate::partial_level::*;
+
+        let entry = Entry::absent(key);
+
+        update_entry!(self, entry, level_list_meta::table, level_list_meta::request_hash);
+
+        Ok(entry)
+    }
+
     fn store(&mut self, partial_levels: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
 
