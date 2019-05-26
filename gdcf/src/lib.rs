@@ -165,9 +165,6 @@ impl std::fmt::Display for Secondary {
     }
 }
 
-// TODO: for levels, get their creator via the getGJProfile endpoint, then we can give PartialLevel
-// a User
-
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C>;
 
@@ -551,7 +548,7 @@ where
     /// + [`u64`] - The creator are only provided as their user IDs. Causes no additional requests
     /// + [`Creator`] - Causes no additional requests
     /// + [`User`] - Causes up to 10 additional [`UserRequest`]s to retrieve every creator's
-    /// profile (Not Yet Implemented)
+    /// profile
     ///
     /// `Song` can currently be one of the following:
     /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
