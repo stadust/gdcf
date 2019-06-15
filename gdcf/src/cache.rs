@@ -1,7 +1,6 @@
 use crate::{
     api::request::Request,
     error::{ApiError, CacheError, GdcfError},
-    Secondary,
 };
 use futures::Future;
 
@@ -100,7 +99,7 @@ impl<T, C: Cache> CacheEntry<T, C> {
         match self {
             CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
             CacheEntry::MarkedAbsent(meta) => Ok((CacheEntry::MarkedAbsent(meta), None)),
-            CacheEntry::Cached(ref object, ref meta) => {
+            CacheEntry::Cached(ref object, _) => {
                 let entry = lookup(object)?;
                 let future = if entry.is_expired() {
                     let clone = self.clone();

@@ -1,6 +1,6 @@
 use crate::{error::ValueError, Parse};
 use gdcf_model::level::data::{
-    portal::{self, PortalData, PortalType, Speed},
+    portal::{self, PortalData, PortalType},
     LevelInformationSource, LevelMetadata, LevelObject, ObjectData, Stats,
 };
 #[cfg(feature = "parallel")]

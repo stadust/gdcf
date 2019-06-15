@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    //unused_imports,
+    unused_imports,
     unused_parens
 )]
 
@@ -116,19 +116,20 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, CacheError, GdcfError},
-    future::{GdcfFuture, GdcfStream},
+    future::{GdcfStream},
 };
 use futures::{
-    future::{err, join_all, ok, Either},
-    task, Async, Future, Stream,
+    future::{ok},
+    Future, Stream,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use log::{info, warn};
-use std::mem;
+use log::{info};
+
+pub use crate::future::GdcfFuture;
 
 #[macro_use]
 mod macros;
@@ -456,7 +457,7 @@ where
         // the GD servers failed to provide the creator - there's nothing we can do about it, so we just
         // return a future that resolves to `None` here (making a LevelsRequest would obviously lead to an
         // infinite loop of sorts)
-        let refresh = move |level: &PartialLevel<Song, u64>| ok(CacheEntry::DeducedAbsent);
+        let refresh = move |_: &PartialLevel<Song, u64>| ok(CacheEntry::DeducedAbsent);
 
         self.levels(request)?
             .extend_all(lookup, refresh, |p, q| Some(exchange::partial_level_user(p, q)))
@@ -485,7 +486,7 @@ where
         // the GD servers failed to provide the song - there's nothing we can do about it, so we just
         // return a future that resolves to `None` here (making a LevelsRequest would obviously lead to an
         // infinite loop of sorts)
-        let refresh = move |level: &PartialLevel<u64, u64>| ok(CacheEntry::DeducedAbsent);
+        let refresh = move |_: &PartialLevel<u64, u64>| ok(CacheEntry::DeducedAbsent);
 
         self.levels(request)?
             .extend_all(lookup, refresh, |p, q| Some(exchange::partial_level_song(p, q)))

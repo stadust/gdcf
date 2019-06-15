@@ -3,11 +3,6 @@ use crate::{
     error::ValueError,
 };
 use base64::{DecodeError, URL_SAFE};
-use percent_encoding::percent_decode;
-use std::{
-    error::Error,
-    str::{FromStr, Utf8Error},
-};
 
 #[derive(Debug, Clone)]
 pub struct SelfZip<I> {
