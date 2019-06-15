@@ -125,15 +125,15 @@ pub(crate) fn level_song<User: PartialEq>(
         index_36,
     }: Level<u64, User>,
     song: Option<NewgroundsSong>,
-) -> Level<NewgroundsSong, User> {
-    Level {
+) -> Option<Level<NewgroundsSong, User>> {
+    Some(Level {
         base: partial_level_song(base, song),
         level_data,
         password,
         time_since_update,
         time_since_upload,
         index_36,
-    }
+    })
 }
 
 pub(crate) fn level_user<T: PartialEq, User: PartialEq, Song: PartialEq>(
@@ -146,13 +146,13 @@ pub(crate) fn level_user<T: PartialEq, User: PartialEq, Song: PartialEq>(
         index_36,
     }: Level<Song, T>,
     user: User,
-) -> Level<Song, User> {
-    Level {
+) -> Option<Level<Song, User>> {
+    Some(Level {
         base: partial_level_user(base, user),
         level_data,
         password,
         time_since_upload,
         time_since_update,
         index_36,
-    }
+    })
 }

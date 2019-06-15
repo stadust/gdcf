@@ -30,14 +30,10 @@ impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CacheEntry<T, C: Cache> {
-    Absent(C::CacheEntryMeta),
+    DeducedAbsent,
+    MarkedAbsent(C::CacheEntryMeta),
     Cached(T, C::CacheEntryMeta),
 }
-/*
-pub struct CacheEntry<T, C: Cache> {
-    pub object: Option<T>,
-    pub metadata: C::CacheEntryMeta,
-}*/
 
 impl<T, C: Cache> CacheEntry<T, C> {
     pub fn new(object: T, metadata: C::CacheEntryMeta) -> Self {
@@ -45,23 +41,20 @@ impl<T, C: Cache> CacheEntry<T, C> {
     }
 
     pub fn absent(metadata: C::CacheEntryMeta) -> Self {
-        CacheEntry::Absent(metadata)
-    }
-
-    pub fn meta(&self) -> &C::CacheEntryMeta {
-        match self {
-            CacheEntry::Absent(meta) | CacheEntry::Cached(_, meta) => meta,
-        }
+        CacheEntry::MarkedAbsent(metadata)
     }
 
     pub fn is_expired(&self) -> bool {
-        self.meta().is_expired()
+        match self {
+            CacheEntry::DeducedAbsent => false,
+            CacheEntry::MarkedAbsent(meta) | CacheEntry::Cached(_, meta) => meta.is_expired(),
+        }
     }
 
     pub fn is_absent(&self) -> bool {
         match self {
-            CacheEntry::Absent(_) => true,
-            _ => false,
+            CacheEntry::Cached(..) => false,
+            _ => true,
         }
     }
 
@@ -69,13 +62,19 @@ impl<T, C: Cache> CacheEntry<T, C> {
         self, other: CacheEntry<AddOn, C>, combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
     ) -> CacheEntry<R, C> {
         match self {
-            CacheEntry::Absent(meta) => CacheEntry::Absent(meta),
+            CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
+            CacheEntry::MarkedAbsent(meta) => CacheEntry::MarkedAbsent(meta),
             CacheEntry::Cached(object, meta) =>
                 match other {
-                    CacheEntry::Absent(absent_meta) =>
+                    CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
                         match combinator(object, None) {
                             Some(combined) => CacheEntry::Cached(combined, meta),
-                            None => CacheEntry::Absent(absent_meta),
+                            None =>
+                                match other {
+                                    CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
+                                    CacheEntry::MarkedAbsent(absent_meta) => CacheEntry::MarkedAbsent(absent_meta),
+                                    _ => unreachable!(),
+                                },
                         },
                     CacheEntry::Cached(addon, _) => CacheEntry::Cached(combinator(object, Some(addon)).unwrap(), meta),
                 },
@@ -99,9 +98,10 @@ impl<T, C: Cache> CacheEntry<T, C> {
         Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>>,
     {
         match self {
-            CacheEntry::Absent(meta) => Ok((CacheEntry::Absent(meta), None)),
+            CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
+            CacheEntry::MarkedAbsent(meta) => Ok((CacheEntry::MarkedAbsent(meta), None)),
             CacheEntry::Cached(ref object, ref meta) => {
-                let entry = lookup(&object)?;
+                let entry = lookup(object)?;
                 let future = if entry.is_expired() {
                     let clone = self.clone();
 
@@ -115,8 +115,74 @@ impl<T, C: Cache> CacheEntry<T, C> {
         }
     }
 }
+// FIXME: If impl specialization ever gets stabilized, this looks like something that could benefit
+// from it.
+impl<T, C: Cache> CacheEntry<Vec<T>, C> {
+    pub(crate) fn extend_all<A: ApiError, AddOn, U, Look, Req, Comb, Fut>(
+        self, lookup: Look, request: Req, combinator: Comb,
+    ) -> Result<
+        (
+            CacheEntry<Vec<U>, C>,
+            Option<impl Future<Item = CacheEntry<Vec<U>, C>, Error = GdcfError<A, C::Err>>>,
+        ),
+        C::Err,
+    >
+    where
+        T: Clone,
+        Look: Fn(&T) -> Result<CacheEntry<AddOn, C>, C::Err>,
+        Req: Fn(&T) -> Fut,
+        Comb: Copy + Fn(T, Option<AddOn>) -> Option<U>,
+        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>>,
+    {
+        match self {
+            CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
+            CacheEntry::MarkedAbsent(meta) => Ok((CacheEntry::MarkedAbsent(meta), None)),
+            CacheEntry::Cached(objects, meta) => {
+                let mut combined = Vec::new();
+                let mut futures = Vec::new();
 
-pub trait CacheEntryMeta: Clone + Send + Sync + 'static {
+                for object in objects {
+                    let addon_entry = lookup(&object)?;
+
+                    if addon_entry.is_expired() {
+                        let entry = CacheEntry::Cached(object.clone(), meta);
+
+                        futures.push(request(&object).map(move |addon| entry.combine(addon, combinator)))
+                    };
+
+                    if let CacheEntry::Cached(object, _) = CacheEntry::Cached(object, meta).combine(addon_entry, combinator) {
+                        combined.push(object)
+                    }
+                }
+
+                let combined_entry = CacheEntry::Cached(combined, meta);
+
+                if futures.is_empty() {
+                    Ok((combined_entry, None))
+                } else {
+                    let future = futures::future::join_all(futures).map(move |entries| {
+                        CacheEntry::Cached(
+                            entries
+                                .into_iter()
+                                .filter_map(|entry| {
+                                    match entry {
+                                        CacheEntry::Cached(object, _) => Some(object),
+                                        _ => None,
+                                    }
+                                })
+                                .collect(),
+                            meta,
+                        )
+                    });
+
+                    Ok((combined_entry, Some(future)))
+                }
+            },
+        }
+    }
+}
+
+pub trait CacheEntryMeta: Copy + Send + Sync + 'static {
     fn is_expired(&self) -> bool;
     fn is_absent(&self) -> bool;
 }

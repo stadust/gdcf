@@ -34,16 +34,6 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         }
     }
 
-    fn lookup_with_cached<I>(
-        &self, lookup: impl FnOnce(&T) -> Result<CacheEntry<I, C>, C::Err>,
-    ) -> Result<Option<CacheEntry<I, C>>, C::Err> {
-        match self {
-            GdcfFuture::UpToDate(CacheEntry::Cached(object, _)) | GdcfFuture::Outdated(CacheEntry::Cached(object, _), _) =>
-                Ok(Some(lookup(object)?)),
-            _ => Ok(None),
-        }
-    }
-
     /// Constructs a future that resolves to an "extended" version of the object that would be
     /// returned by this future. For instance, if this future resolved to a `Level<u64, u64>`,
     /// the new one could resolve to a `Level<Option<NewgroundsSong>, u64>`
@@ -56,9 +46,11 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     /// + `AddOn`: The type of the object we extend with. In the
     /// example above, this would be `Option<NewgroundsSong>`
     ///
-    /// + `R`: The type of the object the
+    /// + `U`: The type of the object the
     /// new future will resolve to. In the above example this would be
     /// `Level<Option<NewgroundsSong>, u64>
+    ///
+    /// + `Look`: The type of the database-lookup closure.
     pub(crate) fn extend<AddOn, U, Look, Req, Comb, Fut>(
         self, lookup: Look, request: Req, combinator: Comb,
     ) -> Result<GdcfFuture<U, A, C>, C::Err>
@@ -74,7 +66,7 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         let future = match self {
             GdcfFuture::Empty => GdcfFuture::Empty,
             GdcfFuture::UpToDate(entry) =>
-                match entry.clone().extend(lookup, request, combinator)? {
+                match entry.extend(lookup, request, combinator)? {
                     (entry, None) => GdcfFuture::UpToDate(entry),
                     (cached, Some(future)) => GdcfFuture::Outdated(cached, Box::new(future)),
                 },
@@ -112,6 +104,62 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     }
 }
 
+// FIXME: same thing as in cache.rs, specialization would be freaking awesome
+impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
+    pub(crate) fn extend_all<AddOn, U, Look, Req, Comb, Fut>(
+        self, lookup: Look, request: Req, combinator: Comb,
+    ) -> Result<GdcfFuture<Vec<U>, A, C>, C::Err>
+    where
+        T: Clone + Send + 'static,
+        U: Send + 'static,
+        AddOn: Clone + Send + 'static,
+        Look: Clone + Fn(&T) -> Result<CacheEntry<AddOn, C>, C::Err> + Send + 'static,
+        Req: Clone + Fn(&T) -> Fut + Send + 'static,
+        Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
+    {
+        let future = match self {
+            GdcfFuture::Empty => GdcfFuture::Empty,
+            GdcfFuture::UpToDate(entry) =>
+                match entry.extend_all(lookup, request, combinator)? {
+                    (entry, None) => GdcfFuture::UpToDate(entry),
+                    (cached, Some(future)) => GdcfFuture::Outdated(cached, Box::new(future)),
+                },
+            GdcfFuture::Uncached(future) => GdcfFuture::Uncached(Box::new(Self::extend_future_all(future, lookup, request, combinator))),
+            GdcfFuture::Outdated(entry, future) =>
+                if let (entry, None) = entry.extend_all(lookup.clone(), request.clone(), combinator)? {
+                    GdcfFuture::Outdated(entry, Box::new(Self::extend_future_all(future, lookup, request, combinator)))
+                } else {
+                    GdcfFuture::Uncached(Box::new(Self::extend_future_all(future, lookup, request, combinator)))
+                },
+        };
+
+        Ok(future)
+    }
+
+    fn extend_future_all<AddOn, U, Look, Req, Comb, Fut>(
+        future: impl Future<Item = CacheEntry<Vec<T>, C>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req, combinator: Comb,
+    ) -> impl Future<Item = CacheEntry<Vec<U>, C>, Error = GdcfError<A, C::Err>>
+    where
+        T: Clone + Send + 'static,
+        U: Send + 'static,
+        AddOn: Clone + Send + 'static,
+        Look: Fn(&T) -> Result<CacheEntry<AddOn, C>, C::Err> + Send + 'static,
+        Req: Fn(&T) -> Fut + Send + 'static,
+        Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
+    {
+        future.and_then(move |cache_multi_entry| {
+            match cache_multi_entry.extend_all(lookup, request, combinator) {
+                Err(err) => Either::A(futures::future::err(GdcfError::Cache(err))),
+                Ok((entry, None)) => Either::A(futures::future::ok(entry)),
+                Ok((_, Some(future))) => Either::B(future),
+            }
+        })
+    }
+}
+
+/*
 impl<T, A, C> Into<(Option<CacheEntry<T, C>>, Option<GdcfInnerFuture<T, A, C>>)> for GdcfFuture<T, A, C>
 where
     A: ApiError,
@@ -125,7 +173,7 @@ where
             GdcfFuture::Empty => (None, None),
         }
     }
-}
+}*/
 
 impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
     type Error = GdcfError<A, C::Err>;
