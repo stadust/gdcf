@@ -94,18 +94,20 @@ impl Handler for LevelsRequest {
                 other.push(Secondary::MissingCreator(level.creator))
             }
 
-            if other
-                .iter()
-                .filter_map(|sec| {
-                    match sec {
-                        Secondary::NewgroundsSong(ref n) => Some(n.song_id),
-                        _ => None,
-                    }
-                })
-                .find(|&n| Some(n) == level.custom_song)
-                .is_none()
-            {
-                other.push(Secondary::MissingNewgroundsSong(level.custom_song.unwrap()))
+            if let Some(custom_song) = level.custom_song {
+                if other
+                    .iter()
+                    .filter_map(|sec| {
+                        match sec {
+                            Secondary::NewgroundsSong(ref n) => Some(n.song_id),
+                            _ => None,
+                        }
+                    })
+                    .find(|&n| n == custom_song)
+                    .is_none()
+                {
+                    other.push(Secondary::MissingNewgroundsSong(custom_song))
+                }
             }
         }
 

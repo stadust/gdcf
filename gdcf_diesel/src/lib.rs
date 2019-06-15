@@ -188,9 +188,9 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
             .filter(request_results::request_hash.eq(key as i64))
             .select(partial_level::all_columns)
             .load(&connection))
-            .into_iter()
-            .map(|row: Wrapped<_>| row.0)
-            .collect();
+        .into_iter()
+        .map(|row: Wrapped<_>| row.0)
+        .collect();
 
         Ok(CacheEntry::new(levels, entry))
     }
