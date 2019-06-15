@@ -144,6 +144,8 @@ mod future;
 pub enum Secondary {
     NewgroundsSong(NewgroundsSong),
     Creator(Creator),
+    MissingCreator(u64),
+    MissingNewgroundsSong(u64)
 }
 
 impl From<NewgroundsSong> for Secondary {
@@ -163,6 +165,8 @@ impl std::fmt::Display for Secondary {
         match self {
             Secondary::NewgroundsSong(inner) => inner.fmt(f),
             Secondary::Creator(inner) => inner.fmt(f),
+            Secondary::MissingCreator(cid) => write!(f, "Creator object missing server-sided: {}", cid),
+            Secondary::MissingNewgroundsSong(nid) => write!(f, "Newgrounds song object missing server-sided: {}", nid)
         }
     }
 }
@@ -250,6 +254,8 @@ where
                             match object {
                                 Secondary::NewgroundsSong(song) => cache.store(song, song.song_id),
                                 Secondary::Creator(creator) => cache.store(creator, creator.user_id),
+                                Secondary::MissingCreator(cid) => Store::<Creator>::mark_absent(&mut cache, *cid),
+                                Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSong>::mark_absent(&mut cache, *nid),
                             }
                             .map_err(GdcfError::Cache)?;
                         }
