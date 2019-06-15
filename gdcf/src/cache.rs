@@ -3,6 +3,7 @@ use crate::{
     error::{ApiError, CacheError, GdcfError},
 };
 use futures::Future;
+use std::fmt::{Debug, Formatter};
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type CacheEntryMeta: CacheEntryMeta;
@@ -27,11 +28,21 @@ pub trait CanCache<R: Request>: Cache + Lookup<R::Result> + Store<R::Result> {
 
 impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<R::Result> {}
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum CacheEntry<T, C: Cache> {
     DeducedAbsent,
     MarkedAbsent(C::CacheEntryMeta),
     Cached(T, C::CacheEntryMeta),
+}
+
+impl<T: Debug, C: Cache> Debug for CacheEntry<T, C> where C::CacheEntryMeta: Debug {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            CacheEntry::DeducedAbsent => write!(f, "DeducedAbsent"),
+            CacheEntry::MarkedAbsent(meta) => write!(f, "MarkedAbsent({:?})", meta),
+            CacheEntry::Cached(object, meta) => write!(f, "Cached({:?}, {:?})", object, meta)
+        }
+    }
 }
 
 impl<T, C: Cache> CacheEntry<T, C> {
