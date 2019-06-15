@@ -63,12 +63,11 @@ Here's an example of how to download pages 6 through 55 of featured demons level
 
 ```rust
 // First we need to configure the cache. Here we're using a sqlite in-memory database
-// whose cache entries expire after 30 minutes.
-let mut config = DatabaseCacheConfig::sqlite_memory_config();
-config.invalidate_after(Duration::minutes(30));
+// whose cache entries expire after 30 minutes (this is hardcoded in GDCF right now,
+// but will be configurable again in the future!).
+let mut cache = Cache::in_memory()?;
 
 // Then we can create the actual cache and API wrapper
-let cache = DatabaseCache::new(config);
 let client = BoomlingsClient::new();
 
 // A database cache needs to go through initialization before it can be used, as it
@@ -83,9 +82,9 @@ let gdcf = Gdcf::new(client, cache);
 // request structs. Here, we're make a requests to retrieve the 6th page of
 // featured demon levels of any demon difficulty
 let request = LevelsRequest::default()
-    .request_type(LevelRequestType::Featured)
-    .with_rating(LevelRating::Demon(DemonRating::Hard))
-    .page(5);
+   .request_type(LevelRequestType::Featured)
+   .with_rating(LevelRating::Demon(DemonRating::Hard))
+   .page(5);
 
 // To actually issue the request, we call the appropriate method on our Gdcf instance.
 // The type parameters on these methods determine how much associated information
@@ -93,34 +92,45 @@ let request = LevelsRequest::default()
 // get us information about the requested levels' custom songs and creators
 // instead of just their IDs. "paginate_levels" give us a stream over all pages
 // of results from our request instead of only the page we requested.
-let stream = gdcf.paginate_levels::<NewgroundsSong, Creator>(request);
+// We have to use `Option<Creator>` instead of just `Creator` because the
+// Geometry Dash servers sometimes "forgot" about a levels creator and simply do not
+// return them (in the game, this is where you see those "-" as the creator name)
+let stream = gdcf.paginate_levels::<NewgroundsSong, Option<Creator>>(request)?;
 
 // Since we have a stream, we can use all our favorite Stream methods from the
 // futures crate. Here we limit the stream to 50 pages of levels a print
 // out each level's name, creator, song and song artist.
 let future = stream
-    .take(50)
-    .for_each(|levels| {
-        for level in levels {
-            match level.custom_song {
-                Some(newgrounds_song) =>
-                    println!(
-                        "Retrieved demon level {} by {} using custom song {} by {}",
-                        level.name, level.creator.name, newgrounds_song.name,
-                        newgrounds_song.artist
-                    ),
-                None =>
-                    println!(
-                        "Retrieved demon level {} by {} using main song {} by {}",
-                        level.name, level.creator.name, level.main_song.unwrap().name,
-                        level.main_song.unwrap().artist
-                    )
-            }
-        }
+   .take(50)
+   .for_each(|levels| {
+       // GDCF communicates its responses as entries in the cache. If a request was succesful,
+       // its result gets stored in the cache, and we receive a `CacheEntry::Cached` variant,
+       // containing the result and some metadata.
+       if let CacheEntry::Cached(levels, _) = levels {
+           for level in levels {
+               match level.custom_song {
+                   Some(newgrounds_song) => println!(
+                       "Retrieved demon level {} by {:?} using custom song {} by {}",
+                       level.name,
+                       level.creator.map(|c| c.name),
+                       newgrounds_song.name,
+                       newgrounds_song.artist
+                   ),
+                   None => println!(
+                       "Retrieved demon level {} by {:?} using main song {} by {}",
+                       level.name,
+                       level.creator.map(|c| c.name),
+                       level.main_song.unwrap().name,
+                       level.main_song.unwrap().artist
+                   ),
+               }
+           }
+       }
 
-        Ok(())
-    })
-    .map_err(|error| eprintln!("Something went wrong! {:?}", error));
+       Ok(())
+   })
+   .map_err(|error| eprintln!("Something went wrong! {:?}", error));
 
+// Lastly, we can run our future on the tokio executor!
 tokio::run(future);
 ```
