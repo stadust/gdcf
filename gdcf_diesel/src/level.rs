@@ -87,20 +87,30 @@ lookup_simply!(SemiLevel, level, level_meta, level_id);
 
 impl Lookup<Level<u64, u64>> for Cache {
     fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Self>, Self::Err> {
-        let CacheEntry { object: semi, metadata }: CacheEntry<SemiLevel, _> = self.lookup(key)?;
-        let partial = self.lookup(semi.level_id)?.into_inner();
+        match self.lookup(key)? {
+            CacheEntry::Cached(semi_level, meta) => {
+                let semi_level: SemiLevel = semi_level;
 
-        Ok(CacheEntry {
-            object: Level {
-                base: partial,
-                level_data: semi.level_data,
-                password: semi.level_password,
-                time_since_upload: semi.time_since_upload,
-                time_since_update: semi.time_since_update,
-                index_36: semi.index_36,
+                match self.lookup(semi_level.level_id)? {
+                    CacheEntry::Cached(partial, _) =>
+                        Ok(CacheEntry::Cached(
+                            Level {
+                                base: partial,
+                                level_data: semi_level.level_data,
+                                password: semi_level.level_password,
+                                time_since_upload: semi_level.time_since_upload,
+                                time_since_update: semi_level.time_since_update,
+                                index_36: semi_level.index_36,
+                            },
+                            meta,
+                        )),
+                    CacheEntry::DeducedAbsent => Ok(CacheEntry::DeducedAbsent),
+                    CacheEntry::MarkedAbsent(meta) => Ok(CacheEntry::MarkedAbsent(meta)),
+                }
             },
-            metadata,
-        })
+            CacheEntry::DeducedAbsent => Ok(CacheEntry::DeducedAbsent),
+            CacheEntry::MarkedAbsent(meta) => Ok(CacheEntry::MarkedAbsent(meta)),
+        }
     }
 }
 

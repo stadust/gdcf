@@ -162,13 +162,6 @@ impl CacheError for Error {
             _ => false,
         }
     }
-
-    fn is_absent(&self) -> bool {
-        match self {
-            Error::MarkedAbsent(_) => true,
-            _ => false,
-        }
-    }
 }
 
 impl gdcf::cache::Cache for Cache {
