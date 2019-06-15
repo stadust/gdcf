@@ -16,11 +16,13 @@ A benchmark with `criterion.rs` has showed, that `gdcf_parse` can calculate the 
 
 ## `gdcf`
 
-This crate is, although the smallest, the actual heart of the project. It defines traits for how a API client to retrieve, and a cache to store, objects from `gdcf_model` should look. It then defines the `Gdcf` struct, which allows you to make requests through the API client, where the responses are stored in the cache. For each request, it first looks into the cache, to see if the request _could_ be satisfied using cached data. There are three possible outcomes here:
+This crate is, although the smallest, the actual heart of the project. It defines traits for how a API client to retrieve, and a cache to store, objects from `gdcf_model` should look. It then defines the `Gdcf` struct, which allows you to make requests through the API client, where the responses are stored in the cache. For each request, it first looks into the cache, to see if the request _could_ be satisfied using cached data. There are four possible outcomes here:
 
 - _The requested data isn't cached_: In this case, GDCF makes a request using the provided API client and returns a future. That future first awaits the API request's completion, stores the response in the provided cache (for later use), and then resolves to the received data
 - _The requested data is cached, but the cached value is considered outdated_: In this case, GDCF does the same as above, but returns the cached value along with the future
 - _The requested data is cached and valid_: In this case, GDCF never makes any API request and simply returns the cached data
+- _The requested data has been marked absent, and the marker is up to date_: There is no data actually cached, but a previous request to the servers has resulted in an empty response. In this case, no request is made.
+- _The requested data has been marked absent, but the marker is considered outdated_: In this case, you get a dummy object telling you that the last time the request was made, it was unsuccessful, but a background task will do the request to see if the data was created server-sided since then. 
 
 ### Why you would want to do this
 
