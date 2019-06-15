@@ -145,7 +145,7 @@ pub enum Secondary {
     NewgroundsSong(NewgroundsSong),
     Creator(Creator),
     MissingCreator(u64),
-    MissingNewgroundsSong(u64)
+    MissingNewgroundsSong(u64),
 }
 
 impl From<NewgroundsSong> for Secondary {
@@ -166,7 +166,7 @@ impl std::fmt::Display for Secondary {
             Secondary::NewgroundsSong(inner) => inner.fmt(f),
             Secondary::Creator(inner) => inner.fmt(f),
             Secondary::MissingCreator(cid) => write!(f, "Creator object missing server-sided: {}", cid),
-            Secondary::MissingNewgroundsSong(nid) => write!(f, "Newgrounds song object missing server-sided: {}", nid)
+            Secondary::MissingNewgroundsSong(nid) => write!(f, "Newgrounds song object missing server-sided: {}", nid),
         }
     }
 }

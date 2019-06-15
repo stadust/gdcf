@@ -1,7 +1,10 @@
 use crate::{error::ApiError, Req};
-use gdcf::api::{
-    client::Response,
-    request::{LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest},
+use gdcf::{
+    api::{
+        client::Response,
+        request::{LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest},
+    },
+    Secondary,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
@@ -49,7 +52,7 @@ impl Handler for LevelsRequest {
         let mut other = Vec::new();
         let mut sections = response_body.split('#');
 
-        let levels = match sections.next() {
+        let levels: Vec<PartialLevel<u64, u64>> = match sections.next() {
             Some(section) =>
                 section
                     .split('|')
@@ -73,6 +76,36 @@ impl Handler for LevelsRequest {
                 for fragment in section.split("~:~") {
                     other.push(NewgroundsSong::parse_str2(fragment, "~|~")?.into());
                 }
+            }
+        }
+
+        for level in &levels {
+            if other
+                .iter()
+                .filter_map(|sec| {
+                    match sec {
+                        Secondary::Creator(c) => Some(c.user_id),
+                        _ => None,
+                    }
+                })
+                .find(|&c| c == level.creator)
+                .is_none()
+            {
+                other.push(Secondary::MissingCreator(level.creator))
+            }
+
+            if other
+                .iter()
+                .filter_map(|sec| {
+                    match sec {
+                        Secondary::NewgroundsSong(ref n) => Some(n.song_id),
+                        _ => None,
+                    }
+                })
+                .find(|&n| Some(n) == level.custom_song)
+                .is_none()
+            {
+                other.push(Secondary::MissingNewgroundsSong(level.custom_song.unwrap()))
             }
         }
 
