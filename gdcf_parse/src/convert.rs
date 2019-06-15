@@ -4,7 +4,7 @@ use gdcf_model::{
     GameVersion,
 };
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
-use std::{str::FromStr};
+use std::str::FromStr;
 
 pub trait RobtopInto<Conv, T> {
     fn robtop_into(self) -> T;

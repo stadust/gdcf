@@ -24,7 +24,7 @@ use crate::{
     meta::{DatabaseEntry, Entry},
     wrap::Wrapped,
 };
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
 use gdcf::{
@@ -130,12 +130,6 @@ mod sqlite {
 
 #[derive(Debug, Fail)]
 pub enum Error {
-    #[fail(display = "Not in database :(")]
-    CacheMiss,
-
-    #[fail(display = "Entry marked as absent")]
-    MarkedAbsent(NaiveDateTime),
-
     #[fail(display = "Database error: {}", _0)]
     Database(#[cause] diesel::result::Error),
 
@@ -156,12 +150,12 @@ impl From<diesel::result::Error> for Error {
 }
 
 impl CacheError for Error {
-    fn is_cache_miss(&self) -> bool {
+    /*fn is_cache_miss(&self) -> bool {
         match self {
             Error::CacheMiss | Error::Database(diesel::result::Error::NotFound) => true,
             _ => false,
         }
-    }
+    }*/
 }
 
 impl gdcf::cache::Cache for Cache {
@@ -179,24 +173,26 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
 
         let connection = self.pool.get()?;
 
-        let entry: DatabaseEntry = level_list_meta::table
+        let entry = handle_missing!(level_list_meta::table
             .filter(level_list_meta::request_hash.eq(key as i64))
-            .get_result(&connection)?;
+            .get_result(&connection));
+
+        let entry = self.entry(entry);
 
         if entry.absent {
-            return Err(Error::MarkedAbsent(entry.cached_at))
+            return Ok(CacheEntry::MarkedAbsent(entry))
         }
 
-        let levels = partial_level::table
+        let levels = handle_missing!(partial_level::table
             .inner_join(request_results::table.on(partial_level::level_id.eq(request_results::level_id)))
             .filter(request_results::request_hash.eq(key as i64))
             .select(partial_level::all_columns)
-            .load(&connection)?
+            .load(&connection))
             .into_iter()
             .map(|row: Wrapped<_>| row.0)
             .collect();
 
-        Ok(CacheEntry::new(levels, self.entry(entry)))
+        Ok(CacheEntry::new(levels, entry))
     }
 }
 

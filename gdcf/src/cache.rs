@@ -30,17 +30,33 @@ impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum CacheEntry<T, C: Cache> {
+    /// Variant to return if there was no entry at all in the cache regarding a specific request,
+    /// meaning the request hasn't been done yet ever
+    Missing,
+
+    /// Variant indicating that the there was no entry at all in the cache regarding a specific
+    /// request, but it could be deduced from the context that a request that should have caused an
+    /// entry has already been made.
     DeducedAbsent,
+
+    /// Variant indicating that a request was already made previously, but the server indicated
+    /// returned an empty response
     MarkedAbsent(C::CacheEntryMeta),
+
+    /// Variant indicating that a request was already made, and its results were stored.
     Cached(T, C::CacheEntryMeta),
 }
 
-impl<T: Debug, C: Cache> Debug for CacheEntry<T, C> where C::CacheEntryMeta: Debug {
+impl<T: Debug, C: Cache> Debug for CacheEntry<T, C>
+where
+    C::CacheEntryMeta: Debug,
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
+            CacheEntry::Missing => write!(f, "Missing"),
             CacheEntry::DeducedAbsent => write!(f, "DeducedAbsent"),
             CacheEntry::MarkedAbsent(meta) => write!(f, "MarkedAbsent({:?})", meta),
-            CacheEntry::Cached(object, meta) => write!(f, "Cached({:?}, {:?})", object, meta)
+            CacheEntry::Cached(object, meta) => write!(f, "Cached({:?}, {:?})", object, meta),
         }
     }
 }
@@ -56,6 +72,7 @@ impl<T, C: Cache> CacheEntry<T, C> {
 
     pub fn is_expired(&self) -> bool {
         match self {
+            CacheEntry::Missing => true,
             CacheEntry::DeducedAbsent => false,
             CacheEntry::MarkedAbsent(meta) | CacheEntry::Cached(_, meta) => meta.is_expired(),
         }
@@ -72,10 +89,12 @@ impl<T, C: Cache> CacheEntry<T, C> {
         self, other: CacheEntry<AddOn, C>, combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
     ) -> CacheEntry<R, C> {
         match self {
+            CacheEntry::Missing => CacheEntry::Missing,
             CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
             CacheEntry::MarkedAbsent(meta) => CacheEntry::MarkedAbsent(meta),
             CacheEntry::Cached(object, meta) =>
                 match other {
+                    CacheEntry::Missing => CacheEntry::Missing,
                     CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
                         match combinator(object, None) {
                             Some(combined) => CacheEntry::Cached(combined, meta),
@@ -111,6 +130,10 @@ impl<T, C: Cache> CacheEntry<T, C> {
             CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
             CacheEntry::MarkedAbsent(meta) => Ok((CacheEntry::MarkedAbsent(meta), None)),
             CacheEntry::Cached(ref object, _) => {
+                // What happens when this one is CacheEntry::Missing:
+                // + entry.is_expired() will return true
+                // + combine will return CacheEntry::Missing
+                // --> We get the correct behavior
                 let entry = lookup(object)?;
                 let future = if entry.is_expired() {
                     let clone = self.clone();
@@ -122,6 +145,7 @@ impl<T, C: Cache> CacheEntry<T, C> {
 
                 Ok((self.combine(entry, combinator), future))
             },
+            CacheEntry::Missing => Ok((CacheEntry::Missing, None)),
         }
     }
 }
@@ -145,6 +169,7 @@ impl<T, C: Cache> CacheEntry<Vec<T>, C> {
         Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>>,
     {
         match self {
+            CacheEntry::Missing => Ok((CacheEntry::Missing, None)),
             CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
             CacheEntry::MarkedAbsent(meta) => Ok((CacheEntry::MarkedAbsent(meta), None)),
             CacheEntry::Cached(objects, meta) => {

@@ -115,19 +115,16 @@ use crate::{
         ApiClient,
     },
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
-    error::{ApiError, CacheError, GdcfError},
-    future::{GdcfStream},
+    error::{ApiError, GdcfError},
+    future::GdcfStream,
 };
-use futures::{
-    future::{ok},
-    Future, Stream,
-};
+use futures::{future::ok, Future, Stream};
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use log::{info};
+use log::info;
 
 pub use crate::future::GdcfFuture;
 
@@ -295,8 +292,13 @@ where
     {
         info!("Processing request {}", request);
 
-        let cached = match self.cache.lookup_request(&request) {
-            Ok(entry) =>
+        let cached = match self.cache.lookup_request(&request)? {
+            CacheEntry::Missing => {
+                info!("No cache entry for request {}", request);
+
+                None
+            },
+            entry =>
                 if entry.is_expired() {
                     info!("Cache entry for request {} is expired!", request);
 
@@ -306,14 +308,6 @@ where
 
                     return Ok(EitherOrBoth::A(entry))
                 },
-
-            Err(ref error) if error.is_cache_miss() => {
-                info!("No cache entry for request {}", request);
-
-                None
-            },
-
-            Err(error) => return Err(error),
         };
 
         let future = self.refresh(request);
@@ -362,9 +356,9 @@ where
             gdcf.refresh(LevelsRequest::default().with_id(level.base.level_id))
                 .and_then(move |_| {
                     match cache2.lookup(song_id) {
-                        Err(ref err) if err.is_cache_miss() => Ok(CacheEntry::DeducedAbsent),
-                        Err(err) => Err(GdcfError::Cache(err)),
+                        Ok(CacheEntry::Missing) => Ok(CacheEntry::DeducedAbsent),
                         Ok(obj) => Ok(obj),
+                        Err(err) => Err(GdcfError::Cache(err)),
                     }
                 })
         };
@@ -392,9 +386,9 @@ where
             gdcf.refresh(LevelsRequest::default().with_id(level.base.level_id))
                 .and_then(move |_| {
                     match cache2.lookup(user_id) {
-                        Err(ref err) if err.is_cache_miss() => Ok(CacheEntry::DeducedAbsent),
-                        Err(err) => Err(GdcfError::Cache(err)),
+                        Ok(CacheEntry::Missing) => Ok(CacheEntry::DeducedAbsent),
                         Ok(obj) => Ok(obj),
+                        Err(err) => Err(GdcfError::Cache(err)),
                     }
                 })
         };

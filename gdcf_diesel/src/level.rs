@@ -106,10 +106,12 @@ impl Lookup<Level<u64, u64>> for Cache {
                         )),
                     CacheEntry::DeducedAbsent => Ok(CacheEntry::DeducedAbsent),
                     CacheEntry::MarkedAbsent(meta) => Ok(CacheEntry::MarkedAbsent(meta)),
+                    CacheEntry::Missing => Ok(CacheEntry::Missing),
                 }
             },
             CacheEntry::DeducedAbsent => Ok(CacheEntry::DeducedAbsent),
             CacheEntry::MarkedAbsent(meta) => Ok(CacheEntry::MarkedAbsent(meta)),
+            CacheEntry::Missing => Ok(CacheEntry::Missing),
         }
     }
 }

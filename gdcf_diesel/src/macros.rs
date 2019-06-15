@@ -257,25 +257,25 @@ macro_rules! store_simply {
 macro_rules! lookup_simply {
     ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{wrap::Wrapped, Cache, Error};
+            use crate::{wrap::Wrapped, Cache};
             use diesel::{QueryDsl, RunQueryDsl};
             use gdcf::cache::{CacheEntry, Lookup};
 
             impl Lookup<$to_lookup_ty> for Cache {
                 fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Self>, Self::Err> {
                     let connection = self.pool.get()?;
-                    let entry = $meta_table::table
+                    let entry = handle_missing!($meta_table::table
                         .filter($meta_table::$primary_column.eq(key as i64))
-                        .get_result(&connection)?;
+                        .get_result(&connection));
                     let entry = self.entry(entry);
 
                     if entry.absent {
-                        return Err(Error::MarkedAbsent(entry.cached_at))
+                        return Ok(CacheEntry::MarkedAbsent(entry))
                     }
 
-                    let wrapped: Wrapped<$to_lookup_ty> = $object_table::table
+                    let wrapped: Wrapped<$to_lookup_ty> = handle_missing!($object_table::table
                         .filter($object_table::$primary_column.eq(key as i64))
-                        .get_result(&connection)?;
+                        .get_result(&connection));
 
                     Ok(CacheEntry::new(wrapped.0, entry))
                 }
@@ -370,6 +370,16 @@ macro_rules! diesel_stuff {
                     $column_name.eq(__for_values!(object.$field_name, $($rust_type)*))
                 ),*
             )
+        }
+    };
+}
+
+macro_rules! handle_missing {
+    ($database_call: expr) => {
+        match $database_call {
+            Err(diesel::result::Error::NotFound) => return Ok(CacheEntry::Missing),
+            Err(err) => return Err($crate::Error::Database(err)),
+            Ok(whatevs) => whatevs,
         }
     };
 }
