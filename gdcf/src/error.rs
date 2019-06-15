@@ -8,7 +8,6 @@ pub trait ApiError: Fail {
 
 pub trait CacheError: Fail {
     fn is_cache_miss(&self) -> bool;
-    fn is_absent(&self) -> bool;
 }
 
 #[derive(Debug, Fail)]

@@ -24,7 +24,7 @@ use crate::{
     meta::{DatabaseEntry, Entry},
     wrap::Wrapped,
 };
-use chrono::{DateTime, Duration, Utc, NaiveDateTime};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
 use gdcf::{

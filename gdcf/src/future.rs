@@ -1,0 +1,195 @@
+use crate::{
+    api::{request::PaginatableRequest, ApiClient},
+    cache::{Cache, CacheEntry},
+    error::{ApiError, GdcfError},
+    ProcessRequest,
+};
+use futures::{future::Either, task, Async, Future, Stream};
+use log::info;
+use std::mem;
+
+pub(crate) type GdcfInnerFuture<T, A, C> =
+    Box<dyn Future<Item = CacheEntry<T, C>, Error = GdcfError<A, <C as Cache>::Err>> + Send + 'static>;
+
+#[allow(missing_debug_implementations)]
+pub enum GdcfFuture<T, A: ApiError, C: Cache> {
+    Empty,
+    Uncached(GdcfInnerFuture<T, A, C>),
+    Outdated(CacheEntry<T, C>, GdcfInnerFuture<T, A, C>),
+    UpToDate(CacheEntry<T, C>),
+}
+
+impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
+    pub fn cached(&self) -> Option<&CacheEntry<T, C>> {
+        match self {
+            GdcfFuture::Outdated(ref entry, _) | GdcfFuture::UpToDate(ref entry) => Some(entry),
+            _ => None,
+        }
+    }
+
+    pub fn inner_future(&self) -> Option<&GdcfInnerFuture<T, A, C>> {
+        match self {
+            GdcfFuture::Uncached(fut) | GdcfFuture::Outdated(_, fut) => Some(fut),
+            _ => None,
+        }
+    }
+
+    fn lookup_with_cached<I>(
+        &self, lookup: impl FnOnce(&T) -> Result<CacheEntry<I, C>, C::Err>,
+    ) -> Result<Option<CacheEntry<I, C>>, C::Err> {
+        match self {
+            GdcfFuture::UpToDate(CacheEntry::Cached(object, _)) | GdcfFuture::Outdated(CacheEntry::Cached(object, _), _) =>
+                Ok(Some(lookup(object)?)),
+            _ => Ok(None),
+        }
+    }
+
+    /// Constructs a future that resolves to an "extended" version of the object that would be
+    /// returned by this future. For instance, if this future resolved to a `Level<u64, u64>`,
+    /// the new one could resolve to a `Level<Option<NewgroundsSong>, u64>`
+    ///
+    /// ## Type parameters:
+    ///
+    /// + `T`: The type of the object the current future would resolve to. In the above example this
+    /// would be `Level<u64, u64>`
+    ///
+    /// + `AddOn`: The type of the object we extend with. In the
+    /// example above, this would be `Option<NewgroundsSong>`
+    ///
+    /// + `R`: The type of the object the
+    /// new future will resolve to. In the above example this would be
+    /// `Level<Option<NewgroundsSong>, u64>
+    pub(crate) fn extend<AddOn, U, Look, Req, Comb, Fut>(
+        self, lookup: Look, request: Req, combinator: Comb,
+    ) -> Result<GdcfFuture<U, A, C>, C::Err>
+    where
+        T: Clone + Send + 'static,
+        U: Send + 'static,
+        AddOn: Clone + Send + 'static,
+        Look: Clone + FnOnce(&T) -> Result<CacheEntry<AddOn, C>, C::Err> + Send + 'static,
+        Req: Clone + FnOnce(&T) -> Fut + Send + 'static,
+        Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
+    {
+        let future = match self {
+            GdcfFuture::Empty => GdcfFuture::Empty,
+            GdcfFuture::UpToDate(entry) =>
+                match entry.clone().extend(lookup, request, combinator)? {
+                    (entry, None) => GdcfFuture::UpToDate(entry),
+                    (cached, Some(future)) => GdcfFuture::Outdated(cached, Box::new(future)),
+                },
+            GdcfFuture::Uncached(future) => GdcfFuture::Uncached(Box::new(Self::extend_future(future, lookup, request, combinator))),
+            GdcfFuture::Outdated(entry, future) =>
+                if let (entry, None) = entry.extend(lookup.clone(), request.clone(), combinator)? {
+                    GdcfFuture::Outdated(entry, Box::new(Self::extend_future(future, lookup, request, combinator)))
+                } else {
+                    GdcfFuture::Uncached(Box::new(Self::extend_future(future, lookup, request, combinator)))
+                },
+        };
+
+        Ok(future)
+    }
+
+    fn extend_future<AddOn, U, Look, Req, Comb, Fut>(
+        future: impl Future<Item = CacheEntry<T, C>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req, combinator: Comb,
+    ) -> impl Future<Item = CacheEntry<U, C>, Error = GdcfError<A, C::Err>>
+    where
+        T: Clone + Send + 'static,
+        U: Send + 'static,
+        AddOn: Clone + Send + 'static,
+        Look: FnOnce(&T) -> Result<CacheEntry<AddOn, C>, C::Err> + Send + 'static,
+        Req: FnOnce(&T) -> Fut + Send + 'static,
+        Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>> + Send + 'static,
+    {
+        future.and_then(move |cache_entry| {
+            match cache_entry.extend(lookup, request, combinator) {
+                Err(err) => Either::A(futures::future::err(GdcfError::Cache(err))),
+                Ok((entry, None)) => Either::A(futures::future::ok(entry)),
+                Ok((_, Some(future))) => Either::B(future),
+            }
+        })
+    }
+}
+
+impl<T, A, C> Into<(Option<CacheEntry<T, C>>, Option<GdcfInnerFuture<T, A, C>>)> for GdcfFuture<T, A, C>
+where
+    A: ApiError,
+    C: Cache,
+{
+    fn into(self) -> (Option<CacheEntry<T, C>>, Option<GdcfInnerFuture<T, A, C>>) {
+        match self {
+            GdcfFuture::Uncached(fut) => (None, Some(fut)),
+            GdcfFuture::Outdated(entry, fut) => (Some(entry), Some(fut)),
+            GdcfFuture::UpToDate(entry) => (Some(entry), None),
+            GdcfFuture::Empty => (None, None),
+        }
+    }
+}
+
+impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
+    type Error = GdcfError<A, C::Err>;
+    type Item = CacheEntry<T, C>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        match self {
+            GdcfFuture::Empty => Ok(Async::NotReady),
+            GdcfFuture::Uncached(future) => future.poll(),
+            GdcfFuture::Outdated(_, future) => future.poll(),
+            fut =>
+                match std::mem::replace(fut, GdcfFuture::Empty) {
+                    GdcfFuture::UpToDate(inner) => Ok(Async::Ready(inner)),
+                    _ => unreachable!(),
+                },
+        }
+    }
+}
+
+#[allow(missing_debug_implementations)]
+pub struct GdcfStream<A, C, R, T, M>
+where
+    R: PaginatableRequest,
+    M: ProcessRequest<A, C, R, T>,
+    A: ApiClient,
+    C: Cache,
+{
+    pub(crate) next_request: R,
+    pub(crate) current_request: GdcfFuture<T, A::Err, C>,
+    pub(crate) source: M,
+}
+
+impl<A, C, R, T, M> Stream for GdcfStream<A, C, R, T, M>
+where
+    R: PaginatableRequest,
+    M: ProcessRequest<A, C, R, T>,
+    A: ApiClient,
+    C: Cache,
+{
+    type Error = GdcfError<A::Err, C::Err>;
+    type Item = CacheEntry<T, C>;
+
+    fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
+        match self.current_request.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+
+            Ok(Async::Ready(result)) => {
+                task::current().notify();
+
+                let next = self.next_request.next();
+                let cur = mem::replace(&mut self.next_request, next);
+
+                self.current_request = self.source.process_request(cur).map_err(GdcfError::Cache)?;
+
+                Ok(Async::Ready(Some(result)))
+            },
+
+            Err(GdcfError::Api(ref err)) if err.is_no_result() => {
+                info!("Stream over request {} terminating due to exhaustion!", self.next_request);
+
+                Ok(Async::Ready(None))
+            },
+
+            Err(err) => Err(err),
+        }
+    }
+}

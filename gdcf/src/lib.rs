@@ -116,6 +116,7 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, CacheError, GdcfError},
+    future::{GdcfFuture, GdcfStream},
 };
 use futures::{
     future::{err, join_all, ok, Either},
@@ -136,6 +137,7 @@ pub mod api;
 pub mod cache;
 pub mod error;
 mod exchange;
+mod future;
 
 // FIXME: move this somewhere more fitting
 #[derive(Debug, Clone, PartialEq)]
@@ -166,21 +168,21 @@ impl std::fmt::Display for Secondary {
 }
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    fn process_request(&self, request: R) -> GdcfFuture<T, A::Err, C>;
+    fn process_request(&self, request: R) -> Result<GdcfFuture<T, A::Err, C>, C::Err>;
 
-    fn paginate(&self, request: R) -> GdcfStream<A, C, R, T, Self>
+    fn paginate(&self, request: R) -> Result<GdcfStream<A, C, R, T, Self>, C::Err>
     where
         R: PaginatableRequest,
         Self: Sized + Clone,
     {
         let next = request.next();
-        let current = self.process_request(request);
+        let current = self.process_request(request)?;
 
-        GdcfStream {
+        Ok(GdcfStream {
             next_request: next,
             current_request: current,
             source: self.clone(),
-        }
+        })
     }
 }
 
@@ -192,6 +194,24 @@ where
 {
     client: A,
     cache: C,
+}
+
+impl<A, C> Gdcf<A, C>
+where
+    A: ApiClient,
+    C: Cache,
+{
+    pub fn new(client: A, cache: C) -> Gdcf<A, C> {
+        Gdcf { client, cache }
+    }
+
+    pub fn cache(&self) -> C {
+        self.cache.clone()
+    }
+
+    pub fn client(&self) -> A {
+        self.client.clone()
+    }
 }
 
 enum EitherOrBoth<A, B> {
@@ -219,12 +239,7 @@ where
                 Response::Exact(what_we_want) =>
                     cache
                         .store(&what_we_want, key)
-                        .map(move |entry_info| {
-                            CacheEntry {
-                                object: what_we_want,
-                                metadata: entry_info,
-                            }
-                        })
+                        .map(move |entry_info| CacheEntry::Cached(what_we_want, entry_info))
                         .map_err(GdcfError::Cache),
                 Response::More(what_we_want, excess) => {
                     for object in &excess {
@@ -237,12 +252,7 @@ where
 
                     cache
                         .store(&what_we_want, key)
-                        .map(move |entry_info| {
-                            CacheEntry {
-                                object: what_we_want,
-                                metadata: entry_info,
-                            }
-                        })
+                        .map(move |entry_info| CacheEntry::Cached(what_we_want, entry_info))
                         .map_err(GdcfError::Cache)
                 },
             }
@@ -292,22 +302,22 @@ where
     }
 }
 
+
 impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
 where
     R: Request + Send + Sync + 'static,
     A: ApiClient + MakeRequest<R>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<R>,
 {
-    fn process_request(&self, request: R) -> GdcfFuture<R::Result, A::Err, C> {
-        match self.process(request) {
-            Ok(EitherOrBoth::A(entry)) => GdcfFuture::UpToDate(entry),
-            Ok(EitherOrBoth::B(future)) => GdcfFuture::Uncached(Box::new(future)),
-            Ok(EitherOrBoth::Both(entry, future)) => GdcfFuture::Outdated(entry, Box::new(future)),
-            Err(err) => GdcfFuture::CacheError(err),
+    fn process_request(&self, request: R) -> Result<GdcfFuture<R::Result, A::Err, C>, C::Err> {
+        match self.process(request)? {
+            EitherOrBoth::A(entry) => Ok(GdcfFuture::UpToDate(entry)),
+            EitherOrBoth::B(future) => Ok(GdcfFuture::Uncached(Box::new(future))),
+            EitherOrBoth::Both(entry, future) => Ok(GdcfFuture::Outdated(entry, Box::new(future))),
         }
     }
 }
-
+/*
 impl<A, C> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, u64>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
@@ -647,9 +657,9 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         Comb: Fn(T, Option<I>) -> U + Send + Sync + 'static,
         Fut: Future<Item = Option<CacheEntry<I, C>>, Error = GdcfError<A, C::Err>> + Send + 'static,
     {
-        let combine = move |entry: CacheEntry<T, C>, other: Option<CacheEntry<I, C>>| {
+        let combine = move |entry: CacheEntry<T, C>, other: Option<CacheEntry<I, C>>| -> CacheEntry<U, C> {
             CacheEntry {
-                object: combinator(entry.object, other.map(|inner| inner.object)),
+                object: entry.object.map(|t| combinator(t, other.and_then(|inner| inner.object))),
                 metadata: entry.metadata,
             }
         };
@@ -898,53 +908,4 @@ impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
                 },
         }
     }
-}
-
-#[allow(missing_debug_implementations)]
-pub struct GdcfStream<A, C, R, T, M>
-where
-    R: PaginatableRequest,
-    M: ProcessRequest<A, C, R, T>,
-    A: ApiClient,
-    C: Cache,
-{
-    next_request: R,
-    current_request: GdcfFuture<T, A::Err, C>,
-    source: M,
-}
-
-impl<A, C, R, T, M> Stream for GdcfStream<A, C, R, T, M>
-where
-    R: PaginatableRequest,
-    M: ProcessRequest<A, C, R, T>,
-    A: ApiClient,
-    C: Cache,
-{
-    type Error = GdcfError<A::Err, C::Err>;
-    type Item = T;
-
-    fn poll(&mut self) -> Result<Async<Option<T>>, Self::Error> {
-        match self.current_request.poll() {
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-
-            Ok(Async::Ready(result)) => {
-                task::current().notify();
-
-                let next = self.next_request.next();
-                let cur = mem::replace(&mut self.next_request, next);
-
-                self.current_request = self.source.process_request(cur);
-
-                Ok(Async::Ready(Some(result)))
-            },
-
-            Err(GdcfError::Api(ref err)) if err.is_no_result() => {
-                info!("Stream over request {} terminating due to exhaustion!", self.next_request);
-
-                Ok(Async::Ready(None))
-            },
-
-            Err(err) => Err(err),
-        }
-    }
-}
+}*/
