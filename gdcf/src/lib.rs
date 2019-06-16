@@ -227,7 +227,7 @@ where
     A: ApiClient,
     C: Cache + Store<Creator> + Store<NewgroundsSong>,
 {
-    fn refresh<R>(&self, request: R) -> impl Future<Item = CacheEntry<R::Result, C>, Error = GdcfError<A::Err, C::Err>>
+    fn refresh<R>(&self, request: R) -> impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -282,7 +282,7 @@ where
     fn process<R>(
         &self, request: R,
     ) -> Result<
-        EitherOrBoth<CacheEntry<R::Result, C>, impl Future<Item = CacheEntry<R::Result, C>, Error = GdcfError<A::Err, C::Err>>>,
+        EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>>,
         C::Err,
     >
     where
@@ -590,7 +590,7 @@ where
     /// parameter until it hits the first empty page.
     pub fn paginate_levels<Song, User>(
         &self, request: LevelsRequest,
-    ) -> Result<impl Stream<Item = CacheEntry<Vec<PartialLevel<Song, User>>, C>, Error = GdcfError<A::Err, C::Err>>, C::Err>
+    ) -> Result<impl Stream<Item = CacheEntry<Vec<PartialLevel<Song, User>>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,

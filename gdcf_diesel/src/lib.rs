@@ -149,14 +149,7 @@ impl From<diesel::result::Error> for Error {
     }
 }
 
-impl CacheError for Error {
-    /*fn is_cache_miss(&self) -> bool {
-        match self {
-            Error::CacheMiss | Error::Database(diesel::result::Error::NotFound) => true,
-            _ => false,
-        }
-    }*/
-}
+impl CacheError for Error {}
 
 impl gdcf::cache::Cache for Cache {
     type CacheEntryMeta = Entry;
@@ -167,7 +160,7 @@ impl gdcf::cache::Cache for Cache {
 // one of them, so its fine
 
 impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Self>, Self::Err> {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Entry>, Self::Err> {
         use crate::partial_level::*;
         use diesel::JoinOnDsl;
 

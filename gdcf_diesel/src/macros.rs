@@ -257,12 +257,12 @@ macro_rules! store_simply {
 macro_rules! lookup_simply {
     ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{wrap::Wrapped, Cache};
+            use crate::{wrap::Wrapped, Cache, Entry};
             use diesel::{QueryDsl, RunQueryDsl};
             use gdcf::cache::{CacheEntry, Lookup};
 
             impl Lookup<$to_lookup_ty> for Cache {
-                fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Self>, Self::Err> {
+                fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Entry>, Self::Err> {
                     let connection = self.pool.get()?;
                     let entry = handle_missing!($meta_table::table
                         .filter($meta_table::$primary_column.eq(key as i64))

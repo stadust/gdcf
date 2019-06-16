@@ -86,7 +86,7 @@ meta_table!(level_meta, level_id);
 lookup_simply!(SemiLevel, level, level_meta, level_id);
 
 impl Lookup<Level<u64, u64>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Self>, Self::Err> {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Entry>, Self::Err> {
         match self.lookup(key)? {
             CacheEntry::Cached(semi_level, meta) => {
                 let semi_level: SemiLevel = semi_level;

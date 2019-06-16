@@ -3,7 +3,6 @@ use crate::{
     error::{ApiError, CacheError, GdcfError},
 };
 use futures::Future;
-use std::fmt::{Debug, Formatter};
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type CacheEntryMeta: CacheEntryMeta;
@@ -11,7 +10,7 @@ pub trait Cache: Clone + Send + Sync + 'static {
 }
 
 pub trait Lookup<Obj>: Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Obj, Self>, Self::Err>;
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Obj, Self::CacheEntryMeta>, Self::Err>;
 }
 
 pub trait Store<Obj>: Cache {
@@ -21,15 +20,15 @@ pub trait Store<Obj>: Cache {
 
 // TODO: make this private
 pub trait CanCache<R: Request>: Cache + Lookup<R::Result> + Store<R::Result> {
-    fn lookup_request(&self, request: &R) -> Result<CacheEntry<R::Result, Self>, Self::Err> {
+    fn lookup_request(&self, request: &R) -> Result<CacheEntry<R::Result, Self::CacheEntryMeta>, Self::Err> {
         self.lookup(request.key())
     }
 }
 
 impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<R::Result> {}
 
-#[derive(PartialEq, Clone, Copy)]
-pub enum CacheEntry<T, C: Cache> {
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum CacheEntry<T, Meta: CacheEntryMeta> {
     /// Variant to return if there was no entry at all in the cache regarding a specific request,
     /// meaning the request hasn't been done yet ever
     Missing,
@@ -41,32 +40,18 @@ pub enum CacheEntry<T, C: Cache> {
 
     /// Variant indicating that a request was already made previously, but the server indicated
     /// returned an empty response
-    MarkedAbsent(C::CacheEntryMeta),
+    MarkedAbsent(Meta),
 
     /// Variant indicating that a request was already made, and its results were stored.
-    Cached(T, C::CacheEntryMeta),
+    Cached(T, Meta),
 }
 
-impl<T: Debug, C: Cache> Debug for CacheEntry<T, C>
-where
-    C::CacheEntryMeta: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            CacheEntry::Missing => write!(f, "Missing"),
-            CacheEntry::DeducedAbsent => write!(f, "DeducedAbsent"),
-            CacheEntry::MarkedAbsent(meta) => write!(f, "MarkedAbsent({:?})", meta),
-            CacheEntry::Cached(object, meta) => write!(f, "Cached({:?}, {:?})", object, meta),
-        }
-    }
-}
-
-impl<T, C: Cache> CacheEntry<T, C> {
-    pub fn new(object: T, metadata: C::CacheEntryMeta) -> Self {
+impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
+    pub fn new(object: T, metadata: Meta) -> Self {
         CacheEntry::Cached(object, metadata)
     }
 
-    pub fn absent(metadata: C::CacheEntryMeta) -> Self {
+    pub fn absent(metadata: Meta) -> Self {
         CacheEntry::MarkedAbsent(metadata)
     }
 
@@ -86,8 +71,8 @@ impl<T, C: Cache> CacheEntry<T, C> {
     }
 
     pub(crate) fn combine<AddOn, R>(
-        self, other: CacheEntry<AddOn, C>, combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
-    ) -> CacheEntry<R, C> {
+        self, other: CacheEntry<AddOn, Meta>, combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
+    ) -> CacheEntry<R, Meta> {
         match self {
             CacheEntry::Missing => CacheEntry::Missing,
             CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
@@ -110,21 +95,21 @@ impl<T, C: Cache> CacheEntry<T, C> {
         }
     }
 
-    pub(crate) fn extend<A: ApiError, AddOn, U, Look, Req, Comb, Fut>(
+    pub(crate) fn extend<A: ApiError, C: CacheError, AddOn, U, Look, Req, Comb, Fut>(
         self, lookup: Look, request: Req, combinator: Comb,
     ) -> Result<
         (
-            CacheEntry<U, C>,
-            Option<impl Future<Item = CacheEntry<U, C>, Error = GdcfError<A, C::Err>>>,
+            CacheEntry<U, Meta>,
+            Option<impl Future<Item = CacheEntry<U, Meta>, Error = GdcfError<A, C>>>,
         ),
-        C::Err,
+        C,
     >
     where
         T: Clone,
-        Look: FnOnce(&T) -> Result<CacheEntry<AddOn, C>, C::Err>,
+        Look: FnOnce(&T) -> Result<CacheEntry<AddOn, Meta>, C>,
         Req: FnOnce(&T) -> Fut,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U>,
-        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>>,
+        Fut: Future<Item = CacheEntry<AddOn, Meta>, Error = GdcfError<A, C>>,
     {
         match self {
             CacheEntry::DeducedAbsent => Ok((CacheEntry::DeducedAbsent, None)),
@@ -151,22 +136,22 @@ impl<T, C: Cache> CacheEntry<T, C> {
 }
 // FIXME: If impl specialization ever gets stabilized, this looks like something that could benefit
 // from it.
-impl<T, C: Cache> CacheEntry<Vec<T>, C> {
-    pub(crate) fn extend_all<A: ApiError, AddOn, U, Look, Req, Comb, Fut>(
+impl<T, Meta: CacheEntryMeta> CacheEntry<Vec<T>, Meta> {
+    pub(crate) fn extend_all<A: ApiError, C: CacheError, AddOn, U, Look, Req, Comb, Fut>(
         self, lookup: Look, request: Req, combinator: Comb,
     ) -> Result<
         (
-            CacheEntry<Vec<U>, C>,
-            Option<impl Future<Item = CacheEntry<Vec<U>, C>, Error = GdcfError<A, C::Err>>>,
+            CacheEntry<Vec<U>, Meta>,
+            Option<impl Future<Item = CacheEntry<Vec<U>, Meta>, Error = GdcfError<A, C>>>,
         ),
-        C::Err,
+        C,
     >
     where
         T: Clone,
-        Look: Fn(&T) -> Result<CacheEntry<AddOn, C>, C::Err>,
+        Look: Fn(&T) -> Result<CacheEntry<AddOn, Meta>, C>,
         Req: Fn(&T) -> Fut,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U>,
-        Fut: Future<Item = CacheEntry<AddOn, C>, Error = GdcfError<A, C::Err>>,
+        Fut: Future<Item = CacheEntry<AddOn, Meta>, Error = GdcfError<A, C>>,
     {
         match self {
             CacheEntry::Missing => Ok((CacheEntry::Missing, None)),
