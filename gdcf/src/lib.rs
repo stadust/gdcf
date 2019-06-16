@@ -105,9 +105,6 @@
 //! tokio::run(future);
 //! ```
 
-// TODO: it would be nice to be able to differentiate between cache-miss because the data doesn't
-// exist and cache-miss because the data simply wasn't requested yet
-
 use crate::{
     api::{
         client::{MakeRequest, Response},
@@ -233,6 +230,8 @@ where
         A: MakeRequest<R>,
         C: CanCache<R>,
     {
+        info!("Performing refresh on request {}", request);
+
         let mut cache = self.cache();
         let mut cache2 = self.cache();
         let key = request.key();

@@ -30,6 +30,7 @@ use gdcf::{
 };
 use gdcf_model::level::PartialLevel;
 use r2d2::Pool;
+use log::{warn, debug};
 
 pub use crate::meta::Entry;
 
@@ -192,6 +193,8 @@ impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
     fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
         use crate::partial_level::*;
 
+        warn!("Marking results of LevelsRequest with key {} as absent!", key);
+
         let entry = Entry::absent(key);
 
         update_entry!(self, entry, level_list_meta::table, level_list_meta::request_hash);
@@ -201,6 +204,8 @@ impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
 
     fn store(&mut self, partial_levels: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
+
+        debug!("Storing result of LevelsRequest with key {}", key);
 
         let conn = self.pool.get()?;
 

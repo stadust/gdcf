@@ -126,7 +126,7 @@ impl Store<Level<u64, u64>> for Cache {
     fn store(&mut self, obj: &Level<u64, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         self.store(&obj.base, obj.base.level_id)?;
 
-        debug!("Storing {}", obj);
+        debug!("Storing {} under key {}", obj, key as i64);
 
         let entry = Entry::new(key);
 

@@ -537,6 +537,10 @@ impl From<u64> for LevelRequest {
 
 impl Request for LevelRequest {
     type Result = Level<u64, u64>;
+
+    fn key(&self) -> u64 {
+        self.level_id
+    }
 }
 
 impl Request for LevelsRequest {

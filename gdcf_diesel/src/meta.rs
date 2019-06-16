@@ -6,8 +6,7 @@ use diesel::{
     Queryable,
 };
 use gdcf::cache::CacheEntryMeta;
-use std::fmt::Display;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Entry {
@@ -51,7 +50,11 @@ impl Entry {
 
 impl Display for Entry {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "Entry {}, cached at {} (expired: {}), absent: {}", self.key, self.cached_at, self.expired, self.absent)
+        write!(
+            f,
+            "Entry {}, cached at {} (expired: {}), absent: {}",
+            self.key, self.cached_at, self.expired, self.absent
+        )
     }
 }
 

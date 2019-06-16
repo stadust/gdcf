@@ -53,7 +53,7 @@ impl<T: Display, Meta: CacheEntryMeta + Display> Display for CacheEntry<T, Meta>
             CacheEntry::Missing => write!(f, "Cache entry missing"),
             CacheEntry::DeducedAbsent => write!(f, "Cache entry deduced missing due to server sided data inconsistency"),
             CacheEntry::MarkedAbsent(meta) => write!(f, "{} marked as missing due to empty server response", meta),
-            CacheEntry::Cached(object, meta) => write!(f, "Cached {}, {}", object, meta)
+            CacheEntry::Cached(object, meta) => write!(f, "Cached {}, {}", object, meta),
         }
     }
 }
