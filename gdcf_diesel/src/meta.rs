@@ -6,6 +6,8 @@ use diesel::{
     Queryable,
 };
 use gdcf::cache::CacheEntryMeta;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Entry {
@@ -40,6 +42,16 @@ impl Entry {
             absent: true,
             key,
         }
+    }
+
+    pub fn cached_at(&self) -> NaiveDateTime {
+        self.cached_at
+    }
+}
+
+impl Display for Entry {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "Entry {}, cached at {} (expired: {}), absent: {}", self.key, self.cached_at, self.expired, self.absent)
     }
 }
 

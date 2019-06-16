@@ -3,6 +3,7 @@ use crate::{
     error::{ApiError, CacheError, GdcfError},
 };
 use futures::Future;
+use std::fmt::{Display, Formatter};
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type CacheEntryMeta: CacheEntryMeta;
@@ -44,6 +45,17 @@ pub enum CacheEntry<T, Meta: CacheEntryMeta> {
 
     /// Variant indicating that a request was already made, and its results were stored.
     Cached(T, Meta),
+}
+
+impl<T: Display, Meta: CacheEntryMeta + Display> Display for CacheEntry<T, Meta> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            CacheEntry::Missing => write!(f, "Cache entry missing"),
+            CacheEntry::DeducedAbsent => write!(f, "Cache entry deduced missing due to server sided data inconsistency"),
+            CacheEntry::MarkedAbsent(meta) => write!(f, "{} marked as missing due to empty server response", meta),
+            CacheEntry::Cached(object, meta) => write!(f, "Cached {}, {}", object, meta)
+        }
+    }
 }
 
 impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {

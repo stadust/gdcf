@@ -8,8 +8,13 @@ use futures::{future::Either, task, Async, Future, Stream};
 use log::info;
 use std::mem;
 
-pub(crate) type GdcfInnerFuture<T, A, C> =
-    Box<dyn Future<Item = CacheEntry<T, <C as Cache>::CacheEntryMeta>, Error = GdcfError<A, <C as Cache>::Err>> + Send + 'static>;
+pub(crate) type GdcfInnerFuture<T, A, C> = Box<
+    dyn Future<
+            Item = CacheEntry<T, <C as Cache>::CacheEntryMeta>,
+            Error = GdcfError<A, <C as Cache>::Err>,
+        > + Send
+        + 'static,
+>;
 
 #[allow(missing_debug_implementations)]
 pub enum GdcfFuture<T, A: ApiError, C: Cache> {
@@ -58,10 +63,15 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         T: Clone + Send + 'static,
         U: Send + 'static,
         AddOn: Clone + Send + 'static,
-        Look: Clone + FnOnce(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err> + Send + 'static,
+        Look: Clone
+            + FnOnce(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err>
+            + Send
+            + 'static,
         Req: Clone + FnOnce(&T) -> Fut + Send + 'static,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
-        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>> + Send + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
+            + Send
+            + 'static,
     {
         let future = match self {
             GdcfFuture::Empty => GdcfFuture::Empty,
@@ -70,12 +80,20 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
                     (entry, None) => GdcfFuture::UpToDate(entry),
                     (cached, Some(future)) => GdcfFuture::Outdated(cached, Box::new(future)),
                 },
-            GdcfFuture::Uncached(future) => GdcfFuture::Uncached(Box::new(Self::extend_future(future, lookup, request, combinator))),
+            GdcfFuture::Uncached(future) =>
+                GdcfFuture::Uncached(Box::new(Self::extend_future(
+                    future, lookup, request, combinator,
+                ))),
             GdcfFuture::Outdated(entry, future) =>
                 if let (entry, None) = entry.extend(lookup.clone(), request.clone(), combinator)? {
-                    GdcfFuture::Outdated(entry, Box::new(Self::extend_future(future, lookup, request, combinator)))
+                    GdcfFuture::Outdated(
+                        entry,
+                        Box::new(Self::extend_future(future, lookup, request, combinator)),
+                    )
                 } else {
-                    GdcfFuture::Uncached(Box::new(Self::extend_future(future, lookup, request, combinator)))
+                    GdcfFuture::Uncached(Box::new(Self::extend_future(
+                        future, lookup, request, combinator,
+                    )))
                 },
         };
 
@@ -83,8 +101,8 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     }
 
     fn extend_future<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
-        combinator: Comb,
+        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>,
+        lookup: Look, request: Req, combinator: Comb,
     ) -> impl Future<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where
         T: Clone + Send + 'static,
@@ -93,7 +111,9 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
         Look: FnOnce(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err> + Send + 'static,
         Req: FnOnce(&T) -> Fut + Send + 'static,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
-        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>> + Send + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
+            + Send
+            + 'static,
     {
         future.and_then(move |cache_entry| {
             match cache_entry.extend(lookup, request, combinator) {
@@ -114,10 +134,13 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
         T: Clone + Send + 'static,
         U: Send + 'static,
         AddOn: Clone + Send + 'static,
-        Look: Clone + Fn(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err> + Send + 'static,
+        Look:
+            Clone + Fn(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err> + Send + 'static,
         Req: Clone + Fn(&T) -> Fut + Send + 'static,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
-        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>> + Send + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
+            + Send
+            + 'static,
     {
         let future = match self {
             GdcfFuture::Empty => GdcfFuture::Empty,
@@ -126,12 +149,22 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
                     (entry, None) => GdcfFuture::UpToDate(entry),
                     (cached, Some(future)) => GdcfFuture::Outdated(cached, Box::new(future)),
                 },
-            GdcfFuture::Uncached(future) => GdcfFuture::Uncached(Box::new(Self::extend_future_all(future, lookup, request, combinator))),
+            GdcfFuture::Uncached(future) =>
+                GdcfFuture::Uncached(Box::new(Self::extend_future_all(
+                    future, lookup, request, combinator,
+                ))),
             GdcfFuture::Outdated(entry, future) =>
-                if let (entry, None) = entry.extend_all(lookup.clone(), request.clone(), combinator)? {
-                    GdcfFuture::Outdated(entry, Box::new(Self::extend_future_all(future, lookup, request, combinator)))
+                if let (entry, None) =
+                    entry.extend_all(lookup.clone(), request.clone(), combinator)?
+                {
+                    GdcfFuture::Outdated(
+                        entry,
+                        Box::new(Self::extend_future_all(future, lookup, request, combinator)),
+                    )
                 } else {
-                    GdcfFuture::Uncached(Box::new(Self::extend_future_all(future, lookup, request, combinator)))
+                    GdcfFuture::Uncached(Box::new(Self::extend_future_all(
+                        future, lookup, request, combinator,
+                    )))
                 },
         };
 
@@ -139,8 +172,8 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     }
 
     fn extend_future_all<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
-        combinator: Comb,
+        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>,
+        lookup: Look, request: Req, combinator: Comb,
     ) -> impl Future<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where
         T: Clone + Send + 'static,
@@ -149,7 +182,9 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
         Look: Fn(&T) -> Result<CacheEntry<AddOn, C::CacheEntryMeta>, C::Err> + Send + 'static,
         Req: Fn(&T) -> Fut + Send + 'static,
         Comb: Copy + Fn(T, Option<AddOn>) -> Option<U> + Send + Sync + 'static,
-        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>> + Send + 'static,
+        Fut: Future<Item = CacheEntry<AddOn, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
+            + Send
+            + 'static,
     {
         future.and_then(move |cache_multi_entry| {
             match cache_multi_entry.extend_all(lookup, request, combinator) {
@@ -161,17 +196,26 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     }
 }
 
-impl<T, A, C> Into<(Option<CacheEntry<T, C::CacheEntryMeta>>, Option<GdcfInnerFuture<T, A, C>>)> for GdcfFuture<T, A, C>
+impl<T, A, C>
+    Into<(
+        CacheEntry<T, C::CacheEntryMeta>,
+        Option<GdcfInnerFuture<T, A, C>>,
+    )> for GdcfFuture<T, A, C>
 where
     A: ApiError,
     C: Cache,
 {
-    fn into(self) -> (Option<CacheEntry<T, C::CacheEntryMeta>>, Option<GdcfInnerFuture<T, A, C>>) {
+    fn into(
+        self,
+    ) -> (
+        CacheEntry<T, C::CacheEntryMeta>,
+        Option<GdcfInnerFuture<T, A, C>>,
+    ) {
         match self {
-            GdcfFuture::Uncached(fut) => (None, Some(fut)),
-            GdcfFuture::Outdated(entry, fut) => (Some(entry), Some(fut)),
-            GdcfFuture::UpToDate(entry) => (Some(entry), None),
-            GdcfFuture::Empty => (None, None),
+            GdcfFuture::Uncached(fut) => (CacheEntry::Missing, Some(fut)),
+            GdcfFuture::Outdated(entry, fut) => (entry, Some(fut)),
+            GdcfFuture::UpToDate(entry) => (entry, None),
+            GdcfFuture::Empty => (CacheEntry::Missing, None),
         }
     }
 }
@@ -227,13 +271,17 @@ where
                 let next = self.next_request.next();
                 let cur = mem::replace(&mut self.next_request, next);
 
-                self.current_request = self.source.process_request(cur).map_err(GdcfError::Cache)?;
+                self.current_request =
+                    self.source.process_request(cur).map_err(GdcfError::Cache)?;
 
                 Ok(Async::Ready(Some(result)))
             },
 
             Err(GdcfError::Api(ref err)) if err.is_no_result() => {
-                info!("Stream over request {} terminating due to exhaustion!", self.next_request);
+                info!(
+                    "Stream over request {} terminating due to exhaustion!",
+                    self.next_request
+                );
 
                 Ok(Async::Ready(None))
             },
