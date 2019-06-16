@@ -50,11 +50,11 @@ CREATE TABLE partial_level (
     object_amount INTEGER,
     index_46 TEXT,
     index_47 TEXT
-
+);
 
 CREATE TABLE partial_level_meta (
     level_id BIGINT PRIMARY KEY,
-    cached_at TIMESTAMP WITHOUT TIME ZONE);
+    cached_at TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE level_list_meta (
