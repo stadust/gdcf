@@ -282,7 +282,10 @@ where
     fn process<R>(
         &self, request: R,
     ) -> Result<
-        EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>>,
+        EitherOrBoth<
+            CacheEntry<R::Result, C::CacheEntryMeta>,
+            impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+        >,
         C::Err,
     >
     where

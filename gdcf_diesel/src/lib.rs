@@ -20,10 +20,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use crate::{
-    meta::{DatabaseEntry, Entry},
-    wrap::Wrapped,
-};
+use crate::{meta::DatabaseEntry, wrap::Wrapped};
 use chrono::{DateTime, Duration, Utc};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
@@ -33,6 +30,8 @@ use gdcf::{
 };
 use gdcf_model::level::PartialLevel;
 use r2d2::Pool;
+
+pub use crate::meta::Entry;
 
 // this means we cannot enable two features at once. Since diesel doesn't allow writing database
 // agnostic code, the alternative to this is wrapping everything in macros (like we used to do in

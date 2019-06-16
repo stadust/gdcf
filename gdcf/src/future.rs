@@ -83,7 +83,8 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     }
 
     fn extend_future<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req, combinator: Comb,
+        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
+        combinator: Comb,
     ) -> impl Future<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where
         T: Clone + Send + 'static,
@@ -138,7 +139,8 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     }
 
     fn extend_future_all<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req, combinator: Comb,
+        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
+        combinator: Comb,
     ) -> impl Future<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where
         T: Clone + Send + 'static,
@@ -158,7 +160,6 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
         })
     }
 }
-
 
 impl<T, A, C> Into<(Option<CacheEntry<T, C::CacheEntryMeta>>, Option<GdcfInnerFuture<T, A, C>>)> for GdcfFuture<T, A, C>
 where
