@@ -3,7 +3,7 @@ use crate::{
     error::ValueError,
     Parse,
 };
-use gdcf_model::user::{Creator, User, SearchedUser};
+use gdcf_model::user::{Creator, SearchedUser, User};
 
 pub fn youtube(value: &str) -> Option<String> {
     if value.is_empty() {
@@ -36,8 +36,8 @@ parser! {
         stars(index = 3),
         demons(index = 4),
         creator_points(index = 8),
-        index_10(index = 10),
-        index_11(index = 11),
+        primary_color(index = 10),
+        secondary_color(index = 11),
         secret_coins(index = 13),
         account_id(index = 16),
         user_coins(index = 17),
@@ -81,8 +81,8 @@ parser! {
         index_6(index = 6),
         creator_points(index = 8),
         index_9(index = 9),
-        index_10(index = 10),
-        index_11(index = 11),
+        primary_color(index = 10),
+        secondary_color(index = 11),
         secret_coins(index = 13),
         index_14(index = 14),
         index_15(index = 15),

@@ -2,18 +2,16 @@ use crate::{error::ApiError, Req};
 use gdcf::{
     api::{
         client::Response,
-        request::{LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest},
+        request::{user::UserSearchRequest, LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest},
     },
     Secondary,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
-    user::{Creator, User},
+    user::{Creator, SearchedUser, User},
 };
 use gdcf_parse::Parse;
-use gdcf::api::request::user::UserSearchRequest;
-use gdcf_model::user::SearchedUser;
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -136,7 +134,6 @@ impl Handler for UserRequest {
         Req::UserRequest(self)
     }
 }
-
 
 impl Handler for UserSearchRequest {
     fn endpoint() -> &'static str {

@@ -1,11 +1,12 @@
 use crate::util::{self, b64_decode_string, xor_decrypt};
 use gdcf_model::{
     level::{data::portal::Speed, Featured, LevelLength, Password},
+    user::ModLevel,
     GameVersion,
 };
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::str::FromStr;
-use gdcf_model::user::ModLevel;
+use gdcf_model::user::Color;
 
 pub trait RobtopInto<Conv, T> {
     fn robtop_into(self) -> T;
@@ -234,8 +235,65 @@ impl RobtopFrom<ModLevel, &str> for ModLevel {
             "0" => ModLevel::None,
             "1" => ModLevel::Normal,
             "2" => ModLevel::Elder,
-            t => ModLevel::Unknown(u8::robtop_from(t)?)
+            t => ModLevel::Unknown(u8::robtop_from(t)?),
         })
+    }
+}
+
+impl RobtopInto<Color, String> for Color {
+    fn robtop_into(self) -> String {
+        match self {
+            Color::Known(125, 255, 0) => "0".to_string(),
+            Color::Known(0, 255, 0) => "1".to_string(),
+            Color::Known(0, 255, 125) => "2".to_string(),
+            Color::Known(0, 255, 255) => "3".to_string(),
+            Color::Known(0, 200, 255) => "16".to_string(),
+            Color::Known(0, 125, 255) => "4".to_string(),
+            Color::Known(0, 0, 255) => "5".to_string(),
+            Color::Known(125, 0, 255) => "6".to_string(),
+            Color::Known(185, 0, 255) => "13".to_string(),
+            Color::Known(255, 0, 255) => "7".to_string(),
+            Color::Known(255, 0, 125) => "8".to_string(),
+            Color::Known(255, 0, 0) => "9".to_string(),
+            Color::Known(255, 75, 0) => "29".to_string(),
+            Color::Known(255, 125, 0) => "10".to_string(),
+            Color::Known(255, 185, 0) => "14".to_string(),
+            Color::Known(255, 255, 0) => "11".to_string(),
+            Color::Known(255, 255, 255) => "12".to_string(),
+            Color::Known(175, 175, 175) => "17".to_string(),
+            Color::Known(80, 80, 80) => "18".to_string(),
+            Color::Known(0, 0, 0) => "15".to_string(),
+            Color::Known(125, 125, 0) => "27".to_string(),
+            Color::Known(100, 150, 0) => "32".to_string(),
+            Color::Known(75, 175, 0) => "28".to_string(),
+            Color::Known(0, 150, 0) => "38".to_string(),
+            Color::Known(0, 175, 75) => "20".to_string(),
+            Color::Known(0, 150, 100) => "33".to_string(),
+            Color::Known(0, 125, 125) => "21".to_string(),
+            Color::Known(0, 100, 150) => "34".to_string(),
+            Color::Known(0, 75, 175) => "22".to_string(),
+            Color::Known(0, 0, 150) => "39".to_string(),
+            Color::Known(75, 0, 175) => "23".to_string(),
+            Color::Known(100, 0, 150) => "35".to_string(),
+            Color::Known(125, 0, 125) => "24".to_string(),
+            Color::Known(150, 0, 100) => "36".to_string(),
+            Color::Known(175, 0, 75) => "25".to_string(),
+            Color::Known(150, 0, 0) => "37".to_string(),
+            Color::Known(150, 50, 0) => "30".to_string(),
+            Color::Known(175, 75, 0) => "26".to_string(),
+            Color::Known(150, 100, 0) => "31".to_string(),
+            Color::Known(255, 255, 125) => "19".to_string(),
+            Color::Known(125, 255, 175) => "40".to_string(),
+            Color::Known(125, 125, 255) => "41".to_string(),
+            Color::Unknown(idx) => idx.to_string(),
+            _ => "Non GD Color (This is an error on your end. You fucked up)".to_string(),
+        }
+    }
+}
+
+impl RobtopFrom<Color, &str> for Color {
+    fn robtop_from(t: &str) -> Result<Color, String> {
+        Ok(Color::from(u8::robtop_from(t)?))
     }
 }
 

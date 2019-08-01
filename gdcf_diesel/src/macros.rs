@@ -47,6 +47,7 @@ macro_rules! __diesel_type {
     (GameVersion) => {Int2};
     (MainSong) => {Int2};
     (ModLevel) => {Int2};
+    (Color) => {Int4};
 }
 
 macro_rules! __ref_if_not_copy {
@@ -72,6 +73,7 @@ macro_rules! __ref_if_not_copy {
     (GameVersion) => {i16};
     (MainSong) => {i16};
     (ModLevel) => {i16};
+    (Color) => {i32};
 }
 
 macro_rules! __row_type {
@@ -96,6 +98,7 @@ macro_rules! __row_type {
     (GameVersion) => {i16};
     (MainSong) => {i16};
     (ModLevel) => {i16};
+    (Color) => {i32};
 }
 
 macro_rules! __for_queryable {
@@ -142,6 +145,13 @@ macro_rules! __for_queryable {
     }};
     ($value: expr, ModLevel) => {{
         ModLevel::from($value as u8)
+    }};
+    ($value: expr, Color) => {{
+        if $value < 0 {
+            Color::Unknown(-$value as u8)
+        } else {
+            Color::Known($value as u8, ($value >> 8) as u8, ($value >> 16) as u8)
+        }
     }};
     ($value: expr, $($t:tt)*) => {
         $value
@@ -226,6 +236,12 @@ macro_rules! __for_values {
     ($value: expr, ModLevel) => {{
         let byte: u8 = $value.into();
         byte as i16
+    }};
+    ($value: expr, Color) => {{
+        match $value {
+            Color::Unknown(idx) => -(idx as i32),
+            Color::Known(r,g,b) => r as i32 | (g as i32) << 8 | (b as i32) << 16
+        }
     }};
     ($value: expr, $($t:tt)*) => {
         &$value

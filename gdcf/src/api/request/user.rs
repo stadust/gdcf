@@ -1,7 +1,7 @@
 //! Module ontianing request definitions for retrieving users
 
-use crate::api::request::{BaseRequest, Request, GD_21, PaginatableRequest};
-use gdcf_model::user::{User, SearchedUser};
+use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
+use gdcf_model::user::{SearchedUser, User};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -69,7 +69,10 @@ pub struct UserSearchRequest {
 
     /// The page of users to retrieve
     ///
-    /// Since the behavior of the search function was changed to return only the user whose name matches the search string exactly (previous behavior was a prefix search), it is not possible to retrieve more than 1 user via this endpoint anymore, rendering the pagination parameters useless.
+    /// Since the behavior of the search function was changed to return only the user whose name
+    /// matches the search string exactly (previous behavior was a prefix search), it is not
+    /// possible to retrieve more than 1 user via this endpoint anymore, rendering the pagination
+    /// parameters useless.
     ///
     /// ## GD Internals:
     /// This field is called `page` in the boomlings API
@@ -79,12 +82,14 @@ pub struct UserSearchRequest {
     ///
     /// ## GD Internals:
     /// This field is called `str` in the boomlings API
-    pub search_string: String
+    pub search_string: String,
 }
 
 impl UserSearchRequest {
     const_setter!(with_base, base, BaseRequest);
+
     const_setter!(total: u32);
+
     const_setter!(page: u32);
 
     pub const fn new(search_string: String) -> Self {
@@ -92,7 +97,7 @@ impl UserSearchRequest {
             base: GD_21,
             total: 0,
             page: 0,
-            search_string
+            search_string,
         }
     }
 }
@@ -102,7 +107,6 @@ impl Into<UserSearchRequest> for String {
         UserSearchRequest::new(self)
     }
 }
-
 
 impl Display for UserSearchRequest {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
@@ -126,7 +130,7 @@ impl PaginatableRequest for UserSearchRequest {
             base: self.base,
             total: self.total,
             page: self.page + 1,
-            search_string : self.search_string.clone()
+            search_string: self.search_string.clone(),
         }
     }
 }

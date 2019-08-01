@@ -20,7 +20,7 @@ use gdcf::api::{
     client::{ApiFuture, MakeRequest, Response},
     request::{
         level::{LevelRequest, LevelsRequest},
-        user::UserRequest,
+        user::{UserRequest, UserSearchRequest},
         Request as GdcfRequest,
     },
     ApiClient,
@@ -37,7 +37,6 @@ use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},
     Action, Condition, Error as RetryError, RetryIf,
 };
-use gdcf::api::request::user::UserSearchRequest;
 
 #[macro_use]
 mod macros;
@@ -58,7 +57,7 @@ pub enum Req<'a> {
     UserRequest(&'a UserRequest),
 
     #[serde(with = "UserSearchRequestRem")]
-    UserSearchRequest(&'a UserSearchRequest)
+    UserSearchRequest(&'a UserSearchRequest),
 }
 
 #[derive(Debug, Default, Clone)]

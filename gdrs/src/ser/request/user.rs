@@ -1,5 +1,8 @@
 use super::BaseRequestRem;
-use gdcf::api::request::{user:: {UserRequest, UserSearchRequest}, BaseRequest};
+use gdcf::api::request::{
+    user::{UserRequest, UserSearchRequest},
+    BaseRequest,
+};
 use serde_derive::Serialize;
 
 #[derive(Serialize)]
@@ -12,7 +15,6 @@ pub struct UserRequestRem {
     user: u64,
 }
 
-
 #[derive(Serialize)]
 #[serde(remote = "UserSearchRequest")]
 pub struct UserSearchRequestRem {
@@ -24,5 +26,5 @@ pub struct UserSearchRequestRem {
     page: u32,
 
     #[serde(rename = "str")]
-    search_string: String
+    search_string: String,
 }
