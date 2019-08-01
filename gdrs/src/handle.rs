@@ -12,6 +12,7 @@ use gdcf_model::{
     user::{Creator, User},
 };
 use gdcf_parse::Parse;
+use gdcf::api::request::user::UserSearchRequest;
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -132,5 +133,26 @@ impl Handler for UserRequest {
 
     fn to_req(&self) -> Req {
         Req::UserRequest(self)
+    }
+}
+
+
+impl Handler for UserSearchRequest {
+    fn endpoint() -> &'static str {
+        endpoint!("getGJUsers20")
+    }
+
+    fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        let mut sections = response_body.split('#');
+
+        match sections.next() {
+            _ => ()
+        }
+
+        Ok(Response::Exact(()))
+    }
+
+    fn to_req(&self) -> Req {
+        Req::UserSearchRequest(self)
     }
 }

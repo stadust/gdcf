@@ -1,6 +1,6 @@
 pub use self::request::{
     level::{LevelRequestRem, LevelsRequestRem},
-    user::UserRequestRem,
+    user::{UserRequestRem, UserSearchRequestRem},
     BaseRequestRem,
 };
 use gdcf::api::request::level::{CompletionFilter, LevelRequestType, SearchFilters, SongFilter};

@@ -1,6 +1,6 @@
 //! Module ontianing request definitions for retrieving users
 
-use crate::api::request::{BaseRequest, Request, GD_21};
+use crate::api::request::{BaseRequest, Request, GD_21, PaginatableRequest};
 use gdcf_model::user::User;
 use std::{
     fmt::{Display, Error, Formatter},
@@ -54,4 +54,79 @@ impl Display for UserRequest {
 
 impl Request for UserRequest {
     type Result = User;
+}
+
+#[derive(Debug, Clone)]
+pub struct UserSearchRequest {
+    /// The base request data
+    pub base: BaseRequest,
+
+    /// Unknown, probably related to pagination
+    ///
+    /// ## GD Internals:
+    /// This field is called `total` in the boomlings API
+    pub total: u32,
+
+    /// The page of users to retrieve
+    ///
+    /// Since the behavior of the search function was changed to return only the user whose name matches the search string exactly (previous behavior was a prefix search), it is not possible to retrieve more than 1 user via this endpoint anymore, rendering the pagination parameters useless.
+    ///
+    /// ## GD Internals:
+    /// This field is called `page` in the boomlings API
+    pub page: u32,
+
+    /// The name of the user being searched for
+    ///
+    /// ## GD Internals:
+    /// This field is called `str` in the boomlings API
+    pub search_string: String
+}
+
+impl UserSearchRequest {
+    const_setter!(with_base, base, BaseRequest);
+    const_setter!(total: u32);
+    const_setter!(page: u32);
+
+    pub const fn new(search_string: String) -> Self {
+        UserSearchRequest {
+            base: GD_21,
+            total: 0,
+            page: 0,
+            search_string
+        }
+    }
+}
+
+impl Into<UserSearchRequest> for String {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self)
+    }
+}
+
+
+impl Display for UserSearchRequest {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "UserSearchRequest({})", self.search_string)
+    }
+}
+
+impl Hash for UserSearchRequest {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.search_string.hash(state)
+    }
+}
+
+impl Request for UserSearchRequest {
+    type Result = ();
+}
+
+impl PaginatableRequest for UserSearchRequest {
+    fn next(&self) -> Self {
+        UserSearchRequest {
+            base: self.base,
+            total: self.total,
+            page: self.page + 1,
+            search_string : self.search_string.clone()
+        }
+    }
 }

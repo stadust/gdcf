@@ -13,7 +13,7 @@
 use crate::{
     error::ApiError,
     handle::Handler,
-    ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem},
+    ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem, UserSearchRequestRem},
 };
 use futures::{future::Executor, Future, Stream};
 use gdcf::api::{
@@ -37,6 +37,7 @@ use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},
     Action, Condition, Error as RetryError, RetryIf,
 };
+use gdcf::api::request::user::UserSearchRequest;
 
 #[macro_use]
 mod macros;
@@ -55,6 +56,9 @@ pub enum Req<'a> {
 
     #[serde(with = "UserRequestRem")]
     UserRequest(&'a UserRequest),
+
+    #[serde(with = "UserSearchRequestRem")]
+    UserSearchRequest(&'a UserSearchRequest)
 }
 
 #[derive(Debug, Default, Clone)]
