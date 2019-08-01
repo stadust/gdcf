@@ -93,7 +93,7 @@ pub struct User {
     // TODO: figure this value out
     ///
     /// ## GD Internals:
-    /// This value is provided at index `10`
+    /// This value is provided at index `11`
     pub index_11: String,
 
     /// The amount of secret coins this [`User`] has collected.
@@ -246,5 +246,104 @@ pub struct User {
 impl Display for User {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "User({}, {})", self.user_id, self.name)
+    }
+}
+
+#[derive(Debug)]
+pub struct SearchedUser {
+    /// This [`SearchedUser`]'s name
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `1`
+    pub name: String,
+
+    /// The [`SearchedUser`]'s unique user ID
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `2`
+    pub user_id: u64,
+
+    /// This [`SearchedUser`]'s stars
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `3`
+    pub stars: u32,
+
+    /// This [`SearchedUser`]'s beaten demons
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `4`
+    pub demons: u16,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `6`
+    pub index_6: Option<String>,
+
+    /// This [`SearchedUsers`] creator points
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `8`
+    pub creator_points: u16,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `9`
+    pub index_9: String,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `10`
+    pub index_10: String,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `11`
+    pub index_11: String,
+
+    /// The amount of secret coins this [`SearchedUser`] has collected.
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `13`
+    pub secret_coins: u8,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `14`
+    pub index_14: String,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `15`
+    pub index_15: String,
+
+    /// The [`SearchedUser`]'s unique account ID
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `16`
+    pub account_id: u64,
+
+    /// The amount of user coins this [`SearchedUser`] has collected.
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `17`
+    pub user_coins: u16,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `19`
+    pub index_19: String
+}
+
+impl Display for SearchedUser {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "SearchedUser({}, {})", self.user_id, self.name)
     }
 }

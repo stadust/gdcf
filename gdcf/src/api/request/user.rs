@@ -1,7 +1,7 @@
 //! Module ontianing request definitions for retrieving users
 
 use crate::api::request::{BaseRequest, Request, GD_21, PaginatableRequest};
-use gdcf_model::user::User;
+use gdcf_model::user::{User, SearchedUser};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -117,7 +117,7 @@ impl Hash for UserSearchRequest {
 }
 
 impl Request for UserSearchRequest {
-    type Result = ();
+    type Result = SearchedUser;
 }
 
 impl PaginatableRequest for UserSearchRequest {

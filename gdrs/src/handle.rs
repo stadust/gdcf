@@ -13,6 +13,7 @@ use gdcf_model::{
 };
 use gdcf_parse::Parse;
 use gdcf::api::request::user::UserSearchRequest;
+use gdcf_model::user::SearchedUser;
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -146,10 +147,9 @@ impl Handler for UserSearchRequest {
         let mut sections = response_body.split('#');
 
         match sections.next() {
-            _ => ()
+            Some(section) => Ok(Response::Exact(SearchedUser::parse_iter(section.split(':'))?)),
+            None => Err(ApiError::UnexpectedFormat),
         }
-
-        Ok(Response::Exact(()))
     }
 
     fn to_req(&self) -> Req {
