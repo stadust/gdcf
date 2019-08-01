@@ -1,0 +1,2 @@
+ALTER TABLE profile RENAME COLUMN mod_level TO index_49;
+ALTER TABLE profile ALTER COLUMN index_49 TYPE SMALLINT USING index_49::TEXT;

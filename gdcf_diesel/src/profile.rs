@@ -6,7 +6,7 @@ use diesel::{
     sql_types::{Int8, Nullable, Text},
     ExpressionMethods, Queryable,
 };
-use gdcf_model::user::User;
+use gdcf_model::user::{User, ModLevel};
 
 impl<'a> Identifiable for &'a Wrapped<User> {
     type Id = &'a u64;
@@ -46,7 +46,7 @@ diesel_stuff! {
         (twitch_url, twitch_url, Option<String>),
         (diamonds, diamonds, u16),
         (death_effect_index, death_effect_index, u8),
-        (index_49, index_49, String),
+        (mod_level, mod_level, ModLevel),
         (index_50, index_50, String)
     }
 }

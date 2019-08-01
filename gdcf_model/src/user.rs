@@ -5,6 +5,25 @@ use std::fmt::{Display, Error, Formatter};
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
 
+
+/// Enum representing the different types of moderator a user can be
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+pub enum ModLevel {
+    /// User isn't a moderator
+    None,
+
+    /// User is a normal moderator
+    Normal,
+
+    /// User is an elder moderator
+    Elder,
+
+    /// Unknown or invalid value. This variant will be constructed if robtop ever adds more moderator
+    /// levels and will hold the internal game value associated with the new moderator level
+    Unknown(u8),
+}
+
 /// Struct representing a [`Level`](::model::level::Level)'s creator.
 ///
 /// ## GD Internals:
@@ -230,11 +249,11 @@ pub struct User {
     /// This value is provied at index `48`
     pub death_effect_index: u8,
 
-    // TODO: figure this value out
+    /// The level of moderator this [`User`] is
     ///
     /// ## GD Internals:
     /// This value is provided at index `49`
-    pub index_49: String,
+    pub mod_level: ModLevel,
 
     // TODO: figure this value out
     ///
@@ -339,11 +358,33 @@ pub struct SearchedUser {
     ///
     /// ## GD Internals:
     /// This value is provided at index `19`
-    pub index_19: String
+    pub index_19: String,
 }
 
 impl Display for SearchedUser {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "SearchedUser({}, {})", self.user_id, self.name)
+    }
+}
+
+impl Into<u8> for ModLevel {
+    fn into(self) -> u8 {
+        match self {
+            ModLevel::None => 0,
+            ModLevel::Normal => 1,
+            ModLevel::Elder => 2,
+            ModLevel::Unknown(inner) => inner
+        }
+    }
+}
+
+impl From<u8> for ModLevel {
+    fn from(i: u8) -> Self {
+        match i {
+            0 => ModLevel::None,
+            1 => ModLevel::Normal,
+            2 => ModLevel::Elder,
+            i => ModLevel::Unknown(i)
+        }
     }
 }

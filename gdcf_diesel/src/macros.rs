@@ -46,6 +46,7 @@ macro_rules! __diesel_type {
     (Featured) => {Int4};
     (GameVersion) => {Int2};
     (MainSong) => {Int2};
+    (ModLevel) => {Int2};
 }
 
 macro_rules! __ref_if_not_copy {
@@ -70,6 +71,7 @@ macro_rules! __ref_if_not_copy {
     (Featured) => {i32};
     (GameVersion) => {i16};
     (MainSong) => {i16};
+    (ModLevel) => {i16};
 }
 
 macro_rules! __row_type {
@@ -93,6 +95,7 @@ macro_rules! __row_type {
     (Featured) => {i32};
     (GameVersion) => {i16};
     (MainSong) => {i16};
+    (ModLevel) => {i16};
 }
 
 macro_rules! __for_queryable {
@@ -136,6 +139,9 @@ macro_rules! __for_queryable {
     }};
     ($value: expr, GameVersion) => {{
         GameVersion::from($value as u8)
+    }};
+    ($value: expr, ModLevel) => {{
+        ModLevel::from($value as u8)
     }};
     ($value: expr, $($t:tt)*) => {
         $value
@@ -214,6 +220,10 @@ macro_rules! __for_values {
         value // y'all gay
     }};
     ($value: expr, GameVersion) => {{
+        let byte: u8 = $value.into();
+        byte as i16
+    }};
+    ($value: expr, ModLevel) => {{
         let byte: u8 = $value.into();
         byte as i16
     }};

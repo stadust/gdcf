@@ -59,7 +59,7 @@ parser! {
         twitch_url(index = 45, parse_infallible = TwitchConverter, default),
         diamonds(index = 46),
         death_effect_index(index = 48),
-        index_49(index = 49),
+        mod_level(index = 49),
         index_50(index = 50),
     }
 }

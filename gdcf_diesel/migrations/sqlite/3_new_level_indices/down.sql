@@ -1,6 +1,7 @@
 PRAGMA foreign_keys=off;
 
 BEGIN TRANSACTION;
+
 ALTER TABLE partial_level RENAME TO temp_table;
 CREATE TABLE partial_level (
     level_id INTEGER PRIMARY KEY,

@@ -5,6 +5,7 @@ use gdcf_model::{
 };
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::str::FromStr;
+use gdcf_model::user::ModLevel;
 
 pub trait RobtopInto<Conv, T> {
     fn robtop_into(self) -> T;
@@ -213,6 +214,28 @@ impl RobtopInto<Speed, String> for Speed {
             Speed::Invalid => "",
         }
         .to_string()
+    }
+}
+
+impl RobtopInto<ModLevel, String> for ModLevel {
+    fn robtop_into(self) -> String {
+        match self {
+            ModLevel::None => "0".to_string(),
+            ModLevel::Normal => "1".to_string(),
+            ModLevel::Elder => "2".to_string(),
+            ModLevel::Unknown(inner) => inner.to_string(),
+        }
+    }
+}
+
+impl RobtopFrom<ModLevel, &str> for ModLevel {
+    fn robtop_from(t: &str) -> Result<ModLevel, String> {
+        Ok(match t {
+            "0" => ModLevel::None,
+            "1" => ModLevel::Normal,
+            "2" => ModLevel::Elder,
+            t => ModLevel::Unknown(u8::robtop_from(t)?)
+        })
     }
 }
 
