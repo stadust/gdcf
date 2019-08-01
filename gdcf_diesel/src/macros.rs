@@ -262,11 +262,17 @@ macro_rules! lookup_simply {
             use crate::{wrap::Wrapped, Cache, Entry};
             use diesel::{QueryDsl, RunQueryDsl};
             use gdcf::cache::{CacheEntry, Lookup};
-            use log::{trace, debug};
+            use log::{debug, trace};
 
             impl Lookup<$to_lookup_ty> for Cache {
                 fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Entry>, Self::Err> {
-                    trace!("Performing look up of {} with key {} in table {} (meta table {})", stringify!($to_lookup_ty), key as i64, stringify!($object_table), stringify!($meta_table));
+                    trace!(
+                        "Performing look up of {} with key {} in table {} (meta table {})",
+                        stringify!($to_lookup_ty),
+                        key as i64,
+                        stringify!($object_table),
+                        stringify!($meta_table)
+                    );
 
                     let connection = self.pool.get()?;
                     let entry = handle_missing!($meta_table::table

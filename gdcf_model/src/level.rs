@@ -337,6 +337,12 @@ where
     /// This value is provided at index `30`
     pub copy_of: Option<u64>,
 
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `31`
+    pub index_31: Option<String>,
+
     /// The id of the newgrounds song this [`PartialLevel`] uses, or [`None`]
     /// if it useds a main song.
     ///
@@ -365,6 +371,12 @@ where
     /// This value is provided at index `39`, and a value of `0` means no stars
     /// were requested
     pub stars_requested: Option<u8>,
+
+    // TODO: figure this value out
+    ///
+    /// ## GD Internals:
+    /// This value is provided at index `40`
+    pub index_40: Option<String>,
 
     /// Value indicating whether this [`PartialLevel`] is epic
     ///

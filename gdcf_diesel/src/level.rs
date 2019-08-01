@@ -2,7 +2,7 @@ use crate::{meta::Entry, wrap::Wrapped, Cache};
 use diesel::{backend::Backend, deserialize::FromSqlRow, ExpressionMethods, Queryable, RunQueryDsl};
 use gdcf::cache::{CacheEntry, Lookup, Store};
 use gdcf_model::level::{Level, Password};
-use log::debug;
+use log::{debug, warn};
 use std::fmt::Display;
 
 // Daily reminder that diesel is a piece of shit
@@ -118,6 +118,8 @@ impl Lookup<Level<u64, u64>> for Cache {
 
 impl Store<Level<u64, u64>> for Cache {
     fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+        warn!("Marking Level with key {} as absent!", key as i64);
+
         let entry = Entry::absent(key);
         update_entry!(self, entry, level_meta::table, level_meta::level_id);
         Ok(entry)

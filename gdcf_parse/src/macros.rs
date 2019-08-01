@@ -116,7 +116,7 @@ macro_rules! __into_expr {
     }};
 
     (! $($t:tt)*) => {{
-        compile_error!("Please specific an extractor via `extract = <...>` for help variables")
+        compile_error!("Please specific an extractor via `extract = <...>` for helper variables")
     }};
 
     (@ $($t:tt)*) => {
@@ -243,6 +243,8 @@ macro_rules! parser {
                     let $helper_field = __unwrap!($helper_field($($tokens2)*));
                 )*
 
+                trace!("Finished parsing {}", stringify!($struct_name));
+
                 Ok(Self {
                     $(
                         $field_name,
@@ -342,6 +344,8 @@ macro_rules! parser {
                 $(
                     let $helper_field = __unwrap!($helper_field($($tokens2)*));
                 )*
+
+                trace!("Finished parsing {}", stringify!($struct_name));
 
                 Ok(Self {
                     $delegated,

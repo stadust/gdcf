@@ -121,7 +121,7 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use log::info;
+use log::{info, warn};
 
 pub use crate::future::GdcfFuture;
 
@@ -268,6 +268,8 @@ where
                 // TODO: maybe mark malformed data as absent as well
                 if let GdcfError::Api(ref err) = error {
                     if err.is_no_result() {
+                        warn!("Request yielded no result, marking as absent");
+
                         return Store::<R::Result>::mark_absent(&mut cache2, key)
                             .map(|entry_info| CacheEntry::MarkedAbsent(entry_info))
                             .map_err(GdcfError::Cache)
@@ -279,7 +281,8 @@ where
     }
 
     fn process<R>(
-        &self, request: R,
+        &self,
+        request: R,
     ) -> Result<
         EitherOrBoth<
             CacheEntry<R::Result, C::CacheEntryMeta>,
@@ -443,7 +446,8 @@ where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, u64>>>,
 {
     fn process_request(
-        &self, request: LevelsRequest,
+        &self,
+        request: LevelsRequest,
     ) -> Result<GdcfFuture<Vec<PartialLevel<Song, Option<Creator>>>, <A as ApiClient>::Err, C>, C::Err> {
         let cache = self.cache();
 
@@ -467,7 +471,8 @@ where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<u64, u64>>>,
 {
     fn process_request(
-        &self, request: LevelsRequest,
+        &self,
+        request: LevelsRequest,
     ) -> Result<GdcfFuture<Vec<PartialLevel<NewgroundsSong, u64>>, <A as ApiClient>::Err, C>, C::Err> {
         let cache = self.cache();
 
@@ -497,7 +502,8 @@ where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, Option<Creator>>>>,
 {
     fn process_request(
-        &self, request: LevelsRequest,
+        &self,
+        request: LevelsRequest,
     ) -> Result<GdcfFuture<Vec<PartialLevel<Song, Option<User>>>, <A as ApiClient>::Err, C>, C::Err> {
         let cache = self.cache();
         let gdcf = self.clone();
@@ -591,7 +597,8 @@ where
     /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
     /// parameter until it hits the first empty page.
     pub fn paginate_levels<Song, User>(
-        &self, request: LevelsRequest,
+        &self,
+        request: LevelsRequest,
     ) -> Result<impl Stream<Item = CacheEntry<Vec<PartialLevel<Song, User>>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,

@@ -52,7 +52,10 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     ///
     /// + `Look`: The type of the database-lookup closure.
     pub(crate) fn extend<AddOn, U, Look, Req, Comb, Fut>(
-        self, lookup: Look, request: Req, combinator: Comb,
+        self,
+        lookup: Look,
+        request: Req,
+        combinator: Comb,
     ) -> Result<GdcfFuture<U, A, C>, C::Err>
     where
         T: Clone + Send + 'static,
@@ -83,7 +86,9 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
     }
 
     fn extend_future<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
+        future: impl Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>,
+        lookup: Look,
+        request: Req,
         combinator: Comb,
     ) -> impl Future<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where
@@ -108,7 +113,10 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<T, A, C> {
 // FIXME: same thing as in cache.rs, specialization would be freaking awesome
 impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     pub(crate) fn extend_all<AddOn, U, Look, Req, Comb, Fut>(
-        self, lookup: Look, request: Req, combinator: Comb,
+        self,
+        lookup: Look,
+        request: Req,
+        combinator: Comb,
     ) -> Result<GdcfFuture<Vec<U>, A, C>, C::Err>
     where
         T: Clone + Send + 'static,
@@ -139,7 +147,9 @@ impl<T, A: ApiError, C: Cache> GdcfFuture<Vec<T>, A, C> {
     }
 
     fn extend_future_all<AddOn, U, Look, Req, Comb, Fut>(
-        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>, lookup: Look, request: Req,
+        future: impl Future<Item = CacheEntry<Vec<T>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>,
+        lookup: Look,
+        request: Req,
         combinator: Comb,
     ) -> impl Future<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A, C::Err>>
     where

@@ -83,7 +83,9 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
     }
 
     pub(crate) fn combine<AddOn, R>(
-        self, other: CacheEntry<AddOn, Meta>, combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
+        self,
+        other: CacheEntry<AddOn, Meta>,
+        combinator: impl Fn(T, Option<AddOn>) -> Option<R>,
     ) -> CacheEntry<R, Meta> {
         match self {
             CacheEntry::Missing => CacheEntry::Missing,
@@ -108,7 +110,10 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
     }
 
     pub(crate) fn extend<A: ApiError, C: CacheError, AddOn, U, Look, Req, Comb, Fut>(
-        self, lookup: Look, request: Req, combinator: Comb,
+        self,
+        lookup: Look,
+        request: Req,
+        combinator: Comb,
     ) -> Result<
         (
             CacheEntry<U, Meta>,
@@ -150,7 +155,10 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
 // from it.
 impl<T, Meta: CacheEntryMeta> CacheEntry<Vec<T>, Meta> {
     pub(crate) fn extend_all<A: ApiError, C: CacheError, AddOn, U, Look, Req, Comb, Fut>(
-        self, lookup: Look, request: Req, combinator: Comb,
+        self,
+        lookup: Look,
+        request: Req,
+        combinator: Comb,
     ) -> Result<
         (
             CacheEntry<Vec<U>, Meta>,

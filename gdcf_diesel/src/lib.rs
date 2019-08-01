@@ -29,8 +29,8 @@ use gdcf::{
     error::CacheError,
 };
 use gdcf_model::level::PartialLevel;
+use log::{debug, warn};
 use r2d2::Pool;
-use log::{warn, debug};
 
 pub use crate::meta::Entry;
 
