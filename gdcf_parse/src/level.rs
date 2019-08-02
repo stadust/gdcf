@@ -87,23 +87,24 @@ fn extract_rating(rating: LevelRating) -> String {
             },
         _ => 1971, // doesnt matter
     }
-    .robtop_into()
+        .robtop_into()
 }
 
 fn extract_is_demon(rating: LevelRating) -> String {
-    match rating {
-        LevelRating::Demon(_) => true,
-        _ => false,
-    }
-    .robtop_into()
+    RobtopInto::<bool, String>::robtop_into(
+        match rating {
+            LevelRating::Demon(_) => true,
+            _ => false,
+        }
+    )
 }
 
 fn extract_is_auto(rating: LevelRating) -> String {
-    (rating == LevelRating::Auto).robtop_into()
+    RobtopInto::<bool, String>::robtop_into(rating == LevelRating::Auto)
 }
 
 fn extract_is_na(rating: LevelRating) -> String {
-    (rating == LevelRating::NotAvailable).robtop_into()
+    RobtopInto::<bool, String>::robtop_into(rating == LevelRating::NotAvailable)
 }
 
 parser! {

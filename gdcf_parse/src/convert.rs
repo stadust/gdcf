@@ -1,9 +1,5 @@
 use crate::util::{self, b64_decode_string, xor_decrypt};
-use gdcf_model::{
-    level::{data::portal::Speed, Featured, LevelLength, Password},
-    user::ModLevel,
-    GameVersion,
-};
+use gdcf_model::{level::{data::portal::Speed, Featured, LevelLength, Password}, user::ModLevel, GameVersion, GameMode};
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::str::FromStr;
 use gdcf_model::user::Color;
@@ -48,6 +44,33 @@ impl RobtopFrom<bool, &str> for bool {
     }
 }
 
+// because robtop wants me to suffer an early death
+pub(crate) struct TwoBool;
+
+impl RobtopInto<TwoBool, String> for bool {
+    fn robtop_into(self) -> String {
+        match self {
+            true => "2",
+            false => "0",
+        }
+            .to_string()
+    }
+
+    fn can_omit(&self) -> bool {
+        !*self
+    }
+}
+
+impl RobtopFrom<bool, &str> for TwoBool {
+    fn robtop_from(s: &str) -> Result<bool, String> {
+        match s {
+            "0" => Ok(false),
+            "2" => Ok(true),
+            _ => Err("Not '0' or '2'".to_owned()),
+        }
+    }
+}
+
 macro_rules! delegate_to_from_str {
     ($($t: ident),*) => {
         $(
@@ -71,6 +94,17 @@ macro_rules! delegate_to_from_str {
 }
 
 delegate_to_from_str!(i8, u8, i16, u16, i32, u32, i64, u64, usize, isize, f32, f64);
+
+macro_rules! delegate_into_num {
+    ($t: ident[$num: ty]) => {
+        impl RobtopInto<$t, String> for $t {
+            fn robtop_into(self) -> String {
+                let intermediate: $num = self.into();
+                intermediate.to_string()
+            }
+        }
+    };
+}
 
 impl RobtopInto<String, String> for String {
     fn robtop_into(self) -> String {
@@ -236,6 +270,23 @@ impl RobtopFrom<ModLevel, &str> for ModLevel {
             "1" => ModLevel::Normal,
             "2" => ModLevel::Elder,
             t => ModLevel::Unknown(u8::robtop_from(t)?),
+        })
+    }
+}
+
+delegate_into_num!(GameMode[u8]);
+
+impl RobtopFrom<GameMode ,&str> for GameMode {
+    fn robtop_from(t: &str) -> Result<GameMode, String> {
+        Ok(match t {
+            "0" => GameMode::Cube,
+            "1" => GameMode::Ship,
+            "2" => GameMode::Ball,
+            "3" => GameMode::Ufo,
+            "4" => GameMode::Wave,
+            "5" => GameMode::Robot,
+            "6" => GameMode::Spider,
+            i => GameMode::Unknown(u8::robtop_from(i)?)
         })
     }
 }

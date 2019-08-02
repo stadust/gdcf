@@ -24,6 +24,18 @@ pub enum GameVersion {
     Version { minor: u8, major: u8 },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GameMode {
+    Cube,
+    Ship,
+    Ball,
+    Ufo,
+    Wave,
+    Robot,
+    Spider,
+    Unknown(u8),
+}
+
 impl From<u8> for GameVersion {
     fn from(version: u8) -> Self {
         if version == 10 {
@@ -59,6 +71,36 @@ impl ToString for GameVersion {
         match self {
             GameVersion::Unknown => String::from("10"),
             GameVersion::Version { minor, major } => (minor + 10 * major).to_string(),
+        }
+    }
+}
+
+impl From<u8> for GameMode {
+    fn from(i: u8) -> Self {
+        match i {
+            0 => GameMode::Cube,
+            1 => GameMode::Ship,
+            2 => GameMode::Ball,
+            3 => GameMode::Ufo,
+            4 => GameMode::Wave,
+            5 => GameMode::Robot,
+            6 => GameMode::Spider,
+            i => GameMode::Unknown(i)
+        }
+    }
+}
+
+impl Into<u8> for GameMode {
+    fn into(self) -> u8 {
+        match self {
+            GameMode::Cube => 0,
+            GameMode::Ship => 1,
+            GameMode::Ball => 2,
+            GameMode::Ufo => 3,
+            GameMode::Wave => 4,
+            GameMode::Robot => 5,
+            GameMode::Spider => 6,
+            GameMode::Unknown(idx) => idx,
         }
     }
 }

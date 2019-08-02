@@ -1,5 +1,5 @@
 use crate::{
-    convert::{TwitchConverter, TwitterConverter, YoutubeConverter},
+    convert::{TwitchConverter, TwitterConverter, YoutubeConverter, TwoBool},
     error::ValueError,
     Parse,
 };
@@ -80,12 +80,12 @@ parser! {
         demons(index = 4),
         index_6(index = 6, default),
         creator_points(index = 8),
-        index_9(index = 9),
+        icon_index(index = 9),
         primary_color(index = 10),
         secondary_color(index = 11),
         secret_coins(index = 13),
-        index_14(index = 14),
-        index_15(index = 15),
+        icon_type(index = 14),
+        has_glow(index = 15, parse = TwoBool),
         account_id(index = 16),
         user_coins(index = 17),
     }

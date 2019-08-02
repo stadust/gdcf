@@ -4,6 +4,7 @@ use std::fmt::{Display, Error, Formatter};
 
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
+use crate::GameMode;
 
 /// Enum representing the different types of moderator a user can be
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -321,11 +322,11 @@ pub struct SearchedUser {
     /// This value is provided at index `8`
     pub creator_points: u16,
 
-    // TODO: figure this value out
+    /// The index of the icon being displayed.
     ///
     /// ## GD Internals:
     /// This value is provided at index `9`
-    pub index_9: String,
+    pub icon_index: u16,
 
     /// This [`SearchedUser`]'s primary color
     ///
@@ -348,17 +349,17 @@ pub struct SearchedUser {
     /// This value is provided at index `13`
     pub secret_coins: u8,
 
-    // TODO: figure this value out
+    /// The type of icon being displayed
     ///
     /// ## GD Internals:
     /// This value is provided at index `14`
-    pub index_14: String,
+    pub icon_type: GameMode,
 
-    // TODO: figure this value out
+    /// Values indicating whether this [`SearchedUser`] has glow activated or not.
     ///
     /// ## GD Internals:
     /// This value is provided at index `15`
-    pub index_15: String,
+    pub has_glow: bool,
 
     /// The [`SearchedUser`]'s unique account ID
     ///
