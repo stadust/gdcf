@@ -1,4 +1,4 @@
-CREATE FUNCTION pg_temp.idx_to_col(index TEXT)
+CREATE OR REPLACE FUNCTION pg_temp.idx_to_col(index TEXT)
 RETURNS INTEGER AS $idx_to_col$
     SELECT CASE
         WHEN index = '0' THEN 125 | (255 << 8) | (0 << 16)
