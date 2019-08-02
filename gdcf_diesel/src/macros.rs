@@ -240,7 +240,7 @@ macro_rules! __for_values {
     ($value: expr, Color) => {{
         match $value {
             Color::Unknown(idx) => -(idx as i32),
-            Color::Known(r,g,b) => r as i32 | (g as i32) << 8 | (b as i32) << 16
+            Color::Known(r, g, b) => r as i32 | (g as i32) << 8 | (b as i32) << 16,
         }
     }};
     ($value: expr, $($t:tt)*) => {

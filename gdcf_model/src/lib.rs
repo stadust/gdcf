@@ -7,8 +7,11 @@ pub mod user;
 
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
-use std::{num::ParseIntError, str::FromStr};
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    num::ParseIntError,
+    str::FromStr,
+};
 
 /// Enum modelling the version of a Geometry Dash client
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -63,7 +66,7 @@ impl Display for GameVersion {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
             GameVersion::Unknown => write!(f, "Unknown"),
-            GameVersion::Version { minor, major } => write!(f, "{}.{}", major, minor)
+            GameVersion::Version { minor, major } => write!(f, "{}.{}", major, minor),
         }
     }
 }
@@ -78,7 +81,7 @@ impl From<u8> for GameMode {
             4 => GameMode::Wave,
             5 => GameMode::Robot,
             6 => GameMode::Spider,
-            i => GameMode::Unknown(i)
+            i => GameMode::Unknown(i),
         }
     }
 }

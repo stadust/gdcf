@@ -2,9 +2,9 @@
 
 use std::fmt::{Display, Error, Formatter};
 
+use crate::GameMode;
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
-use crate::GameMode;
 
 /// Enum representing the different types of moderator a user can be
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]

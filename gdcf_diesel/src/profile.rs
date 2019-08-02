@@ -6,7 +6,7 @@ use diesel::{
     sql_types::{Int8, Nullable, Text},
     ExpressionMethods, Queryable,
 };
-use gdcf_model::user::{ModLevel, User, Color};
+use gdcf_model::user::{Color, ModLevel, User};
 
 impl<'a> Identifiable for &'a Wrapped<User> {
     type Id = &'a u64;

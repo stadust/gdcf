@@ -1,5 +1,5 @@
 use crate::{
-    convert::{TwitchConverter, TwitterConverter, YoutubeConverter, TwoBool},
+    convert::{TwitchConverter, TwitterConverter, TwoBool, YoutubeConverter},
     error::ValueError,
     Parse,
 };

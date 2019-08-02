@@ -60,7 +60,7 @@ pub enum LevelLength {
 pub enum LevelRating {
     /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
-    Unknown,
+    Unknown(i32),
 
     /// Not Available, sometimes referred to as `N/A` or `NA`
     ///
@@ -127,7 +127,7 @@ pub enum LevelRating {
 pub enum DemonRating {
     /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
-    Unknown,
+    Unknown(i32),
 
     /// Easy demon
     ///
@@ -580,7 +580,7 @@ impl Into<i32> for LevelLength {
         }
     }
 }*/
-
+/*
 impl From<i32> for LevelRating {
     fn from(value: i32) -> Self {
         match value {
@@ -609,8 +609,8 @@ impl Into<i32> for LevelRating {
             LevelRating::Unknown => std::i32::MAX,
         }
     }
-}
-
+}*/
+/*
 impl From<i32> for DemonRating {
     fn from(value: i32) -> DemonRating {
         match value {
@@ -635,7 +635,7 @@ impl Into<i32> for DemonRating {
             DemonRating::Unknown => std::i32::MAX,
         }
     }
-}
+}*/
 
 impl ToString for LevelRating {
     fn to_string(&self) -> String {
@@ -647,7 +647,7 @@ impl ToString for LevelRating {
             LevelRating::Hard => "Hard".into(),
             LevelRating::Harder => "Harder".into(),
             LevelRating::Insane => "Insane".into(),
-            LevelRating::Unknown => "__UNKNOWN_LEVEL_RATING__".into(),
+            LevelRating::Unknown(_) => "__UNKNOWN_LEVEL_RATING__".into(),
             LevelRating::Demon(demon) => demon.to_string(),
         }
     }
@@ -663,7 +663,7 @@ impl From<String> for LevelRating {
             "Normal" => LevelRating::Normal,
             "Harder" => LevelRating::Harder,
             "Insane" => LevelRating::Harder,
-            "__UNKNOWN_LEVEL_RATING__" => LevelRating::Unknown,
+            "__UNKNOWN_LEVEL_RATING__" => LevelRating::Unknown(-1),
             _ => LevelRating::Demon(DemonRating::from(s)),
         }
     }
@@ -677,7 +677,7 @@ impl ToString for DemonRating {
             DemonRating::Hard => "HardDemon",
             DemonRating::Insane => "InsaneDemon",
             DemonRating::Extreme => "ExtremeDemon",
-            DemonRating::Unknown => "__UNKNOWN_DEMON_RATING__",
+            DemonRating::Unknown(_) => "__UNKNOWN_DEMON_RATING__",
         }
         .to_string()
     }
@@ -691,7 +691,7 @@ impl From<String> for DemonRating {
             "HardDemon" => DemonRating::Hard,
             "InsaneDemon" => DemonRating::Insane,
             "ExtremeDemon" => DemonRating::Extreme,
-            _ => DemonRating::Unknown,
+            _ => DemonRating::Unknown(-1),
         }
     }
 }

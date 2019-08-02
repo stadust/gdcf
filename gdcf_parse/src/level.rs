@@ -1,5 +1,5 @@
 use crate::{
-    convert::{Base64BytesConverter, Base64Converter, RobtopInto},
+    convert::{Base64BytesConverter, Base64Converter, RobtopFrom, RobtopInto},
     error::ValueError,
     Parse,
 };
@@ -11,13 +11,14 @@ use gdcf_model::{
 pub mod data;
 pub mod object;
 
-pub fn process_difficulty(rating: i32, is_auto: bool, is_demon: bool) -> LevelRating {
+pub fn process_difficulty(rating: &str, is_auto: bool, is_demon: bool) -> LevelRating {
     if is_demon {
-        LevelRating::Demon(rating.into())
+        LevelRating::Demon(DemonRating::robtop_from(rating).unwrap()) // FIXME: make custom
+                                                                      // functions return result
     } else if is_auto {
         LevelRating::Auto
     } else {
-        rating.into()
+        LevelRating::robtop_from(rating).unwrap()
     }
 }
 
@@ -69,34 +70,14 @@ fn extract_main_song_id(main_song: Option<&'static MainSong>) -> String {
 }
 
 fn extract_rating(rating: LevelRating) -> String {
-    match rating {
-        LevelRating::NotAvailable => 0,
-        LevelRating::Easy => 10,
-        LevelRating::Normal => 20,
-        LevelRating::Hard => 30,
-        LevelRating::Harder => 40,
-        LevelRating::Insane => 50,
-        LevelRating::Demon(demon) =>
-            match demon {
-                DemonRating::Easy => 10,
-                DemonRating::Medium => 20,
-                DemonRating::Hard => 30,
-                DemonRating::Insane => 40,
-                DemonRating::Extreme => 50,
-                _ => 1971, // doesnt matter
-            },
-        _ => 1971, // doesnt matter
-    }
-        .robtop_into()
+    rating.robtop_into()
 }
 
 fn extract_is_demon(rating: LevelRating) -> String {
-    RobtopInto::<bool, String>::robtop_into(
-        match rating {
-            LevelRating::Demon(_) => true,
-            _ => false,
-        }
-    )
+    RobtopInto::<bool, String>::robtop_into(match rating {
+        LevelRating::Demon(_) => true,
+        _ => false,
+    })
 }
 
 fn extract_is_auto(rating: LevelRating) -> String {

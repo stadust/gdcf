@@ -1,11 +1,36 @@
 use crate::util::{self, b64_decode_string, xor_decrypt};
-use gdcf_model::{level::{data::portal::Speed, Featured, LevelLength, Password}, user::ModLevel, GameVersion, GameMode};
+use gdcf_model::{
+    level::{data::portal::Speed, DemonRating, Featured, LevelLength, LevelRating, Password},
+    user::{Color, ModLevel},
+    GameMode, GameVersion,
+};
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
 use std::str::FromStr;
-use gdcf_model::user::Color;
 
+/// Trait for converting objects of type `Self` into RobTop's data format of type `T` (most commonly
+/// `T = String`)
 pub trait RobtopInto<Conv, T> {
+    /// Converts `self` into `T` using RobTop's data format.
+    ///
+    /// This method should be the inverse of [`RobtopFrom::robtop_from`] and is used to
+    /// convert already parsed data back into robtop's data format
     fn robtop_into(self) -> T;
+
+    /// Converts `self` into `T` using RobTop's data format, if `self` is intended to be part of an
+    /// API request
+    ///
+    /// This method should be the inverse of [`RobtopFrom::robtop_from_req`] and is used
+    /// to serialize data in preparation for making requests to the boomlings API.
+    ///
+    /// Since for almost all objects (with the notable exception of [`LevelRating`] and friends),
+    /// requests use the same format as responses, this method has a default implementation that
+    /// delegates to [`RobtopInto::robtop_into`]
+    fn robtop_into_req(self) -> T
+    where
+        Self: Sized,
+    {
+        self.robtop_into()
+    }
 
     fn can_omit(&self) -> bool {
         false
@@ -14,10 +39,21 @@ pub trait RobtopInto<Conv, T> {
 
 pub trait RobtopFrom<For, T>: Sized {
     fn robtop_from(t: T) -> Result<For, String>;
+
+    fn robtop_from_req(t: T) -> Result<For, String> {
+        Self::robtop_from(t)
+    }
 }
 
 pub trait RobtopFromInfallible<For, T> {
     fn robtop_from_infallible(s: T) -> For;
+}
+
+// "Blanket impl" required to passing unprocessed values to helper functions
+impl<'a> RobtopFrom<&'a str, &'a str> for &'a str {
+    fn robtop_from(t: &'a str) -> Result<&'a str, String> {
+        Ok(t)
+    }
 }
 
 impl RobtopInto<bool, String> for bool {
@@ -53,7 +89,7 @@ impl RobtopInto<TwoBool, String> for bool {
             true => "2",
             false => "0",
         }
-            .to_string()
+        .to_string()
     }
 
     fn can_omit(&self) -> bool {
@@ -127,6 +163,7 @@ impl RobtopFrom<GameVersion, &str> for GameVersion {
         s.parse().map(u8::into).map_err(|e| e.to_string())
     }
 }
+
 impl RobtopInto<GameVersion, String> for GameVersion {
     fn robtop_into(self) -> String {
         match self {
@@ -179,7 +216,119 @@ impl RobtopInto<LevelLength, String> for LevelLength {
             LevelLength::ExtraLong => "4".to_string(),
             LevelLength::Unknown(value) => value.to_string(),
         }
+    }
+}
 
+impl RobtopFrom<LevelRating, &str> for LevelRating {
+    fn robtop_from(t: &str) -> Result<LevelRating, String> {
+        Ok(match t {
+            "0" => LevelRating::NotAvailable,
+            "10" => LevelRating::Easy,
+            "20" => LevelRating::Normal,
+            "30" => LevelRating::Hard,
+            "40" => LevelRating::Harder,
+            "50" => LevelRating::Insane,
+            t => LevelRating::Unknown(i32::robtop_from(t)?),
+        })
+    }
+
+    fn robtop_from_req(t: &str) -> Result<LevelRating, String> {
+        Ok(match t {
+            "-3" => LevelRating::Auto,
+            "-2" => LevelRating::Demon(DemonRating::Unknown(-1)), /* The value doesn't matter, since setting the request field "rating" */
+            // to -2 means "search for any demon, regardless of difficulty"
+            "-1" => LevelRating::NotAvailable,
+            "1" => LevelRating::Easy,
+            "2" => LevelRating::Normal,
+            "3" => LevelRating::Hard,
+            "4" => LevelRating::Harder,
+            "5" => LevelRating::Insane,
+            t => LevelRating::Unknown(i32::robtop_from_req(t)?),
+        })
+    }
+}
+
+impl RobtopInto<LevelRating, String> for LevelRating {
+    fn robtop_into(self) -> String {
+        match self {
+            LevelRating::NotAvailable => "0".to_string(),
+            LevelRating::Easy => "10".to_string(),
+            LevelRating::Normal => "20".to_string(),
+            LevelRating::Hard => "30".to_string(),
+            LevelRating::Harder => "40".to_string(),
+            LevelRating::Insane => "50".to_string(),
+            LevelRating::Demon(demon) => demon.robtop_into(),
+            LevelRating::Unknown(value) => value.robtop_into(),
+            LevelRating::Auto => unreachable!(),
+        }
+    }
+
+    fn robtop_into_req(self) -> String
+    where
+        Self: Sized,
+    {
+        match self {
+            LevelRating::Auto => "-3".to_string(),
+            LevelRating::Demon(_) => "-2".to_string(),
+            LevelRating::NotAvailable => "-1".to_string(),
+            LevelRating::Easy => "1".to_string(),
+            LevelRating::Normal => "2".to_string(),
+            LevelRating::Hard => "3".to_string(),
+            LevelRating::Harder => "4".to_string(),
+            LevelRating::Insane => "5".to_string(),
+            LevelRating::Unknown(value) => value.robtop_into(),
+        }
+    }
+}
+
+impl RobtopFrom<DemonRating, &str> for DemonRating {
+    fn robtop_from(t: &str) -> Result<DemonRating, String> {
+        Ok(match t {
+            "10" => DemonRating::Easy,
+            "20" => DemonRating::Medium,
+            "30" => DemonRating::Hard,
+            "40" => DemonRating::Insane,
+            "50" => DemonRating::Extreme,
+            t => DemonRating::Unknown(i32::robtop_from_req(t)?),
+        })
+    }
+
+    fn robtop_from_req(t: &str) -> Result<DemonRating, String> {
+        Ok(match t {
+            "1" => DemonRating::Easy,
+            "2" => DemonRating::Medium,
+            "3" => DemonRating::Hard,
+            "4" => DemonRating::Insane,
+            "5" => DemonRating::Extreme,
+            t => DemonRating::Unknown(i32::robtop_from_req(t)?),
+        })
+    }
+}
+
+impl RobtopInto<DemonRating, String> for DemonRating {
+    fn robtop_into(self) -> String {
+        match self {
+            DemonRating::Easy => "10".to_string(),
+            DemonRating::Medium => "20".to_string(),
+            DemonRating::Hard => "30".to_string(),
+            DemonRating::Insane => "40".to_string(),
+            DemonRating::Extreme => "50".to_string(),
+            DemonRating::Unknown(value) => value.to_string(),
+        }
+    }
+
+    fn robtop_into_req(self) -> String
+    where
+        Self: Sized,
+    {
+        match self {
+            DemonRating::Easy => "1".to_string(),
+            DemonRating::Medium => "2".to_string(),
+            DemonRating::Hard => "3".to_string(),
+            DemonRating::Insane => "4".to_string(),
+            DemonRating::Extreme => "5".to_string(),
+            DemonRating::Unknown(value) => value.to_string(),
+        }
     }
 }
 
@@ -270,7 +419,7 @@ impl RobtopFrom<ModLevel, &str> for ModLevel {
 
 delegate_into_num!(GameMode[u8]);
 
-impl RobtopFrom<GameMode ,&str> for GameMode {
+impl RobtopFrom<GameMode, &str> for GameMode {
     fn robtop_from(t: &str) -> Result<GameMode, String> {
         Ok(match t {
             "0" => GameMode::Cube,
@@ -280,7 +429,7 @@ impl RobtopFrom<GameMode ,&str> for GameMode {
             "4" => GameMode::Wave,
             "5" => GameMode::Robot,
             "6" => GameMode::Spider,
-            i => GameMode::Unknown(u8::robtop_from(i)?)
+            i => GameMode::Unknown(u8::robtop_from(i)?),
         })
     }
 }
@@ -423,7 +572,9 @@ impl RobtopInto<UrlConverter, String> for String {
 }
 
 pub struct YoutubeConverter;
+
 pub struct TwitterConverter;
+
 pub struct TwitchConverter;
 
 impl RobtopInto<YoutubeConverter, String> for Option<String> {
