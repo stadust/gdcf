@@ -10,6 +10,7 @@ use gdcf_model::{
 };
 use joinery::Joinable;
 use serde::{ser::SerializeMap, Serializer};
+use gdcf_parse::convert::RobtopInto;
 
 mod request;
 
@@ -20,6 +21,14 @@ pub fn vec<T: Into<i32> + Copy>(list: &[T]) -> String {
         String::from("-")
     } else {
         list.iter().map(|v| T::into(*v)).join_with(",").to_string()
+    }
+}
+
+pub fn vec2<T: RobtopInto<T, String> + Copy>(list: &[T]) -> String {
+    if list.is_empty() {
+        String::from("-")
+    } else {
+        list.iter().map(|v| T::robtop_into(*v)).join_with(",").to_string()
     }
 }
 
@@ -42,7 +51,7 @@ pub(super) fn game_version<S>(version: &GameVersion, serializer: S) -> Result<S:
 where
     S: Serializer,
 {
-    serializer.collect_str(&version.to_string())
+    serializer.collect_str(&version.robtop_into())
 }
 
 pub(super) fn bool_to_int<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
@@ -56,7 +65,7 @@ pub(super) fn length_vec<S>(values: &[LevelLength], serializer: S) -> Result<S::
 where
     S: Serializer,
 {
-    serializer.serialize_str(&vec(values))
+    serializer.serialize_str(&vec2(values))
 }
 
 pub(super) fn rating_vec<S>(values: &[LevelRating], serializer: S) -> Result<S::Ok, S::Error>

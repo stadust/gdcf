@@ -16,7 +16,7 @@ use serde_derive::{Deserialize, Serialize};
 pub enum LevelLength {
     /// Enum variant that's used by the [`From<i32>`](From) impl for when an
     /// unrecognized value is passed
-    Unknown,
+    Unknown(i32),
 
     /// Tiny
     ///
@@ -554,7 +554,7 @@ impl Into<i32> for Featured {
         }
     }
 }
-
+/*
 impl From<i32> for LevelLength {
     fn from(length: i32) -> Self {
         match length {
@@ -563,7 +563,7 @@ impl From<i32> for LevelLength {
             2 => LevelLength::Medium,
             3 => LevelLength::Long,
             4 => LevelLength::ExtraLong,
-            _ => LevelLength::Unknown,
+            length => LevelLength::Unknown(length),
         }
     }
 }
@@ -576,10 +576,10 @@ impl Into<i32> for LevelLength {
             LevelLength::Medium => 2,
             LevelLength::Long => 3,
             LevelLength::ExtraLong => 4,
-            LevelLength::Unknown => std::i32::MAX,
+            LevelLength::Unknown(value) => value,
         }
     }
-}
+}*/
 
 impl From<i32> for LevelRating {
     fn from(value: i32) -> Self {
@@ -704,7 +704,7 @@ impl ToString for LevelLength {
             LevelLength::Short => "Short",
             LevelLength::Long => "Long",
             LevelLength::ExtraLong => "ExtraLong",
-            LevelLength::Unknown => "__UNKNOWN_LEVEL_LENGTH__",
+            LevelLength::Unknown(_) => "__UNKNOWN_LEVEL_LENGTH__",
         }
         .to_string()
     }
@@ -718,7 +718,7 @@ impl From<String> for LevelLength {
             "Short" => LevelLength::Short,
             "Long" => LevelLength::Long,
             "ExtraLong" => LevelLength::ExtraLong,
-            _ => LevelLength::Unknown,
+            _ => LevelLength::Unknown(-1),
         }
     }
 }

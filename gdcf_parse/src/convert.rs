@@ -122,25 +122,19 @@ impl RobtopFrom<String, &str> for String {
     }
 }
 
-macro_rules! delegate_to_from_str_no_omit {
-    ($($t: ty),*) => {
-        $(
-            impl RobtopFrom<$t, &str> for $t {
-                fn robtop_from(s: &str ) -> Result<$t, String> {
-                    s.parse().map_err(|e: <Self as FromStr>::Err| e.to_string())
-                }
-            }
-
-            impl RobtopInto<$t, String> for $t {
-                fn robtop_into(self) -> String {
-                    self.to_string()
-                }
-            }
-        )*
-    };
+impl RobtopFrom<GameVersion, &str> for GameVersion {
+    fn robtop_from(s: &str) -> Result<GameVersion, String> {
+        s.parse().map(u8::into).map_err(|e| e.to_string())
+    }
 }
-
-delegate_to_from_str_no_omit!(GameVersion);
+impl RobtopInto<GameVersion, String> for GameVersion {
+    fn robtop_into(self) -> String {
+        match self {
+            GameVersion::Unknown => String::from("10"),
+            GameVersion::Version { minor, major } => (minor + 10 * major).to_string(),
+        }
+    }
+}
 
 impl RobtopFrom<Featured, &str> for Featured {
     fn robtop_from(s: &str) -> Result<Featured, String> {
@@ -170,7 +164,7 @@ impl RobtopFrom<LevelLength, &str> for LevelLength {
             "2" => LevelLength::Medium,
             "3" => LevelLength::Long,
             "4" => LevelLength::ExtraLong,
-            _ => LevelLength::Unknown,
+            s => LevelLength::Unknown(i32::robtop_from(s)?),
         })
     }
 }
@@ -178,14 +172,14 @@ impl RobtopFrom<LevelLength, &str> for LevelLength {
 impl RobtopInto<LevelLength, String> for LevelLength {
     fn robtop_into(self) -> String {
         match self {
-            LevelLength::Tiny => "0",
-            LevelLength::Short => "1",
-            LevelLength::Medium => "2",
-            LevelLength::Long => "3",
-            LevelLength::ExtraLong => "4",
-            _ => "",
+            LevelLength::Tiny => "0".to_string(),
+            LevelLength::Short => "1".to_string(),
+            LevelLength::Medium => "2".to_string(),
+            LevelLength::Long => "3".to_string(),
+            LevelLength::ExtraLong => "4".to_string(),
+            LevelLength::Unknown(value) => value.to_string(),
         }
-        .to_string()
+
     }
 }
 

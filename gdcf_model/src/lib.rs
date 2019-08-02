@@ -8,6 +8,7 @@ pub mod user;
 #[cfg(feature = "serde_support")]
 use serde_derive::{Deserialize, Serialize};
 use std::{num::ParseIntError, str::FromStr};
+use std::fmt::{Display, Formatter};
 
 /// Enum modelling the version of a Geometry Dash client
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -58,19 +59,11 @@ impl Into<u8> for GameVersion {
     }
 }
 
-impl FromStr for GameVersion {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<GameVersion, ParseIntError> {
-        s.parse().map(u8::into)
-    }
-}
-
-impl ToString for GameVersion {
-    fn to_string(&self) -> String {
+impl Display for GameVersion {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            GameVersion::Unknown => String::from("10"),
-            GameVersion::Version { minor, major } => (minor + 10 * major).to_string(),
+            GameVersion::Unknown => write!(f, "Unknown"),
+            GameVersion::Version { minor, major } => write!(f, "{}.{}", major, minor)
         }
     }
 }
