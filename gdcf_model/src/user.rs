@@ -371,12 +371,6 @@ pub struct SearchedUser {
     /// ## GD Internals:
     /// This value is provided at index `17`
     pub user_coins: u16,
-
-    // TODO: figure this value out
-    ///
-    /// ## GD Internals:
-    /// This value is provided at index `19`
-    pub index_19: String,
 }
 
 impl Display for SearchedUser {

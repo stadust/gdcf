@@ -78,7 +78,7 @@ parser! {
         user_id(index = 2),
         stars(index = 3),
         demons(index = 4),
-        index_6(index = 6),
+        index_6(index = 6, default),
         creator_points(index = 8),
         index_9(index = 9),
         primary_color(index = 10),
@@ -88,6 +88,5 @@ parser! {
         index_15(index = 15),
         account_id(index = 16),
         user_coins(index = 17),
-        index_19(index = 19),
     }
 }
