@@ -17,7 +17,7 @@ use gdcf_model::{
     user::{Creator, SearchedUser, User},
 };
 use gdcf_parse::Parse;
-use log::info;
+use log::{info, trace};
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -176,8 +176,16 @@ impl Handler for LevelCommentsRequest {
                     let mut parts = object.split(':');
 
                     if let (Some(raw_comment), Some(raw_user)) = (parts.next(), parts.next()) {
+                        trace!("Processing comment {} by user {}", raw_comment, raw_user);
+
                         let comment = LevelComment::parse_str(raw_comment, '~')?;
-                        let user = CommentUser::parse_str(raw_user, '~')?;
+
+                        // This is the dummy placeholder object used by robtop when the player has been deleted
+                        let user = if raw_user == "1~~9~~10~~11~~14~~15~~16~" {
+                            None
+                        } else {
+                            Some(CommentUser::parse_str(raw_user, '~')?)
+                        };
 
                         comments.push(LevelComment {
                             user,

@@ -146,5 +146,5 @@ pub struct CommentUser {
     ///
     /// ## GD Internals
     /// This value is provided at index `16`
-    pub account_id: u64,
+    pub account_id: Option<u64>,
 }

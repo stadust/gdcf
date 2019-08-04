@@ -121,7 +121,7 @@ impl RobtopInto<TwoBool, String> for bool {
 impl RobtopFrom<bool, &str> for TwoBool {
     fn robtop_from(s: &str) -> Result<bool, String> {
         match s {
-            "0" => Ok(false),
+            "0" | "" | "1" => Ok(false),
             "2" => Ok(true),
             _ => Err("Not '0' or '2'".to_owned()),
         }

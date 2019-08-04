@@ -108,7 +108,7 @@ impl Hash for LevelCommentsRequest {
 }
 
 impl Request for LevelCommentsRequest {
-    type Result = Vec<LevelComment<CommentUser>>;
+    type Result = Vec<LevelComment<Option<CommentUser>>>;
 }
 
 impl PaginatableRequest for LevelCommentsRequest {

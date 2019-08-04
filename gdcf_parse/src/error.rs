@@ -14,15 +14,3 @@ impl std::fmt::Display for ValueError<'_> {
         }
     }
 }
-/*
-#[derive(Debug)]
-pub struct Unexpected(&'static str);
-
-impl std::error::Error for Unexpected {}
-
-impl std::fmt::Display for Unexpected {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-*/
