@@ -226,3 +226,12 @@ pub trait CacheEntryMeta: Copy + Send + Sync + 'static {
     fn is_expired(&self) -> bool;
     fn is_absent(&self) -> bool;
 }
+
+pub trait CacheUserExt {
+    /// Tries to somehow map the username to an account ID, using whatever data is available
+    ///
+    /// If the user associated with this name is found in either the [`SearchedUser`] or [`User`]
+    /// cache, this function must never, under any circumstances, return [`None`]. Doing so is
+    /// considered a bug which the library may or may not recover from.
+    fn username_to_account_id(&self, name: &str) -> Option<u64>;
+}

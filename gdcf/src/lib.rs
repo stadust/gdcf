@@ -121,10 +121,11 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use log::{info, warn};
+use log::{error, info, warn};
 
-use crate::api::request::user::UserSearchRequest;
 pub use crate::future::GdcfFuture;
+use crate::{api::request::user::UserSearchRequest, cache::CacheUserExt};
+use gdcf_model::user::SearchedUser;
 
 #[macro_use]
 mod macros;
@@ -537,11 +538,27 @@ where
 impl<A, C> ProcessRequest<A, C, UserSearchRequest, User> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<UserSearchRequest> + MakeRequest<UserRequest>,
-    C: Cache + CanCache<UserSearchRequest> + CanCache<UserRequest>,
+    C: Cache + CanCache<UserSearchRequest> + CanCache<UserRequest> + CacheUserExt + Store<NewgroundsSong> + Store<Creator>,
+    Self: ProcessRequest<A, C, UserRequest, User>,
 {
     fn process_request(&self, request: UserSearchRequest) -> Result<GdcfFuture<User, <A as ApiClient>::Err, C>, <C as Cache>::Err> {
-        // TODO: retrieve user by name!
-        unimplemented!()
+        let cache = self.cache();
+        let clone = self.clone();
+
+        match cache.username_to_account_id(&request.search_string) {
+            Some(account_id) => self.user(account_id),
+            None => {
+                let lookup = move |searched_user: &SearchedUser| {
+                    error!("Username to account ID resolution failed although (Searched)User was cached. This is a bug in the cache implementation of `CacheUserExt`!");
+
+                    cache.lookup(searched_user.account_id)
+                };
+                let refresh = move |searched_user: &SearchedUser| clone.refresh(UserRequest::new(searched_user.account_id));
+                let combinator = |_, user| user;
+
+                self.search_user(request)?.extend(lookup, refresh, combinator)
+            },
+        }
     }
 }
 
@@ -597,7 +614,10 @@ where
     /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
     /// requests
     /// + [`NewgroundsSong`] - Causes no additional requests.
-    pub fn levels<Song, User>(&self, request: impl Into<LevelsRequest>) -> Result<GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C>, C::Err>
+    pub fn levels<Song, User>(
+        &self,
+        request: impl Into<LevelsRequest>,
+    ) -> Result<GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C>, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,

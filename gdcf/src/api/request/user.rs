@@ -1,7 +1,7 @@
 //! Module ontianing request definitions for retrieving users
 
 use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
-use gdcf_model::user::{SearchedUser, User};
+use gdcf_model::user::{SearchedUser, User, Creator};
 use std::{
     fmt::{Display, Error, Formatter},
     hash::{Hash, Hasher},
@@ -43,6 +43,18 @@ impl Hash for UserRequest {
 impl Into<UserRequest> for u64 {
     fn into(self) -> UserRequest {
         UserRequest::new(self)
+    }
+}
+
+impl Into<UserRequest> for SearchedUser {
+    fn into(self) -> UserRequest {
+        UserRequest::new(self.account_id)
+    }
+}
+
+impl Into<UserRequest> for &SearchedUser {
+    fn into(self) -> UserRequest {
+        UserRequest::new(self.account_id)
     }
 }
 
@@ -111,6 +123,30 @@ impl Into<UserSearchRequest> for String {
 impl Into<UserSearchRequest> for &str {
     fn into(self) -> UserSearchRequest {
         UserSearchRequest::new(self.to_string())
+    }
+}
+
+impl Into<UserSearchRequest> for Creator {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self.name)
+    }
+}
+
+impl Into<UserSearchRequest> for &Creator {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self.name.to_string())
+    }
+}
+
+impl Into<UserSearchRequest> for User {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self.name)
+    }
+}
+
+impl Into<UserSearchRequest> for &User {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self.name.to_string())
     }
 }
 
