@@ -1,6 +1,7 @@
 #![deny(missing_copy_implementations)]
 #![deny(missing_debug_implementations)]
 
+pub mod comment;
 pub mod level;
 pub mod song;
 pub mod user;
