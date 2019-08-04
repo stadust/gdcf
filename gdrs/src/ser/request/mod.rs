@@ -3,6 +3,7 @@ use gdcf::api::request::BaseRequest;
 use gdcf_model::GameVersion;
 use serde_derive::Serialize;
 
+pub(super) mod comment;
 pub(super) mod level;
 pub(super) mod user;
 

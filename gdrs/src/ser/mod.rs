@@ -1,9 +1,13 @@
 pub use self::request::{
+    comment::{LevelCommentsRequestRem, ProfileCommentsRequestRem},
     level::{LevelRequestRem, LevelsRequestRem},
     user::{UserRequestRem, UserSearchRequestRem},
     BaseRequestRem,
 };
-use gdcf::api::request::level::{CompletionFilter, LevelRequestType, SearchFilters, SongFilter};
+use gdcf::api::request::{
+    comment::SortMode,
+    level::{CompletionFilter, LevelRequestType, SearchFilters, SongFilter},
+};
 use gdcf_model::{
     level::{DemonRating, LevelLength, LevelRating},
     GameVersion,
@@ -79,6 +83,16 @@ where
     S: Serializer,
 {
     serializer.serialize_i32(i32::from(*req_type))
+}
+
+pub(super) fn sort_mode<S>(sort_mode: &SortMode, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match sort_mode {
+        SortMode::Liked => serializer.serialize_i32(1),
+        SortMode::Recent => serializer.serialize_i32(0),
+    }
 }
 
 pub(super) fn search_filters<S>(filters: &SearchFilters, serializer: S) -> Result<S::Ok, S::Error>

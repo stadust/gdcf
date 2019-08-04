@@ -26,6 +26,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+pub mod comment;
 pub mod level;
 pub mod user;
 

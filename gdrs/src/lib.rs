@@ -13,12 +13,13 @@
 use crate::{
     error::ApiError,
     handle::Handler,
-    ser::{LevelRequestRem, LevelsRequestRem, UserRequestRem, UserSearchRequestRem},
+    ser::{LevelCommentsRequestRem, LevelRequestRem, LevelsRequestRem, ProfileCommentsRequestRem, UserRequestRem, UserSearchRequestRem},
 };
 use futures::{future::Executor, Future, Stream};
 use gdcf::api::{
     client::{ApiFuture, MakeRequest, Response},
     request::{
+        comment::{LevelCommentsRequest, ProfileCommentsRequest},
         level::{LevelRequest, LevelsRequest},
         user::{UserRequest, UserSearchRequest},
         Request as GdcfRequest,
@@ -58,6 +59,12 @@ pub enum Req<'a> {
 
     #[serde(with = "UserSearchRequestRem")]
     UserSearchRequest(&'a UserSearchRequest),
+
+    #[serde(with = "LevelCommentsRequestRem")]
+    LevelCommentsRequest(&'a LevelCommentsRequest),
+
+    #[serde(with = "ProfileCommentsRequestRem")]
+    ProfileCommentsRequest(&'a ProfileCommentsRequest),
 }
 
 #[derive(Debug, Default, Clone)]

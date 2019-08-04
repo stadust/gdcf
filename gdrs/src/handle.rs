@@ -2,7 +2,9 @@ use crate::{error::ApiError, Req};
 use gdcf::{
     api::{
         client::Response,
-        request::{user::UserSearchRequest, LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest},
+        request::{
+            comment::LevelCommentsRequest, user::UserSearchRequest, LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest,
+        },
     },
     Secondary,
 };
@@ -12,6 +14,8 @@ use gdcf_model::{
     user::{Creator, SearchedUser, User},
 };
 use gdcf_parse::Parse;
+use log::info;
+use gdcf::api::request::comment::ProfileCommentsRequest;
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -151,5 +155,37 @@ impl Handler for UserSearchRequest {
 
     fn to_req(&self) -> Req {
         Req::UserSearchRequest(self)
+    }
+}
+
+impl Handler for LevelCommentsRequest {
+    fn endpoint() -> &'static str {
+        endpoint!("getGJComments21")
+    }
+
+    fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        info!(
+            "We got a total of {} comments!",
+            response_body.split('#').nth(0).unwrap().split('|').count()
+        );
+        Err(ApiError::NoData)
+    }
+
+    fn to_req(&self) -> Req {
+        Req::LevelCommentsRequest(self)
+    }
+}
+
+impl Handler for ProfileCommentsRequest {
+    fn endpoint() -> &'static str {
+        endpoint!("getGJAccountComments20")
+    }
+
+    fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        unimplemented!()
+    }
+
+    fn to_req(&self) -> Req {
+        Req::ProfileCommentsRequest(self)
     }
 }
