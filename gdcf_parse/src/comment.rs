@@ -1,35 +1,42 @@
-use crate::{Parse, ValueError};
+use crate::{
+    convert::{Base64Converter, RGBColor, TwoBool},
+    Parse, ValueError,
+};
 use gdcf_model::comment::{CommentUser, LevelComment, ProfileComment};
 
 parser! {
     ProfileComment => {
-        index_2(index = 2),
-        index_4(index = 4),
-        index_6(index = 6),
-        index_9(index = 9),
+        content(index = 2, parse_infallible = Base64Converter, default),
+        likes(index = 4),
+        comment_id(index = 6),
+        time_since_post(index = 9),
     }
 }
+
 parser! {
     LevelComment => {
         user(custom = dummy[]),
-        index_2(index = 2),
-        index_3(index = 3),
-        index_4(index = 4),
-        index_6(index = 6),
-        index_7(index = 7),
-        index_9(index = 9),
-        index_10(index = 10),
+        content(index = 2, parse_infallible = Base64Converter, default),
+        user_id(index = 3),
+        likes(index = 4),
+        comment_id(index = 6),
+        is_flagged_spam(index = 7),
+        time_since_post(index = 9),
+        progress(index = 10, default),
+        is_elder_mod(index = 11, parse = TwoBool, optional),
+        special_color(index = 12, parse = RGBColor, optional_non_default),
     }
 }
+
 parser! {
     CommentUser => {
-        index_1(index = 1),
-        index_9(index = 9),
-        index_10(index = 10),
-        index_11(index = 11),
-        index_14(index = 14),
-        index_15(index = 15),
-        index_16(index = 16),
+        name(index = 1),
+        icon_index(index = 9),
+        primary_color(index = 10),
+        secondary_color(index = 11),
+        icon_type(index = 14),
+        has_glow(index = 15, parse = TwoBool),
+        account_id(index = 16),
     }
 }
 

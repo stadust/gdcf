@@ -181,13 +181,15 @@ impl Handler for LevelCommentsRequest {
 
                         comments.push(LevelComment {
                             user,
-                            index_2: comment.index_2,
-                            index_3: comment.index_3,
-                            index_4: comment.index_4,
-                            index_6: comment.index_6,
-                            index_7: comment.index_7,
-                            index_9: comment.index_9,
-                            index_10: comment.index_10,
+                            content: comment.content,
+                            user_id: comment.user_id,
+                            likes: comment.likes,
+                            comment_id: comment.comment_id,
+                            is_flagged_spam: comment.is_flagged_spam,
+                            time_since_post: comment.time_since_post,
+                            progress: comment.progress,
+                            is_elder_mod: comment.is_elder_mod,
+                            special_color: comment.special_color,
                         })
                     } else {
                         return Err(ApiError::UnexpectedFormat)

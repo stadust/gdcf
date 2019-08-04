@@ -29,6 +29,7 @@ macro_rules! __match_arm_expr {
         $(, default)?  // 'default' only matters when __unwrap!
         $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
         $(, optional)?  // 'optional' only matters for __unwrap!
+        $(, optional_non_default)?  // 'optional_non_default' only matters for __unwrap!
     ) => {
         $field_name = Some($value)
     };
@@ -45,6 +46,7 @@ macro_rules! __match_arm_expr {
         $(, default)?  // 'default' only matters when __unwrap!
         $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
         $(, optional)?  // 'optional' only matters for __unwrap!
+        $(, optional_non_default)?  // 'optional_non_default' only matters for __unwrap!
     ) => {{}};
 
     (@  $_: expr, // Closure to propagate upward values to, irrelevant here
@@ -60,6 +62,7 @@ macro_rules! __match_arm_expr {
         $(, default)?  // 'default' only matters when __unwrap!
         $(, default_with = $__ :path)? // 'default_with' only matters when __unwrap!
         $(, optional)?  // 'optional' only matters for __unwrap!
+        $(, optional_non_default)?  // 'optional_non_default' only matters for __unwrap!
     ) => {
         __match_arm_expr!(! $field_name, $value, index = $idx $(, parse_infallible = $p)? $(, parse = $p2)?)
     };
@@ -77,14 +80,21 @@ macro_rules! __match_arm_expr {
 }
 
 macro_rules! __into_expr {
-    // Custom parser function
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, optional $(, $($__:tt)*)?) => {{
-        let value = RobtopInto::<$external, _>::robtop_into($value);
-        if RobtopInto::<$external, _>::can_omit(&value) {
-            $map.insert(stringify!($idx), value);
+        if RobtopInto::<$external, _>::can_omit(&$value) {
+            $map.insert(stringify!($idx), RobtopInto::<$external, _>::robtop_into($value));
         }
     }};
 
+    (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident, optional_non_default $(, $($__:tt)*)?) => {{
+        if let Some(value) = $value {
+            if !RobtopInto::<$external, _>::can_omit(&value) {
+                $map.insert(stringify!($idx), RobtopInto::<$external, _>::robtop_into(value));
+            }
+        }
+    }};
+
+    // Custom parser function
     (@ $map: expr, $value: expr, index = $idx: expr, parse = $external: ident $(, $($__:tt)*)?) => {{
         $map.insert(stringify!($idx), RobtopInto::<$external, _>::robtop_into($value))
     }};
@@ -137,6 +147,10 @@ macro_rules! __unwrap {
 
     ($field_name: ident($(^)?index = $idx: expr, optional)) => {
         $field_name.unwrap_or_default()
+    };
+
+    ($field_name: ident($(^)?index = $idx: expr, optional_non_default)) => {
+        $field_name
     };
 
     ($field_name: ident($(^)?index = $idx: expr, default)) => {

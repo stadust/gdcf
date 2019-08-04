@@ -5,7 +5,7 @@ use gdcf_model::{
     GameMode, GameVersion,
 };
 use percent_encoding::{percent_decode, percent_encode, SIMPLE_ENCODE_SET};
-use std::str::FromStr;
+use std::{num::ParseIntError, str::FromStr};
 
 /// Trait for converting objects of type `Self` into RobTop's data format of type `T` (most commonly
 /// `T = String`)
@@ -42,6 +42,27 @@ pub trait RobtopFrom<For, T>: Sized {
 
     fn robtop_from_req(t: T) -> Result<For, String> {
         Self::robtop_from(t)
+    }
+}
+
+impl<D: Default + PartialEq, T> RobtopFrom<Option<D>, T> for Option<D>
+where
+    D: RobtopFrom<D, T>,
+{
+    fn robtop_from(s: T) -> Result<Option<D>, String> {
+        D::robtop_from(s).map(|inner| if inner == D::default() { None } else { Some(inner) })
+    }
+}
+
+impl<D: Default, T> RobtopInto<Option<D>, T> for Option<D>
+where
+    D: RobtopInto<D, T>,
+{
+    fn robtop_into(self) -> T {
+        D::robtop_into(match self {
+            None => D::default(),
+            Some(d) => d,
+        })
     }
 }
 
@@ -491,24 +512,31 @@ impl RobtopFrom<Color, &str> for Color {
     }
 }
 
-impl<D: Default + PartialEq, T> RobtopFrom<Option<D>, T> for Option<D>
-where
-    D: RobtopFrom<D, T>,
-{
-    fn robtop_from(s: T) -> Result<Option<D>, String> {
-        D::robtop_from(s).map(|inner| if inner == D::default() { None } else { Some(inner) })
+pub struct RGBColor;
+
+impl RobtopInto<RGBColor, String> for Color {
+    fn robtop_into(self) -> String {
+        match self {
+            Color::Known(r, g, b) => format!("{},{},{}", r, g, b),
+            Color::Unknown(_) =>
+                "Attempt to convert unknown, indexed color into RGB representation (rgb values aren't unknown!)".to_string(),
+        }
     }
 }
 
-impl<D: Default, T> RobtopInto<Option<D>, T> for Option<D>
-where
-    D: RobtopInto<D, T>,
-{
-    fn robtop_into(self) -> T {
-        D::robtop_into(match self {
-            None => D::default(),
-            Some(d) => d,
-        })
+impl RobtopFrom<Color, &str> for RGBColor {
+    fn robtop_from(rgb: &str) -> Result<Color, String> {
+        let mut split = rgb.split(',');
+
+        if let (Some(r), Some(g), Some(b)) = (split.next(), split.next(), split.next()) {
+            Ok(Color::Known(
+                r.parse().map_err(|e: ParseIntError| e.to_string())?,
+                g.parse().map_err(|e: ParseIntError| e.to_string())?,
+                b.parse().map_err(|e: ParseIntError| e.to_string())?,
+            ))
+        } else {
+            Err(format!("Malformed color string {}", rgb))
+        }
     }
 }
 

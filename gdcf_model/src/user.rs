@@ -25,6 +25,12 @@ pub enum ModLevel {
     Unknown(u8),
 }
 
+impl Default for ModLevel {
+    fn default() -> ModLevel {
+        ModLevel::None
+    }
+}
+
 // Enum representing an in-game icon color
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
