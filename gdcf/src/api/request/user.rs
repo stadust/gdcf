@@ -108,6 +108,12 @@ impl Into<UserSearchRequest> for String {
     }
 }
 
+impl Into<UserSearchRequest> for &str {
+    fn into(self) -> UserSearchRequest {
+        UserSearchRequest::new(self.to_string())
+    }
+}
+
 impl Display for UserSearchRequest {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "UserSearchRequest({})", self.search_string)
