@@ -3,19 +3,21 @@ use gdcf::{
     api::{
         client::Response,
         request::{
-            comment::LevelCommentsRequest, user::UserSearchRequest, LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest,
+            comment::{LevelCommentsRequest, ProfileCommentsRequest},
+            user::UserSearchRequest,
+            LevelRequest, LevelsRequest, Request as GdcfRequest, UserRequest,
         },
     },
     Secondary,
 };
 use gdcf_model::{
+    comment::{CommentUser, LevelComment, ProfileComment},
     level::{Level, PartialLevel},
     song::NewgroundsSong,
     user::{Creator, SearchedUser, User},
 };
 use gdcf_parse::Parse;
 use log::info;
-use gdcf::api::request::comment::ProfileCommentsRequest;
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -164,11 +166,40 @@ impl Handler for LevelCommentsRequest {
     }
 
     fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
-        info!(
-            "We got a total of {} comments!",
-            response_body.split('#').nth(0).unwrap().split('|').count()
-        );
-        Err(ApiError::NoData)
+        let mut sections = response_body.split('#');
+
+        match sections.next() {
+            Some(section) => {
+                let mut comments = Vec::new();
+
+                for object in section.split('|') {
+                    let mut parts = object.split(':');
+
+                    if let (Some(raw_comment), Some(raw_user)) = (parts.next(), parts.next()) {
+                        let comment = LevelComment::parse_str(raw_comment, '~')?;
+                        let user = CommentUser::parse_str(raw_user, '~')?;
+
+                        comments.push(LevelComment {
+                            user,
+                            index_2: comment.index_2,
+                            index_3: comment.index_3,
+                            index_4: comment.index_4,
+                            index_6: comment.index_6,
+                            index_7: comment.index_7,
+                            index_9: comment.index_9,
+                            index_10: comment.index_10,
+                        })
+                    } else {
+                        return Err(ApiError::UnexpectedFormat)
+                    }
+                }
+
+                info!("We got a total of {} comments!", comments.len());
+
+                Ok(Response::Exact(comments))
+            },
+            None => Err(ApiError::UnexpectedFormat),
+        }
     }
 
     fn to_req(&self) -> Req {
@@ -182,7 +213,22 @@ impl Handler for ProfileCommentsRequest {
     }
 
     fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
-        unimplemented!()
+        let mut sections = response_body.split('#');
+
+        match sections.next() {
+            Some(section) => {
+                let mut comments = Vec::new();
+
+                for object in section.split('|') {
+                    comments.push(ProfileComment::parse_str(object, '~')?)
+                }
+
+                info!("We got a total of {} comments!", comments.len());
+
+                Ok(Response::Exact(comments))
+            },
+            None => Err(ApiError::UnexpectedFormat),
+        }
     }
 
     fn to_req(&self) -> Req {

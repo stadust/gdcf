@@ -60,3 +60,11 @@ for index in indices:
     print(f"\t/// This value is provided at index `{index}`")
     print(f"\tpub index_{index}: String,"),
 print("}")
+
+print("And your primitive parser! invocation is:")
+print("parser! {")
+print(f"\t{struct_name} => {{")
+for index in indices:
+    print(f"\t\tindex_{index}(index = {index}),")
+print("\t}")
+print("}")

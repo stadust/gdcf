@@ -14,6 +14,7 @@ extern crate log;
 pub mod util;
 #[macro_use]
 pub mod macros;
+pub mod comment;
 pub mod convert;
 pub mod error;
 pub mod level;

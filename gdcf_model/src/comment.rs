@@ -19,7 +19,7 @@ pub struct ProfileComment {
 }
 
 #[derive(Debug)]
-pub struct LevelComment<User = CommentUser> {
+pub struct LevelComment<User = ()> {
     pub user: User,
     // TODO: figure this out
     /// ## GD Internals

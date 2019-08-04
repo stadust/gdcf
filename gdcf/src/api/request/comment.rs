@@ -1,9 +1,10 @@
 use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
-use gdcf_model::comment::{LevelComment, ProfileComment};
+use gdcf_model::comment::{CommentUser, LevelComment, ProfileComment};
 use std::{
     fmt::{Display, Formatter},
     hash::{Hash, Hasher},
 };
+//use gdcf_model::level::{PartialLevel, Level};
 
 /// The different orderings that can be requested for level comments
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -107,7 +108,7 @@ impl Hash for LevelCommentsRequest {
 }
 
 impl Request for LevelCommentsRequest {
-    type Result = LevelComment;
+    type Result = Vec<LevelComment<CommentUser>>;
 }
 
 impl PaginatableRequest for LevelCommentsRequest {
@@ -116,6 +117,37 @@ impl PaginatableRequest for LevelCommentsRequest {
             page: self.page + 1,
             ..*self
         }
+    }
+}
+// FIXME: figure out these impls
+/*
+impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for PartialLevel<S, U> {
+    fn into(self) -> LevelCommentsRequest {
+        LevelCommentsRequest::new(self.level_id)
+    }
+}
+
+impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for Level<S, U> {
+    fn into(self) -> LevelCommentsRequest {
+        LevelCommentsRequest::new(self.level_id)
+    }
+}
+
+impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for &PartialLevel<S, U> {
+    fn into(self) -> LevelCommentsRequest {
+        LevelCommentsRequest::new(self.level_id)
+    }
+}
+
+impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for &Level<S, U> {
+    fn into(self) -> LevelCommentsRequest {
+        LevelCommentsRequest::new(self.level_id)
+    }
+}*/
+
+impl Into<LevelCommentsRequest> for u64 {
+    fn into(self) -> LevelCommentsRequest {
+        LevelCommentsRequest::new(self)
     }
 }
 
@@ -177,7 +209,7 @@ impl Hash for ProfileCommentsRequest {
 }
 
 impl Request for ProfileCommentsRequest {
-    type Result = ProfileComment;
+    type Result = Vec<ProfileComment>;
 }
 
 impl PaginatableRequest for ProfileCommentsRequest {
