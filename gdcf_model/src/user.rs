@@ -284,7 +284,7 @@ impl Display for User {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchedUser {
     /// This [`SearchedUser`]'s name
     ///
