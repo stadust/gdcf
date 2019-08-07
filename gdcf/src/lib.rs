@@ -113,7 +113,6 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, GdcfError},
-    future::GdcfStream,
 };
 use futures::{future::ok, Future};
 use gdcf_model::{
