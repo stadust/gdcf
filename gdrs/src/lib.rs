@@ -17,7 +17,7 @@ use crate::{
 };
 use futures::{future::Executor, Future, Stream};
 use gdcf::api::{
-    client::{ApiFuture, MakeRequest, Response},
+    client::{MakeRequest, Response},
     request::{
         comment::{LevelCommentsRequest, ProfileCommentsRequest},
         level::{LevelRequest, LevelsRequest},
@@ -44,6 +44,8 @@ mod macros;
 pub mod error;
 pub mod handle;
 mod ser;
+
+type ApiFuture<R, E> = Box<dyn Future<Item = Response<<R as GdcfRequest>::Result>, Error = E> + Send + 'static>;
 
 #[derive(Serialize, Debug)]
 #[serde(untagged)]
@@ -94,6 +96,8 @@ impl ApiClient for BoomlingsClient {
 }
 
 impl<R: GdcfRequest + Handler> MakeRequest<R> for BoomlingsClient {
+    type Future = ApiFuture<R, ApiError>;
+
     fn make(&self, request: R) -> ApiFuture<R, ApiError> {
         let action = ApiRequestAction {
             client: self.client.clone(),

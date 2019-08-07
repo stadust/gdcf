@@ -2,8 +2,6 @@ use futures::Future;
 
 use crate::{api::request::Request, error::ApiError, Secondary};
 
-pub type ApiFuture<R, E> = Box<dyn Future<Item = Response<<R as Request>::Result>, Error = E> + Send + 'static>;
-
 pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
     type Err: ApiError;
 }
@@ -15,5 +13,7 @@ pub enum Response<T> {
 }
 
 pub trait MakeRequest<R: Request>: ApiClient {
-    fn make(&self, request: R) -> ApiFuture<R, Self::Err>;
+    type Future: Future<Item = Response<R::Result>, Error = Self::Err> + Send + 'static;
+
+    fn make(&self, request: R) -> Self::Future;//ApiFuture<R, Self::Err>;
 }
