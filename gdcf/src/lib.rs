@@ -124,8 +124,11 @@ use gdcf_model::{
 use log::{error, info, warn};
 
 pub use crate::future::GdcfFuture;
-use crate::{api::request::user::UserSearchRequest, cache::CacheUserExt};
-use gdcf_model::user::SearchedUser;
+use crate::{
+    api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
+    cache::CacheUserExt,
+};
+use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
 #[macro_use]
 mod macros;
@@ -653,5 +656,22 @@ where
         Self: ProcessRequest<A, C, UserSearchRequest, U>,
     {
         self.process_request(request.into())
+    }
+
+    pub fn profile_comments(&self, request: impl Into<ProfileCommentsRequest>) -> Result<GdcfFuture<Vec<ProfileComment>, A::Err, C>, C::Err>
+    where
+        Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
+    {
+        self.process_request(request.into())
+    }
+
+    pub fn paginate_profile_comments(
+        &self,
+        request: impl Into<ProfileCommentsRequest>,
+    ) -> Result<impl Stream<Item = CacheEntry<Vec<ProfileComment>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>, C::Err>
+    where
+        Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
+    {
+        self.paginate(request.into())
     }
 }
