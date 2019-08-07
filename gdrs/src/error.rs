@@ -1,6 +1,7 @@
 use failure_derive::Fail;
 use gdcf::error::ApiError as TApiError;
 use gdcf_parse::error::ValueError;
+use tokio_retry::Error as RetryError;
 
 #[derive(Fail, Debug)]
 pub enum ApiError {
@@ -56,6 +57,15 @@ impl TApiError for ApiError {
         match self {
             ApiError::InternalServerError | ApiError::NoData => true,
             _ => false,
+        }
+    }
+}
+
+impl From<RetryError<ApiError>> for ApiError {
+    fn from(err: RetryError<ApiError>) -> Self {
+        match err {
+            RetryError::OperationError(e) => e,
+            _ => unimplemented!(),
         }
     }
 }
