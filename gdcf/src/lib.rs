@@ -115,7 +115,7 @@ use crate::{
     error::{ApiError, GdcfError},
     future::GdcfStream,
 };
-use futures::{future::ok, Future, Stream};
+use futures::{future::ok, Future};
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
@@ -634,7 +634,7 @@ where
     pub fn paginate_levels<Song, User>(
         &self,
         request: impl Into<LevelsRequest>,
-    ) -> Result<impl Stream<Item = CacheEntry<Vec<PartialLevel<Song, User>>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>, C::Err>
+    ) -> Result<GdcfStream<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>, Self>, C::Err>
     where
         Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
@@ -668,7 +668,7 @@ where
     pub fn paginate_profile_comments(
         &self,
         request: impl Into<ProfileCommentsRequest>,
-    ) -> Result<impl Stream<Item = CacheEntry<Vec<ProfileComment>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>, C::Err>
+    ) -> Result<GdcfStream<A, C, ProfileCommentsRequest, Vec<ProfileComment>, Self>, C::Err>
     where
         Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
