@@ -123,7 +123,7 @@ use gdcf_model::{
 };
 use log::{error, info, warn};
 
-pub use crate::future::GdcfFuture;
+pub use crate::future::{GdcfFuture, GdcfStream};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
