@@ -195,7 +195,14 @@ impl<R: Handler> Future for ProcessRequestFuture<R> {
                     Ok(body) => {
                         trace!("Received response {}", body);
 
-                        Ok(Async::Ready(R::handle(&body)?))
+                        match R::handle(&body) {
+                            Err(err) => {
+                                error!("Error processing body: {:?}", err);
+
+                                Err(err)
+                            },
+                            Ok(object) => Ok(Async::Ready(object))
+                        }
                     },
                     Err(err) => {
                         error!("Encoding error in response! {:?}", err);

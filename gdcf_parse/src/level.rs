@@ -51,7 +51,7 @@ parser! {
         coin_amount(index = 37),
         coins_verified(index = 38),
         stars_requested(index = 39),
-        index_40(index = 40),
+        index_40(index = 40, optional),
         is_epic(index = 42),
         index_43(index = 43),
         object_amount(index = 45),

@@ -162,7 +162,7 @@ macro_rules! __unwrap {
     }};
 
     ($field_name: ident($(^)?index = $idx: expr, default = $default_func: path)) => {
-        $field_name.unwrap_or_self($default_func)
+        $field_name.unwrap_or_else($default_func)
     };
 
     ($field_name: ident($(^)?index = $idx: expr, parse_infallible = $_: ty $(, $($crap:tt)*)?)) => {
