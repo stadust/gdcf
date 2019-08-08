@@ -114,7 +114,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, GdcfError},
 };
-use futures::{future::ok, Future};
+use futures::{future::ok, Async, Future};
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
@@ -223,12 +223,68 @@ enum EitherOrBoth<A, B> {
     Both(A, B),
 }
 
+struct RefreshCacheFuture<Req: Request, A: ApiClient + MakeRequest<Req>, C: Cache> {
+    inner: <A as MakeRequest<Req>>::Future,
+    cache: C,
+    cache_key: u64,
+}
+
+impl<Req, A, C> Future for RefreshCacheFuture<Req, A, C>
+where
+    Req: Request,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+{
+    type Error = GdcfError<A::Err, C::Err>;
+    type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        match self.inner.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(ref api_error) if api_error.is_no_result() => {
+                // TODO: maybe mark malformed data as absent as well
+
+                warn!("Request yielded no result, marking as absent");
+
+                Store::<Req::Result>::mark_absent(&mut self.cache, self.cache_key)
+                    .map(|entry_info| Async::Ready(CacheEntry::MarkedAbsent(entry_info)))
+                    .map_err(GdcfError::Cache)
+            },
+            Err(api_error) => Err(GdcfError::Api(api_error)),
+            Ok(Async::Ready(response)) =>
+                match response {
+                    Response::Exact(what_we_want) =>
+                        self.cache
+                            .store(&what_we_want, self.cache_key)
+                            .map(|entry_info| Async::Ready(CacheEntry::Cached(what_we_want, entry_info)))
+                            .map_err(GdcfError::Cache),
+                    Response::More(what_we_want, excess) => {
+                        for object in &excess {
+                            match object {
+                                Secondary::NewgroundsSong(song) => self.cache.store(song, song.song_id),
+                                Secondary::Creator(creator) => self.cache.store(creator, creator.user_id),
+                                Secondary::MissingCreator(cid) => Store::<Creator>::mark_absent(&mut self.cache, *cid),
+                                Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSong>::mark_absent(&mut self.cache, *nid),
+                            }
+                            .map_err(GdcfError::Cache)?;
+                        }
+
+                        self.cache
+                            .store(&what_we_want, self.cache_key)
+                            .map(|entry_info| Async::Ready(CacheEntry::Cached(what_we_want, entry_info)))
+                            .map_err(GdcfError::Cache)
+                    },
+                },
+        }
+    }
+}
+
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
     C: Cache + Store<Creator> + Store<NewgroundsSong>,
 {
-    fn refresh<R>(&self, request: R) -> impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>
+    fn refresh<R>(&self, request: R) -> RefreshCacheFuture<R, A, C>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -236,52 +292,11 @@ where
     {
         info!("Performing refresh on request {}", request);
 
-        let mut cache = self.cache();
-        let mut cache2 = self.cache();
-        let key = request.key();
-
-        self.client()
-            .make(request)
-            .map_err(GdcfError::Api)
-            .and_then(move |response| {
-                match response {
-                    Response::Exact(what_we_want) =>
-                        cache
-                            .store(&what_we_want, key)
-                            .map(move |entry_info| CacheEntry::Cached(what_we_want, entry_info))
-                            .map_err(GdcfError::Cache),
-                    Response::More(what_we_want, excess) => {
-                        for object in &excess {
-                            match object {
-                                Secondary::NewgroundsSong(song) => cache.store(song, song.song_id),
-                                Secondary::Creator(creator) => cache.store(creator, creator.user_id),
-                                Secondary::MissingCreator(cid) => Store::<Creator>::mark_absent(&mut cache, *cid),
-                                Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSong>::mark_absent(&mut cache, *nid),
-                            }
-                            .map_err(GdcfError::Cache)?;
-                        }
-
-                        cache
-                            .store(&what_we_want, key)
-                            .map(move |entry_info| CacheEntry::Cached(what_we_want, entry_info))
-                            .map_err(GdcfError::Cache)
-                    },
-                }
-            })
-            .or_else(move |error| {
-                // TODO: maybe mark malformed data as absent as well
-                if let GdcfError::Api(ref err) = error {
-                    if err.is_no_result() {
-                        warn!("Request yielded no result, marking as absent");
-
-                        return Store::<R::Result>::mark_absent(&mut cache2, key)
-                            .map(|entry_info| CacheEntry::MarkedAbsent(entry_info))
-                            .map_err(GdcfError::Cache)
-                    }
-                }
-
-                Err(error)
-            })
+        RefreshCacheFuture {
+            cache_key: request.key(),
+            cache: self.cache(),
+            inner: self.client().make(request)
+        }
     }
 
     fn process<R>(

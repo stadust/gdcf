@@ -201,7 +201,7 @@ impl<R: Handler> Future for ProcessRequestFuture<R> {
 
                                 Err(err)
                             },
-                            Ok(object) => Ok(Async::Ready(object))
+                            Ok(object) => Ok(Async::Ready(object)),
                         }
                     },
                     Err(err) => {
