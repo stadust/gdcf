@@ -312,6 +312,10 @@ where
                     info!("Cache entry for request {} is expired!", request);
 
                     Some(entry)
+                } else if request.forces_refresh() {
+                    info!("Cache entry is up-to-date, but request forces refresh!");
+
+                    Some(entry)
                 } else {
                     info!("Cached entry for request {} is up-to-date!", request);
 

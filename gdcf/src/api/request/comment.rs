@@ -24,6 +24,10 @@ pub enum SortMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LevelCommentsRequest {
+    /// Whether this [`LevelCommentsRequest`] request forces a cache refresh. This is not a HTTP
+    /// request field!
+    pub force_refresh: bool,
+
     /// The base request data
     pub base: BaseRequest,
 
@@ -69,8 +73,14 @@ impl LevelCommentsRequest {
 
     const_setter!(page: u32);
 
+    pub const fn force_refresh(mut self) -> Self {
+        self.force_refresh = true;
+        self
+    }
+
     pub const fn new(level: u64) -> LevelCommentsRequest {
         LevelCommentsRequest {
+            force_refresh: false,
             level_id: level,
             base: GD_21,
             page: 0,
@@ -109,6 +119,10 @@ impl Hash for LevelCommentsRequest {
 
 impl Request for LevelCommentsRequest {
     type Result = Vec<LevelComment<Option<CommentUser>>>;
+
+    fn forces_refresh(&self) -> bool {
+        self.force_refresh
+    }
 }
 
 impl PaginatableRequest for LevelCommentsRequest {
@@ -153,6 +167,10 @@ impl Into<LevelCommentsRequest> for u64 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProfileCommentsRequest {
+    /// Whether this [`ProfileCommentsRequest`] request forces a cache refresh. This is not a HTTP
+    /// request field!
+    pub force_refresh: bool,
+
     /// The base request data
     pub base: BaseRequest,
 
@@ -184,8 +202,14 @@ impl ProfileCommentsRequest {
 
     const_setter!(account_id: u64);
 
+    pub const fn force_refresh(mut self) -> Self {
+        self.force_refresh = true;
+        self
+    }
+
     pub const fn new(account: u64) -> ProfileCommentsRequest {
         ProfileCommentsRequest {
+            force_refresh: false,
             account_id: account,
             base: GD_21,
             page: 0,
@@ -210,6 +234,10 @@ impl Hash for ProfileCommentsRequest {
 
 impl Request for ProfileCommentsRequest {
     type Result = Vec<ProfileComment>;
+
+    fn forces_refresh(&self) -> bool {
+        self.force_refresh
+    }
 }
 
 impl PaginatableRequest for ProfileCommentsRequest {

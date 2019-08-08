@@ -50,7 +50,8 @@ diesel_stuff! {
         (index_50, index_50, String)
     }
 }
-meta_table!(profile_meta, user_id);
 
-store_simply!(User, profile, profile_meta, user_id);
-lookup_simply!(User, profile, profile_meta, user_id);
+meta_table!(profile_meta, account_id);
+
+store_simply!(User, profile, profile_meta, account_id);
+lookup_simply!(User, profile, profile_meta, account_id);
