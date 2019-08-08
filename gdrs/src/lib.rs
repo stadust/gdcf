@@ -160,7 +160,11 @@ impl<R: Handler> Future for ProcessRequestFuture<R> {
             ProcessRequestFuture::WaitingForResponse(response_future, _) =>
                 match response_future.poll() {
                     Ok(Async::NotReady) => return Ok(Async::NotReady),
-                    Err(err) => return Err(ApiError::Custom(err)),
+                    Err(err) => {
+                        error!("Error making request: {:?}", err);
+
+                        return Err(ApiError::Custom(err))
+                    },
                     Ok(Async::Ready(response)) => {
                         debug!("Received {} response", response.status());
 
@@ -181,7 +185,11 @@ impl<R: Handler> Future for ProcessRequestFuture<R> {
 
         match response_poll_result {
             Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(err) => return Err(ApiError::Custom(err)),
+            Err(err) => {
+                error!("Error reading/processing request response {:?}", err);
+
+                return Err(ApiError::Custom(err))
+            },
             Ok(Async::Ready(chunk)) =>
                 match str::from_utf8(&chunk) {
                     Ok(body) => {

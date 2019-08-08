@@ -17,7 +17,7 @@ use gdcf_model::{
     user::{Creator, SearchedUser, User},
 };
 use gdcf_parse::Parse;
-use log::{info, trace};
+use log::{info, trace, warn};
 
 pub trait Handler: GdcfRequest {
     fn endpoint() -> &'static str;
@@ -67,6 +67,8 @@ impl Handler for LevelsRequest {
             None => return Err(ApiError::UnexpectedFormat),
         };
 
+        info!("Found {} levels", levels.len());
+
         if let Some(section) = sections.next() {
             // No creators are fine with us
             if !section.is_empty() {
@@ -76,6 +78,10 @@ impl Handler for LevelsRequest {
             }
         }
 
+        let creator_count = other.len();
+
+        info!("Found {} creators", creator_count);
+
         if let Some(section) = sections.next() {
             // No song fragment is fine with us
             if !section.is_empty() {
@@ -84,6 +90,8 @@ impl Handler for LevelsRequest {
                 }
             }
         }
+
+        info!("Found {} songs", other.len() - creator_count);
 
         for level in &levels {
             if other
@@ -97,6 +105,8 @@ impl Handler for LevelsRequest {
                 .find(|&c| c == level.creator)
                 .is_none()
             {
+                warn!("Creator of level {} missing in response data!", level);
+
                 other.push(Secondary::MissingCreator(level.creator))
             }
 
@@ -112,6 +122,8 @@ impl Handler for LevelsRequest {
                     .find(|&n| n == custom_song)
                     .is_none()
                 {
+                    warn!("Song of level {} missing in response data!", level);
+
                     other.push(Secondary::MissingNewgroundsSong(custom_song))
                 }
             }
@@ -147,6 +159,8 @@ impl Handler for UserSearchRequest {
     }
 
     fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        check_resp!(response_body);
+
         let mut sections = response_body.split('#');
 
         match sections.next() {
@@ -166,6 +180,8 @@ impl Handler for LevelCommentsRequest {
     }
 
     fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        check_resp!(response_body);
+
         let mut sections = response_body.split('#');
 
         match sections.next() {
@@ -223,6 +239,8 @@ impl Handler for ProfileCommentsRequest {
     }
 
     fn handle(response_body: &str) -> Result<Response<Self::Result>, ApiError> {
+        check_resp!(response_body);
+
         let mut sections = response_body.split('#');
 
         match sections.next() {
