@@ -1,0 +1,1 @@
+ALTER TABLE level_request_results RENAME TO request_results;
