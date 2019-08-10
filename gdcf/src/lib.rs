@@ -295,20 +295,11 @@ where
         RefreshCacheFuture {
             cache_key: request.key(),
             cache: self.cache(),
-            inner: self.client().make(request)
+            inner: self.client().make(request),
         }
     }
 
-    fn process<R>(
-        &self,
-        request: R,
-    ) -> Result<
-        EitherOrBoth<
-            CacheEntry<R::Result, C::CacheEntryMeta>,
-            impl Future<Item = CacheEntry<R::Result, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-        >,
-        C::Err,
-    >
+    fn process<R>(&self, request: R) -> Result<EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, RefreshCacheFuture<R, A, C>>, C::Err>
     where
         R: Request,
         A: MakeRequest<R>,
