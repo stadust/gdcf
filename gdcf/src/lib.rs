@@ -223,16 +223,6 @@ enum EitherOrBoth<A, B> {
     Both(A, B),
 }
 
-impl<A, B> EitherOrBoth<A, B> {
-    fn try_map_a<C, E>(self, f: impl FnOnce(A) -> Result<C, E>) -> Result<EitherOrBoth<C, B>, E> {
-        Ok(match self {
-            EitherOrBoth::A(a) => EitherOrBoth::A(f(a)?),
-            EitherOrBoth::B(b) => EitherOrBoth::B(b),
-            EitherOrBoth::Both(a, b) => EitherOrBoth::Both(f(a)?, b),
-        })
-    }
-}
-
 struct RefreshCacheFuture<Req: Request, A: ApiClient + MakeRequest<Req>, C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>>
 {
     inner: <A as MakeRequest<Req>>::Future,
@@ -364,193 +354,196 @@ where
     }
 }
 
-trait Extendable<C: Cache, Into, AddOn> {
+trait Extendable<C: Cache, Into, Ext> {
     type Request: Request;
 
-    fn lookup_extension(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<AddOn, C::Err>;
+    fn lookup_extension(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Ext, C::Err>;
 
-    fn on_extension_absent() -> Option<AddOn>;
+    fn on_extension_absent() -> Option<Ext>;
 
     fn extension_request(&self) -> Self::Request;
 
-    fn combine(self, addon: AddOn) -> Into;
+    fn combine(self, addon: Ext) -> Into;
 }
 
-struct ExtendOneFuture<From, A, C, Into, AddOn, E>
+enum ExtensionFuture<From, A, C, Into, Ext, E>
 where
-    A: MakeRequest<E::Request>,
+    A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     A: ApiClient,
     C: Cache,
-    E: Extendable<C, Into, AddOn>,
+    E: Extendable<C, Into, Ext>,
 {
-    gdcf: Gdcf<A, C>,
-    force_refresh: bool, // FIXME: move this into a future trait somehow
-    state: ExtendOneState<From, A, C, Into, AddOn, E>,
+    WaitingOnInner(Gdcf<A, C>, bool, From),
+    Extending(C, C::CacheEntryMeta, ExtensionModes<A, C, Into, Ext, E>),
+    Exhausted,
 }
 
-impl<From, A, C, Into, AddOn, E> ExtendOneFuture<From, A, C, Into, AddOn, E>
+enum ExtendManyFuture<From, A, C, Into, Ext, E>
+    where
+        A: ApiClient + MakeRequest<E::Request>,
+        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+        From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+        A: ApiClient,
+        C: Cache,
+        E: Extendable<C, Into, Ext>,{
+    WaitingOnInner(Gdcf<A, C>, bool, From),
+    Extending(C, C::CacheEntryMeta, Vec<ExtensionModes<A, C, Into, Ext, E>>),
+    Exhausted
+}
+
+impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext, E>
 where
-    A: MakeRequest<E::Request>,
+    A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     A: ApiClient,
     C: Cache,
-    E: Extendable<C, Into, AddOn>,
-{
-    fn new(gdcf: Gdcf<A, C>, force_refresh: bool, inner: From) -> Self {
-        ExtendOneFuture {
-            gdcf,
-            force_refresh,
-            state: ExtendOneState::PollingInner(inner),
-        }
-    }
-}
-
-impl<From, A, C, Into, AddOn, E> Future for ExtendOneFuture<From, A, C, Into, AddOn, E>
-where
-    A: MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    A: ApiClient,
-    C: Cache,
-    E: Extendable<C, Into, AddOn>,
+    E: Extendable<C, Into, Ext>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Into, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        let cache = self.gdcf.cache();
-
-        match self.state {
-            ExtendOneState::PollingInner(ref mut inner) => {
+        let (return_value, next_state) = match self {
+            ExtensionFuture::WaitingOnInner(gdcf, forces_refresh, inner) =>
                 match inner.poll()? {
-                    Async::Ready(base) => {
+                    Async::Ready(base) =>
                         match base {
-                            CacheEntry::DeducedAbsent => {
-                                std::mem::replace(&mut self.state, ExtendOneState::Exhausted);
-
-                                Ok(Async::Ready(CacheEntry::DeducedAbsent))
-                            },
-                            CacheEntry::MarkedAbsent(meta) => {
-                                std::mem::replace(&mut self.state, ExtendOneState::Exhausted);
-
-                                Ok(Async::Ready(CacheEntry::MarkedAbsent(meta)))
-                            },
+                            CacheEntry::DeducedAbsent => (Async::Ready(CacheEntry::DeducedAbsent), ExtensionFuture::Exhausted),
+                            CacheEntry::MarkedAbsent(meta) => (Async::Ready(CacheEntry::MarkedAbsent(meta)), ExtensionFuture::Exhausted),
                             CacheEntry::Missing => unreachable!(),
                             CacheEntry::Cached(object, meta) => {
-                                let next_state = match self.gdcf.process(object.extension_request()).map_err(GdcfError::Cache)? {
-                                    // Not possible, we'd have gotten EitherOrBoth::B because of how `process` works
-                                    EitherOrBoth::Both(CacheEntry::Missing, _) | EitherOrBoth::A(CacheEntry::Missing) => unreachable!(),
-                                    // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
-                                    // This violates snapshot consistency! TOdO: document
-                                    EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
-                                        match E::on_extension_absent() {
-                                            Some(default_extension) =>
-                                                ExtendOneState::ExtensionWasCached(CacheEntry::Cached(
-                                                    object.combine(default_extension),
-                                                    meta,
-                                                )),
-                                            None => {
-                                                let request = object.extension_request();
-
-                                                ExtendOneState::ExtensionWasMissing(object, meta, self.gdcf.refresh(request))
-                                            },
-                                        },
-                                    // Up-to-date extension request result
-                                    EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
-                                        let extension = object.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
-                                        ExtendOneState::ExtensionWasCached(CacheEntry::Cached(object.combine(extension), meta))
-                                    },
-                                    // Missing extension request result cache entry
-                                    EitherOrBoth::B(refresh_future) => ExtendOneState::ExtensionWasMissing(object, meta, refresh_future),
-                                    // Outdated absent marker
-                                    EitherOrBoth::Both(CacheEntry::MarkedAbsent(_), refresh_future)
-                                    | EitherOrBoth::Both(CacheEntry::DeducedAbsent, refresh_future) =>
-                                        match E::on_extension_absent() {
-                                            Some(default_extension) =>
-                                                ExtendOneState::ExtensionWasOutdated(object, meta, default_extension, refresh_future),
-                                            None => {
-                                                let request = object.extension_request();
-
-                                                ExtendOneState::ExtensionWasMissing(object, meta, self.gdcf.refresh(request))
-                                            },
-                                        },
-                                    // Outdated entry
-                                    EitherOrBoth::Both(CacheEntry::Cached(extension, _), refresh_future) => {
-                                        let extension = object.lookup_extension(&cache, extension).map_err(GdcfError::Cache)?;
-
-                                        ExtendOneState::ExtensionWasOutdated(object, meta, extension, refresh_future)
-                                    },
-                                };
-
-                                std::mem::replace(&mut self.state, next_state);
-
+                                // TODO: figure out if this is really needed
                                 futures::task::current().notify();
 
-                                Ok(Async::NotReady)
+                                (
+                                    Async::NotReady,
+                                    ExtensionFuture::Extending(gdcf.cache(), meta, ExtensionModes::new(object, gdcf, *forces_refresh)?),
+                                )
                             },
-                        }
-                    },
-                    Async::NotReady => Ok(Async::NotReady),
-                }
-            },
-            ExtendOneState::ExtensionWasCached(_) => {
-                if let ExtendOneState::ExtensionWasCached(we_are_fucking_done) =
-                    std::mem::replace(&mut self.state, ExtendOneState::Exhausted)
+                        },
+                    Async::NotReady => return Ok(Async::NotReady),
+                },
+            ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasCached(_)) => {
+                if let ExtensionFuture::Extending(_, meta, ExtensionModes::ExtensionWasCached(object)) =
+                    std::mem::replace(self, ExtensionFuture::Exhausted)
                 {
-                    Ok(Async::Ready(we_are_fucking_done))
+                    return Ok(Async::Ready(CacheEntry::Cached(object, meta)))
                 } else {
                     unreachable!()
                 }
             },
-            ExtendOneState::ExtensionWasMissing(_, _, ref mut refresh_future)
-            | ExtendOneState::ExtensionWasOutdated(_, _, _, ref mut refresh_future) =>
+            ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasMissing(_, ref mut refresh_future))
+            | ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasOutdated(_, _, ref mut refresh_future)) =>
                 match refresh_future.poll()? {
-                    Async::NotReady => Ok(Async::NotReady),
+                    Async::NotReady => return Ok(Async::NotReady),
                     Async::Ready(CacheEntry::Missing) => unreachable!(),
                     Async::Ready(cache_entry) => {
-                        let (base, meta) = match std::mem::replace(&mut self.state, ExtendOneState::Exhausted) {
-                            ExtendOneState::ExtensionWasMissing(base, meta, _) => (base, meta),
-                            ExtendOneState::ExtensionWasOutdated(base, meta, ..) => (base, meta),
+                        let (cache, base, meta) = match std::mem::replace(self, ExtensionFuture::Exhausted) {
+                            ExtensionFuture::Extending(cache, meta, ExtensionModes::ExtensionWasMissing(base, _))
+                            | ExtensionFuture::Extending(cache, meta, ExtensionModes::ExtensionWasOutdated(base, ..)) =>
+                                (cache, base, meta),
                             _ => unreachable!(),
                         };
 
                         match cache_entry {
                             CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
-                                Ok(Async::Ready(CacheEntry::Cached(
+                                return Ok(Async::Ready(CacheEntry::Cached(
                                     base.combine(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                     meta,
                                 ))),
                             CacheEntry::Cached(request_result, _) => {
                                 let extension = base.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
 
-                                Ok(Async::Ready(CacheEntry::Cached(base.combine(extension), meta)))
+                                return Ok(Async::Ready(CacheEntry::Cached(base.combine(extension), meta)))
                             },
                             _ => unreachable!(),
                         }
                     },
                 },
-            ExtendOneState::Exhausted => panic!("Future already polled to completion"),
-        }
+            ExtensionFuture::Exhausted => panic!("Future already polled to completion"),
+        };
+
+        std::mem::replace(self, next_state);
+
+        Ok(return_value)
     }
 }
 
-enum ExtendOneState<From, A, C, Into, AddOn, E>
+
+enum ExtensionModes<A, C, Into, Ext, E>
 where
-    A: MakeRequest<E::Request>,
+    A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     A: ApiClient,
     C: Cache,
-    E: Extendable<C, Into, AddOn>,
+    E: Extendable<C, Into, Ext>,
 {
-    PollingInner(From),
-    ExtensionWasCached(CacheEntry<Into, C::CacheEntryMeta>),
-    ExtensionWasOutdated(E, C::CacheEntryMeta, AddOn, RefreshCacheFuture<E::Request, A, C>),
-    ExtensionWasMissing(E, C::CacheEntryMeta, RefreshCacheFuture<E::Request, A, C>),
-    Exhausted,
+    ExtensionWasCached(Into),
+    ExtensionWasOutdated(E, Ext, RefreshCacheFuture<E::Request, A, C>),
+    ExtensionWasMissing(E, RefreshCacheFuture<E::Request, A, C>),
+}
+
+impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
+{
+    fn new(to_extend: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
+        let cache = gdcf.cache();
+
+        // FIXME: add set_force_refresh(bool) to Request trait
+        //let request = if force_refresh { to_extend.extension_request().force_refresh()} else
+        // {to_extend.extension_request()};
+        let request = to_extend.extension_request();
+
+        let mode = match gdcf.process(request).map_err(GdcfError::Cache)? {
+            // Not possible, we'd have gotten EitherOrBoth::B because of how `process` works
+            EitherOrBoth::Both(CacheEntry::Missing, _) | EitherOrBoth::A(CacheEntry::Missing) => unreachable!(),
+            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
+            // This violates snapshot consistency! TOdO: document
+            EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
+                match E::on_extension_absent() {
+                    Some(default_extension) => ExtensionModes::ExtensionWasCached(to_extend.combine(default_extension)),
+                    None => {
+                        let request = to_extend.extension_request();
+
+                        ExtensionModes::ExtensionWasMissing(to_extend, gdcf.refresh(request))
+                    },
+                },
+            // Up-to-date extension request result
+            EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
+                let extension = to_extend.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
+                ExtensionModes::ExtensionWasCached(to_extend.combine(extension))
+            },
+            // Missing extension request result cache entry
+            EitherOrBoth::B(refresh_future) => ExtensionModes::ExtensionWasMissing(to_extend, refresh_future),
+            // Outdated absent marker
+            EitherOrBoth::Both(CacheEntry::MarkedAbsent(_), refresh_future)
+            | EitherOrBoth::Both(CacheEntry::DeducedAbsent, refresh_future) =>
+                match E::on_extension_absent() {
+                    Some(default_extension) => ExtensionModes::ExtensionWasOutdated(to_extend, default_extension, refresh_future),
+                    None => {
+                        let request = to_extend.extension_request();
+
+                        ExtensionModes::ExtensionWasMissing(to_extend, gdcf.refresh(request))
+                    },
+                },
+            // Outdated entry
+            EitherOrBoth::Both(CacheEntry::Cached(extension, _), refresh_future) => {
+                let extension = to_extend.lookup_extension(&cache, extension).map_err(GdcfError::Cache)?;
+
+                ExtensionModes::ExtensionWasOutdated(to_extend, extension, refresh_future)
+            },
+        };
+
+        Ok(mode)
+    }
 }
 /*
 impl<C: Cache, Into, AddOn, E: Extendable<C, Into, AddOn>> ExtendOneFuture<C, Into, AddOn, E> where C: CanCache<E::Request>{
