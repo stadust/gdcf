@@ -96,7 +96,7 @@ where
                                             extension,
                                             ExtensionModes::ExtensionWasCached(
                                                 to_extend
-                                                    .combine(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                                    .extend(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                             ),
                                         );
                                     },
@@ -107,7 +107,7 @@ where
                                     {
                                         let ext = to_extend.lookup_extension(cache, request_result).map_err(GdcfError::Cache)?;
 
-                                        std::mem::replace(extension, ExtensionModes::ExtensionWasCached(to_extend.combine(ext)));
+                                        std::mem::replace(extension, ExtensionModes::ExtensionWasCached(to_extend.extend(ext)));
                                     }
                                 },
                             },
@@ -222,13 +222,13 @@ where
                         match cache_entry {
                             CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
                                 return Ok(Async::Ready(CacheEntry::Cached(
-                                    base.combine(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                    base.extend(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                     meta,
                                 ))),
                             CacheEntry::Cached(request_result, _) => {
                                 let extension = base.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
 
-                                return Ok(Async::Ready(CacheEntry::Cached(base.combine(extension), meta)))
+                                return Ok(Async::Ready(CacheEntry::Cached(base.extend(extension), meta)))
                             },
                             _ => unreachable!(),
                         }

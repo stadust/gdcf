@@ -25,7 +25,7 @@ impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>
         self.level_id.into()
     }
 
-    fn combine(self, addon: Level<Option<u64>, u64>) -> Level<Song, User> {
+    fn extend(self, addon: Level<Option<u64>, u64>) -> Level<Song, User> {
         let Level {
             level_data,
             password,
@@ -91,7 +91,7 @@ where
         LevelsRequest::default().with_id(self.base.level_id)
     }
 
-    fn combine(self, addon: Option<NewgroundsSong>) -> Level<Option<NewgroundsSong>, u64> {
+    fn extend(self, addon: Option<NewgroundsSong>) -> Level<Option<NewgroundsSong>, u64> {
         change_level_song(self, addon)
     }
 
@@ -124,7 +124,7 @@ where
         LevelsRequest::default().with_id(self.level_id)
     }
 
-    fn combine(self, custom_song: Option<NewgroundsSong>) -> PartialLevel<Option<NewgroundsSong>, u64> {
+    fn extend(self, custom_song: Option<NewgroundsSong>) -> PartialLevel<Option<NewgroundsSong>, u64> {
         change_partial_level_song(self, custom_song)
     }
 
@@ -158,7 +158,7 @@ where
         LevelsRequest::default().with_id(self.base.level_id)
     }
 
-    fn combine(self, addon: Option<Creator>) -> Level<Song, Option<Creator>> {
+    fn extend(self, addon: Option<Creator>) -> Level<Song, Option<Creator>> {
         change_level_user(self, addon)
     }
 
@@ -185,7 +185,7 @@ where
         LevelsRequest::default().with_id(self.level_id)
     }
 
-    fn combine(self, creator: Option<Creator>) -> PartialLevel<Song, Option<Creator>> {
+    fn extend(self, creator: Option<Creator>) -> PartialLevel<Song, Option<Creator>> {
         change_partial_level_user(self, creator)
     }
 

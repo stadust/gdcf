@@ -20,7 +20,7 @@ pub trait Extendable<C: Cache, Into, Ext> {
     fn extension_request(&self) -> Self::Request;
 
     // TODO: maybe put this into a Combinable trait
-    fn combine(self, addon: Ext) -> Into;
+    fn extend(self, addon: Ext) -> Into;
 
     fn change_extension(current: Into, new_extension: Ext) -> Into;
 }
@@ -62,7 +62,7 @@ where
             // This violates snapshot consistency! TOdO: document
             EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
                 match E::on_extension_absent() {
-                    Some(default_extension) => ExtensionModes::ExtensionWasCached(to_extend.combine(default_extension)),
+                    Some(default_extension) => ExtensionModes::ExtensionWasCached(to_extend.extend(default_extension)),
                     None => {
                         let request = to_extend.extension_request();
 
@@ -72,7 +72,7 @@ where
             // Up-to-date extension request result
             EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
                 let extension = to_extend.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
-                ExtensionModes::ExtensionWasCached(to_extend.combine(extension))
+                ExtensionModes::ExtensionWasCached(to_extend.extend(extension))
             },
             // Missing extension request result cache entry
             EitherOrBoth::B(refresh_future) => ExtensionModes::ExtensionWasMissing(to_extend, refresh_future),

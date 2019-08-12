@@ -16,7 +16,7 @@ impl<C: Cache> Extendable<C, User, User> for SearchedUser {
         self.account_id.into()
     }
 
-    fn combine(self, user: User) -> User {
+    fn extend(self, user: User) -> User {
         user
     }
 
