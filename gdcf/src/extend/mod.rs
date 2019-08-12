@@ -18,6 +18,7 @@ pub trait Extendable<C: Cache, Into, Ext> {
 
     fn extension_request(&self) -> Self::Request;
 
+    // TODO: maybe put this into a Combinable trait
     fn combine(self, addon: Ext) -> Into;
 }
 

@@ -8,12 +8,12 @@ use crate::{
 use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
-enum ExtensionFuture<From, A, C, Into, Ext, E>
+#[allow(missing_debug_implementations)]
+pub enum ExtensionFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    A: ApiClient,
     C: Cache,
     E: Extendable<C, Into, Ext>,
 {
@@ -22,12 +22,12 @@ where
     Exhausted,
 }
 
-enum ExtendManyFuture<From, A, C, Into, Ext, E>
+#[allow(missing_debug_implementations)]
+pub enum ExtendManyFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    A: ApiClient,
     C: Cache,
     E: Extendable<C, Into, Ext>,
 {
@@ -41,7 +41,6 @@ where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    A: ApiClient,
     C: Cache,
     E: Extendable<C, Into, Ext>,
 {

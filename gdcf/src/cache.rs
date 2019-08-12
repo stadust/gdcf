@@ -222,6 +222,17 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<Vec<T>, Meta> {
     }
 }
 
+impl<T, Meta: CacheEntryMeta> Into<Option<T>> for CacheEntry<T, Meta> {
+    fn into(self) -> Option<T> {
+        match self {
+            CacheEntry::Missing => None,
+            CacheEntry::DeducedAbsent => None,
+            CacheEntry::MarkedAbsent(_) => None,
+            CacheEntry::Cached(cached, _) => Some(cached),
+        }
+    }
+}
+
 pub trait CacheEntryMeta: Copy + Send + Sync + 'static {
     fn is_expired(&self) -> bool;
     fn is_absent(&self) -> bool;

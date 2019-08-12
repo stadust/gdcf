@@ -3,66 +3,6 @@ use gdcf_model::{
     song::NewgroundsSong,
 };
 /*
-pub(crate) fn partial_level_song<User: PartialEq, Song: PartialEq>(
-    PartialLevel {
-        level_id,
-        name,
-        description,
-        version,
-        creator,
-        difficulty,
-        downloads,
-        main_song,
-        gd_version,
-        likes,
-        length,
-        stars,
-        featured,
-        copy_of,
-        index_31,
-        coin_amount,
-        coins_verified,
-        stars_requested,
-        index_40,
-        is_epic,
-        index_43,
-        object_amount,
-        index_46,
-        index_47,
-        ..
-    }: PartialLevel<Option<u64>, User>,
-    custom_song: Song,
-) -> PartialLevel<Song, User> {
-    PartialLevel {
-        custom_song,
-
-        level_id,
-        name,
-        description,
-        version,
-        creator,
-        difficulty,
-        downloads,
-        main_song,
-        gd_version,
-        likes,
-        length,
-        stars,
-        featured,
-        index_31,
-        copy_of,
-        coin_amount,
-        coins_verified,
-        stars_requested,
-        index_40,
-        is_epic,
-        index_43,
-        object_amount,
-        index_46,
-        index_47,
-    }
-}
-
 pub(crate) fn partial_level_user<T: PartialEq, Song: PartialEq, User: PartialEq>(
     PartialLevel {
         level_id,

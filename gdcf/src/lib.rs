@@ -126,7 +126,7 @@ pub use crate::future::{GdcfFuture, GdcfStream};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
-    future::refresh::RefreshCacheFuture,
+    future::{extend::ExtendManyFuture, refresh::RefreshCacheFuture, ProcessRequestFuture},
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
@@ -172,16 +172,57 @@ impl std::fmt::Display for Secondary {
     }
 }
 
-pub trait ProcessRequest2<A: ApiClient, C: Cache, R: Request, T> {
-    type Future: Future<Item = T, Error = GdcfError<A::Err, C::Err>>;
+pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
+    type Future: Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>;
 
     fn process_request(&self, request: R) -> Result<Self::Future, C::Err>;
 
     // TODO: pagination
 }
 
-pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    fn process_request(&self, request: R) -> Result<GdcfFuture<T, A::Err, C>, C::Err>;
+impl<A, Req, C> ProcessRequest<A, C, Req, Req::Result> for Gdcf<A, C>
+where
+    Req: Request + Send + Sync + 'static,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+{
+    type Future = ProcessRequestFuture<Req, A, C>;
+
+    fn process_request(&self, request: Req) -> Result<ProcessRequestFuture<Req, A, C>, C::Err> {
+        match self.process(request)? {
+            EitherOrBoth::A(entry) => Ok(ProcessRequestFuture::UpToDate(entry)),
+            EitherOrBoth::B(future) => Ok(ProcessRequestFuture::Uncached(future)),
+            EitherOrBoth::Both(entry, future) => Ok(ProcessRequestFuture::Outdated(entry, future)),
+        }
+    }
+}
+
+impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<NewgroundsSong>, u64>>> for Gdcf<A, C>
+where
+    Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>,
+    A: ApiClient + MakeRequest<LevelsRequest>,
+    C: Cache + CanCache<LevelsRequest> + Store<NewgroundsSong> + Store<Creator> + Lookup<NewgroundsSong>,
+{
+    type Future = ExtendManyFuture<
+        <Gdcf<A, C> as ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>>::Future,
+        A,
+        C,
+        PartialLevel<Option<NewgroundsSong>, u64>,
+        Option<NewgroundsSong>,
+        PartialLevel<Option<u64>, u64>,
+    >;
+
+    fn process_request(&self, request: LevelsRequest) -> Result<Self::Future, <C as Cache>::Err> {
+        Ok(ExtendManyFuture::WaitingOnInner(
+            self.clone(),
+            request.force_refresh,
+            self.process_request(request)?,
+        ))
+    }
+}
+
+pub trait ProcessRequestOld<A: ApiClient, C: Cache, R: Request, T> {
+    fn process_request_old(&self, request: R) -> Result<GdcfFuture<T, A::Err, C>, C::Err>;
 
     fn paginate(&self, request: R) -> Result<GdcfStream<A, C, R, T, Self>, C::Err>
     where
@@ -189,7 +230,7 @@ pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
         Self: Sized + Clone,
     {
         let next = request.next();
-        let current = self.process_request(request)?;
+        let current = self.process_request_old(request)?;
 
         Ok(GdcfStream {
             next_request: next,
@@ -227,6 +268,7 @@ where
     }
 }
 
+// TODO: eliminate this
 enum EitherOrBoth<A, B> {
     A(A),
     B(B),
@@ -288,13 +330,13 @@ where
     }
 }
 
-impl<A, R, C> ProcessRequest<A, C, R, R::Result> for Gdcf<A, C>
+impl<A, R, C> ProcessRequestOld<A, C, R, R::Result> for Gdcf<A, C>
 where
     R: Request + Send + Sync + 'static,
     A: ApiClient + MakeRequest<R>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<R>,
 {
-    fn process_request(&self, request: R) -> Result<GdcfFuture<R::Result, A::Err, C>, C::Err> {
+    fn process_request_old(&self, request: R) -> Result<GdcfFuture<R::Result, A::Err, C>, C::Err> {
         match self.process(request)? {
             EitherOrBoth::A(entry) => Ok(GdcfFuture::UpToDate(entry)),
             EitherOrBoth::B(future) => Ok(GdcfFuture::Uncached(Box::new(future))),
@@ -575,11 +617,11 @@ where
     /// cache)
     pub fn level<Song, User>(&self, request: impl Into<LevelRequest>) -> Result<GdcfFuture<Level<Song, User>, A::Err, C>, C::Err>
     where
-        Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
+        Self: ProcessRequestOld<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
         User: PartialEq,
     {
-        self.process_request(request.into())
+        self.process_request_old(request.into())
     }
 
     /// Processes the given [`LevelsRequest`]
@@ -602,11 +644,11 @@ where
         request: impl Into<LevelsRequest>,
     ) -> Result<GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C>, C::Err>
     where
-        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
+        Self: ProcessRequestOld<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
         User: PartialEq,
     {
-        self.process_request(request.into())
+        self.process_request_old(request.into())
     }
 
     /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
@@ -616,7 +658,7 @@ where
         request: impl Into<LevelsRequest>,
     ) -> Result<GdcfStream<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>, Self>, C::Err>
     where
-        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
+        Self: ProcessRequestOld<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
         User: PartialEq,
     {
@@ -626,23 +668,23 @@ where
     /// Processes the given [`UserRequest`]
     pub fn user(&self, request: impl Into<UserRequest>) -> Result<GdcfFuture<User, A::Err, C>, C::Err>
     where
-        Self: ProcessRequest<A, C, UserRequest, User>,
+        Self: ProcessRequestOld<A, C, UserRequest, User>,
     {
-        self.process_request(request.into())
+        self.process_request_old(request.into())
     }
 
     pub fn search_user<U>(&self, request: impl Into<UserSearchRequest>) -> Result<GdcfFuture<U, A::Err, C>, C::Err>
     where
-        Self: ProcessRequest<A, C, UserSearchRequest, U>,
+        Self: ProcessRequestOld<A, C, UserSearchRequest, U>,
     {
-        self.process_request(request.into())
+        self.process_request_old(request.into())
     }
 
     pub fn profile_comments(&self, request: impl Into<ProfileCommentsRequest>) -> Result<GdcfFuture<Vec<ProfileComment>, A::Err, C>, C::Err>
     where
-        Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
+        Self: ProcessRequestOld<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
-        self.process_request(request.into())
+        self.process_request_old(request.into())
     }
 
     pub fn paginate_profile_comments(
@@ -650,7 +692,7 @@ where
         request: impl Into<ProfileCommentsRequest>,
     ) -> Result<GdcfStream<A, C, ProfileCommentsRequest, Vec<ProfileComment>, Self>, C::Err>
     where
-        Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
+        Self: ProcessRequestOld<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
         self.paginate(request.into())
     }

@@ -1,15 +1,63 @@
 use crate::{
-    api::{request::PaginatableRequest, ApiClient},
-    cache::{Cache, CacheEntry},
+    api::{
+        client::MakeRequest,
+        request::{PaginatableRequest, Request},
+        ApiClient,
+    },
+    cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
-    ProcessRequest,
+    future::refresh::RefreshCacheFuture,
+    ProcessRequestOld,
 };
 use futures::{future::Either, task, Async, Future, Stream};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 use std::mem;
 
 pub mod extend;
 pub mod refresh;
+pub mod stream;
+
+pub trait GdcfFut: Future {
+    fn has_result_cached(&self) -> bool;
+    fn into_cached(self) -> Option<Self::Item>;
+}
+
+#[allow(missing_debug_implementations)]
+pub enum ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+{
+    Empty,
+    Uncached(RefreshCacheFuture<Req, A, C>),
+    Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
+    UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
+}
+
+impl<Req, A, C> Future for ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+{
+    type Error = GdcfError<A::Err, C::Err>;
+    type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        match self {
+            ProcessRequestFuture::Empty => panic!("Future already polled to completion"),
+            ProcessRequestFuture::Uncached(future) => future.poll(),
+            ProcessRequestFuture::Outdated(_, future) => future.poll(),
+            fut =>
+                match std::mem::replace(fut, ProcessRequestFuture::Empty) {
+                    ProcessRequestFuture::UpToDate(inner) => Ok(Async::Ready(inner)),
+                    _ => unreachable!(),
+                },
+        }
+    }
+}
 
 pub(crate) type GdcfInnerFuture<T, A, C> =
     Box<dyn Future<Item = CacheEntry<T, <C as Cache>::CacheEntryMeta>, Error = GdcfError<A, <C as Cache>::Err>> + Send + 'static>;
@@ -211,7 +259,7 @@ impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
 pub struct GdcfStream<A, C, R, T, M>
 where
     R: PaginatableRequest,
-    M: ProcessRequest<A, C, R, T>,
+    M: ProcessRequestOld<A, C, R, T>,
     A: ApiClient,
     C: Cache,
 {
@@ -223,7 +271,7 @@ where
 impl<A, C, R, T, M> Stream for GdcfStream<A, C, R, T, M>
 where
     R: PaginatableRequest,
-    M: ProcessRequest<A, C, R, T>,
+    M: ProcessRequestOld<A, C, R, T>,
     A: ApiClient,
     C: Cache,
 {
@@ -240,7 +288,7 @@ where
                 let next = self.next_request.next();
                 let cur = mem::replace(&mut self.next_request, next);
 
-                self.current_request = self.source.process_request(cur).map_err(GdcfError::Cache)?;
+                self.current_request = self.source.process_request_old(cur).map_err(GdcfError::Cache)?;
 
                 Ok(Async::Ready(Some(result)))
             },
