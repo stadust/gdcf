@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    unused_imports,
+    //unused_imports,
     unused_parens
 )]
 
@@ -323,7 +323,7 @@ impl<C: Cache> ExtendByRequest<C, User, User> for SearchedUser {
         addon
     }
 }*/
-
+/*
 impl<A, C> ProcessRequest<A, C, LevelRequest, Level<NewgroundsSong, u64>> for Gdcf<A, C>
 where
     A: ApiClient + MakeRequest<LevelRequest> + MakeRequest<LevelsRequest>,
@@ -543,7 +543,7 @@ where
             },
         }
     }
-}
+}*/
 
 impl<A, C> Gdcf<A, C>
 where

@@ -349,7 +349,7 @@ where
     /// ## GD Internals:
     /// This value is provided at index `35`, and a value of `0` means, that no
     /// custom song is used.
-    pub custom_song: Option<Song>,
+    pub custom_song: Song,
 
     /// The amount of coints in this [`PartialLevel`]
     ///

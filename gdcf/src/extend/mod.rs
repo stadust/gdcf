@@ -7,6 +7,8 @@ use crate::{
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
+pub mod level;
+
 pub trait Extendable<C: Cache, Into, Ext> {
     type Request: Request;
 

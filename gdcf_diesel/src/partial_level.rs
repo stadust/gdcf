@@ -6,7 +6,7 @@ use gdcf_model::{
 };
 
 diesel_stuff! {
-    partial_level (level_id, PartialLevel<u64, u64>) {
+    partial_level (level_id, PartialLevel<Option<u64>, u64>) {
         (level_id, level_id, u64),
         (level_name, name, String),
         (description, description, Option<String>),
@@ -38,8 +38,8 @@ diesel_stuff! {
 // Metadata table storing information about when a partial level was cached
 meta_table!(partial_level_meta, level_id);
 
-store_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
-lookup_simply!(PartialLevel<u64, u64>, partial_level, partial_level_meta, level_id);
+store_simply!(PartialLevel<Option<u64>, u64>, partial_level, partial_level_meta, level_id);
+lookup_simply!(PartialLevel<Option<u64>, u64>, partial_level, partial_level_meta, level_id);
 
 // Metadata table associating the hashes of cached requests with the level ids the requested
 // returned

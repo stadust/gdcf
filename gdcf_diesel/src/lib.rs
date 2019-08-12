@@ -159,8 +159,8 @@ impl gdcf::cache::Cache for Cache {
 // TODO: in the future we can probably make these macro-generated as well, but for now we only have
 // one of them, so its fine
 
-impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<u64, u64>>, Entry>, Self::Err> {
+impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<Option<u64>, u64>>, Entry>, Self::Err> {
         use crate::partial_level::*;
         use diesel::JoinOnDsl;
 
@@ -189,7 +189,7 @@ impl Lookup<Vec<PartialLevel<u64, u64>>> for Cache {
     }
 }
 
-impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
+impl Store<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
     fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
         use crate::partial_level::*;
 
@@ -202,7 +202,7 @@ impl Store<Vec<PartialLevel<u64, u64>>> for Cache {
         Ok(entry)
     }
 
-    fn store(&mut self, partial_levels: &Vec<PartialLevel<u64, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+    fn store(&mut self, partial_levels: &Vec<PartialLevel<Option<u64>, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
 
         debug!("Storing result of LevelsRequest with key {}", key);

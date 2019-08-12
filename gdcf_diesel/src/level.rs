@@ -28,7 +28,7 @@ diesel_stuff! {
     }
 }
 
-impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
+impl<'a> diesel::Insertable<level::table> for &'a Level<Option<u64>, u64> {
     type Values = <Values<'a> as diesel::Insertable<level::table>>::Values;
 
     fn values(self) -> Self::Values {
@@ -50,7 +50,7 @@ impl<'a> diesel::Insertable<level::table> for &'a Level<u64, u64> {
     }
 }
 
-impl<'a> diesel::query_builder::AsChangeset for Wrapped<&'a Level<u64, u64>> {
+impl<'a> diesel::query_builder::AsChangeset for Wrapped<&'a Level<Option<u64>, u64>> {
     type Changeset = <Values<'a> as diesel::query_builder::AsChangeset>::Changeset;
     type Target = level::table;
 
@@ -85,8 +85,8 @@ meta_table!(level_meta, level_id);
 
 lookup_simply!(SemiLevel, level, level_meta, level_id);
 
-impl Lookup<Level<u64, u64>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<u64, u64>, Entry>, Self::Err> {
+impl Lookup<Level<Option<u64>, u64>> for Cache {
+    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<Option<u64>, u64>, Entry>, Self::Err> {
         match self.lookup(key)? {
             CacheEntry::Cached(semi_level, meta) => {
                 let semi_level: SemiLevel = semi_level;
@@ -116,16 +116,8 @@ impl Lookup<Level<u64, u64>> for Cache {
     }
 }
 
-impl Store<Level<u64, u64>> for Cache {
-    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
-        warn!("Marking Level with key {} as absent!", key as i64);
-
-        let entry = Entry::absent(key);
-        update_entry!(self, entry, level_meta::table, level_meta::level_id);
-        Ok(entry)
-    }
-
-    fn store(&mut self, obj: &Level<u64, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+impl Store<Level<Option<u64>, u64>> for Cache {
+    fn store(&mut self, obj: &Level<Option<u64>, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
         self.store(&obj.base, obj.base.level_id)?;
 
         debug!("Storing {} under key {}", obj, key as i64);
@@ -135,6 +127,14 @@ impl Store<Level<u64, u64>> for Cache {
         update_entry!(self, entry, level_meta::table, level_meta::level_id);
         upsert!(self, obj, level::table, level::level_id);
 
+        Ok(entry)
+    }
+
+    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+        warn!("Marking Level with key {} as absent!", key as i64);
+
+        let entry = Entry::absent(key);
+        update_entry!(self, entry, level_meta::table, level_meta::level_id);
         Ok(entry)
     }
 }

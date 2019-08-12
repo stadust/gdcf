@@ -58,7 +58,7 @@ impl Handler for LevelsRequest {
         let mut other = Vec::new();
         let mut sections = response_body.split('#');
 
-        let levels: Vec<PartialLevel<u64, u64>> = match sections.next() {
+        let levels: Vec<PartialLevel<Option<u64>, u64>> = match sections.next() {
             Some(section) =>
                 section
                     .split('|')

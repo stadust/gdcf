@@ -2,8 +2,8 @@ use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
 };
-
-pub(crate) fn partial_level_song<User: PartialEq>(
+/*
+pub(crate) fn partial_level_song<User: PartialEq, Song: PartialEq>(
     PartialLevel {
         level_id,
         name,
@@ -30,9 +30,9 @@ pub(crate) fn partial_level_song<User: PartialEq>(
         index_46,
         index_47,
         ..
-    }: PartialLevel<u64, User>,
-    custom_song: Option<NewgroundsSong>,
-) -> PartialLevel<NewgroundsSong, User> {
+    }: PartialLevel<Option<u64>, User>,
+    custom_song: Song,
+) -> PartialLevel<Song, User> {
     PartialLevel {
         custom_song,
 
@@ -164,3 +164,4 @@ pub(crate) fn level_user<T: PartialEq, User: PartialEq, Song: PartialEq>(
         index_36,
     })
 }
+*/
