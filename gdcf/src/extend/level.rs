@@ -1,6 +1,6 @@
 use super::Extendable;
 use crate::{
-    api::request::LevelsRequest,
+    api::request::{LevelRequest, LevelsRequest},
     cache::{Cache, Lookup},
 };
 use gdcf_model::{
@@ -8,6 +8,43 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::Creator,
 };
+
+// FIXME: this impl isn't usable from Gdcf yet yet
+impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>, Level<Option<u64>, u64>> for PartialLevel<Song, User> {
+    type Request = LevelRequest;
+
+    fn lookup_extension(&self, cache: &C, request_result: Level<Option<u64>, u64>) -> Result<Level<Option<u64>, u64>, <C as Cache>::Err> {
+        Ok(request_result)
+    }
+
+    fn on_extension_absent() -> Option<Level<Option<u64>, u64>> {
+        None
+    }
+
+    fn extension_request(&self) -> Self::Request {
+        self.level_id.into()
+    }
+
+    fn combine(self, addon: Level<Option<u64>, u64>) -> Level<Song, User> {
+        let Level {
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+            ..
+        } = addon;
+
+        Level {
+            base: self,
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+        }
+    }
+}
 
 impl<C: Cache> Extendable<C, Level<Option<NewgroundsSong>, u64>, Option<NewgroundsSong>> for Level<Option<u64>, u64>
 where
