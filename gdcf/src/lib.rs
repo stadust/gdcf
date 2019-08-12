@@ -533,13 +533,13 @@ where
     /// second one and uses the cached value (or at least it will if you set cache-expiry to
     /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
     /// cache)
-    pub fn level<Song, User>(&self, request: impl Into<LevelRequest>) -> Result<GdcfFuture<Level<Song, User>, A::Err, C>, C::Err>
+    pub fn level<Song, User>(&self, request: impl Into<LevelRequest>) -> Result<<Self as ProcessRequest<A, C, LevelRequest, Level<Song, User>>>::Future, C::Err>
     where
-        Self: ProcessRequestOld<A, C, LevelRequest, Level<Song, User>>,
+        Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
         User: PartialEq,
     {
-        self.process_request_old(request.into())
+        self.process_request(request.into())
     }
 
     /// Processes the given [`LevelsRequest`]
@@ -560,15 +560,15 @@ where
     pub fn levels<Song, User>(
         &self,
         request: impl Into<LevelsRequest>,
-    ) -> Result<GdcfFuture<Vec<PartialLevel<Song, User>>, A::Err, C>, C::Err>
+    ) -> Result<<Self as ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>>::Future, C::Err>
     where
-        Self: ProcessRequestOld<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
+        Self: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Song, User>>>,
         Song: PartialEq,
         User: PartialEq,
     {
-        self.process_request_old(request.into())
+        self.process_request(request.into())
     }
-
+/*
     /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
     /// parameter until it hits the first empty page.
     pub fn paginate_levels<Song, User>(
@@ -581,31 +581,31 @@ where
         User: PartialEq,
     {
         self.paginate(request.into())
-    }
+    }*/
 
     /// Processes the given [`UserRequest`]
-    pub fn user(&self, request: impl Into<UserRequest>) -> Result<GdcfFuture<User, A::Err, C>, C::Err>
+    pub fn user(&self, request: impl Into<UserRequest>) -> Result<<Self as ProcessRequest<A, C, UserRequest, User>>::Future, C::Err>
     where
-        Self: ProcessRequestOld<A, C, UserRequest, User>,
+        Self: ProcessRequest<A, C, UserRequest, User>,
     {
-        self.process_request_old(request.into())
+        self.process_request(request.into())
     }
 
-    pub fn search_user<U>(&self, request: impl Into<UserSearchRequest>) -> Result<GdcfFuture<U, A::Err, C>, C::Err>
+    pub fn search_user<U>(&self, request: impl Into<UserSearchRequest>) -> Result<<Self as ProcessRequest<A, C, UserSearchRequest, U>>::Future, C::Err>
     where
-        Self: ProcessRequestOld<A, C, UserSearchRequest, U>,
+        Self: ProcessRequest<A, C, UserSearchRequest, U>,
     {
-        self.process_request_old(request.into())
+        self.process_request(request.into())
     }
 
-    pub fn profile_comments(&self, request: impl Into<ProfileCommentsRequest>) -> Result<GdcfFuture<Vec<ProfileComment>, A::Err, C>, C::Err>
+    pub fn profile_comments(&self, request: impl Into<ProfileCommentsRequest>) -> Result<<Self as ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>>::Future, C::Err>
     where
-        Self: ProcessRequestOld<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
+        Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
-        self.process_request_old(request.into())
+        self.process_request(request.into())
     }
 
-    pub fn paginate_profile_comments(
+    /*pub fn paginate_profile_comments(
         &self,
         request: impl Into<ProfileCommentsRequest>,
     ) -> Result<GdcfStream<A, C, ProfileCommentsRequest, Vec<ProfileComment>, Self>, C::Err>
@@ -613,5 +613,5 @@ where
         Self: ProcessRequestOld<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
         self.paginate(request.into())
-    }
+    }*/
 }
