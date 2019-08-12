@@ -431,6 +431,7 @@ impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
     }
 }
 
+// TODO: Consider having only one type parameter that is used as the type for `base`
 /// Struct representing full levels, extending [`PartialLevel`] with the fields
 /// only retrieved when fully downloading a level.
 ///

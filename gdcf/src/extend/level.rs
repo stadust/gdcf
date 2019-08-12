@@ -8,6 +8,8 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::Creator,
 };
+use crate::api::request::UserRequest;
+use gdcf_model::user::{User, SearchedUser};
 
 // FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>, Level<Option<u64>, u64>> for PartialLevel<Song, User> {
@@ -194,6 +196,54 @@ where
         new_extension: Option<Creator>,
     ) -> PartialLevel<Song, Option<Creator>> {
         change_partial_level_user(current, new_extension)
+    }
+}
+
+impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<User>>, Option<User>> for PartialLevel<Song, u64> {
+    type Request = UserRequest;
+
+    fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
+        Ok(Some(request_result))
+    }
+
+    fn on_extension_absent() -> Option<Option<User>> {
+        Some(None)
+    }
+
+    fn extension_request(&self) -> Self::Request {
+        self.creator.into()
+    }
+
+    fn extend(self, addon: Option<User>) -> PartialLevel<Song, Option<User>> {
+        change_partial_level_user(self, addon)
+    }
+
+    fn change_extension(current: PartialLevel<Song, Option<User>>, new_extension: Option<User>) -> PartialLevel<Song, Option<User>> {
+        change_partial_level_user(current, new_extension)
+    }
+}
+
+impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<User>>, Option<User>> for Level<Song, u64> {
+    type Request = UserRequest;
+
+    fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
+        Ok(Some(request_result))
+    }
+
+    fn on_extension_absent() -> Option<Option<User>> {
+        Some(None)
+    }
+
+    fn extension_request(&self) -> Self::Request {
+        self.base.creator.into()
+    }
+
+    fn extend(self, addon: Option<User>) -> Level<Song, Option<User>> {
+        change_level_user(self, addon)
+    }
+
+    fn change_extension(current: Level<Song, Option<User>>, new_extension: Option<User>) -> Level<Song, Option<User>> {
+        change_level_user(current, new_extension)
     }
 }
 
