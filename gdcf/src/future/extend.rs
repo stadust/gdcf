@@ -3,6 +3,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
     extend::{Extendable, ExtensionModes},
+    future::GdcfFuture,
     Gdcf,
 };
 use futures::{Async, Future};
@@ -145,6 +146,24 @@ where
     }
 }
 
+// TODO: this impl is tricky
+impl<From, A, C, Into, Ext, E> GdcfFuture for ExtendManyFuture<From, A, C, Into, Ext, E>
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
+{
+    fn has_result_cached(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn into_cached(self) -> Option<Self::Item> {
+        unimplemented!()
+    }
+}
+
 impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
@@ -221,5 +240,23 @@ where
         std::mem::replace(self, next_state);
 
         Ok(return_value)
+    }
+}
+
+// TODO: this impl is gonna be tricky as well
+impl<From, A, C, Into, Ext, E> GdcfFuture for ExtensionFuture<From, A, C, Into, Ext, E>
+    where
+        A: ApiClient + MakeRequest<E::Request>,
+        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+        From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+        C: Cache,
+        E: Extendable<C, Into, Ext>,
+{
+    fn has_result_cached(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn into_cached(self) -> Option<Self::Item> {
+        unimplemented!()
     }
 }

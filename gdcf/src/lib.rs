@@ -125,7 +125,7 @@ use log::{error, info};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
-    future::{extend::ExtendManyFuture, refresh::RefreshCacheFuture, ProcessRequestFuture},
+    future::{extend::ExtendManyFuture, process::ProcessRequestFuture, refresh::RefreshCacheFuture, GdcfFuture},
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
@@ -172,7 +172,7 @@ impl std::fmt::Display for Secondary {
 }
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    type Future: Future<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>;
+    type Future: GdcfFuture<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>;
 
     fn process_request(&self, request: R) -> Result<Self::Future, C::Err>;
 
@@ -498,7 +498,10 @@ where
     /// second one and uses the cached value (or at least it will if you set cache-expiry to
     /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
     /// cache)
-    pub fn level<Song, User>(&self, request: impl Into<LevelRequest>) -> Result<<Self as ProcessRequest<A, C, LevelRequest, Level<Song, User>>>::Future, C::Err>
+    pub fn level<Song, User>(
+        &self,
+        request: impl Into<LevelRequest>,
+    ) -> Result<<Self as ProcessRequest<A, C, LevelRequest, Level<Song, User>>>::Future, C::Err>
     where
         Self: ProcessRequest<A, C, LevelRequest, Level<Song, User>>,
         Song: PartialEq,
@@ -533,7 +536,8 @@ where
     {
         self.process_request(request.into())
     }
-/*
+
+    /*
     /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
     /// parameter until it hits the first empty page.
     pub fn paginate_levels<Song, User>(
@@ -556,14 +560,20 @@ where
         self.process_request(request.into())
     }
 
-    pub fn search_user<U>(&self, request: impl Into<UserSearchRequest>) -> Result<<Self as ProcessRequest<A, C, UserSearchRequest, U>>::Future, C::Err>
+    pub fn search_user<U>(
+        &self,
+        request: impl Into<UserSearchRequest>,
+    ) -> Result<<Self as ProcessRequest<A, C, UserSearchRequest, U>>::Future, C::Err>
     where
         Self: ProcessRequest<A, C, UserSearchRequest, U>,
     {
         self.process_request(request.into())
     }
 
-    pub fn profile_comments(&self, request: impl Into<ProfileCommentsRequest>) -> Result<<Self as ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>>::Future, C::Err>
+    pub fn profile_comments(
+        &self,
+        request: impl Into<ProfileCommentsRequest>,
+    ) -> Result<<Self as ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>>::Future, C::Err>
     where
         Self: ProcessRequest<A, C, ProfileCommentsRequest, Vec<ProfileComment>>,
     {
