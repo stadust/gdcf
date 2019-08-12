@@ -55,7 +55,8 @@ where
                     Async::Ready(base) =>
                         match base {
                             CacheEntry::DeducedAbsent => (Async::Ready(CacheEntry::DeducedAbsent), MultiExtensionFuture::Exhausted),
-                            CacheEntry::MarkedAbsent(meta) => (Async::Ready(CacheEntry::MarkedAbsent(meta)), MultiExtensionFuture::Exhausted),
+                            CacheEntry::MarkedAbsent(meta) =>
+                                (Async::Ready(CacheEntry::MarkedAbsent(meta)), MultiExtensionFuture::Exhausted),
                             CacheEntry::Missing => unreachable!(),
                             CacheEntry::Cached(objects, meta) => {
                                 // TODO: figure out if this is really needed

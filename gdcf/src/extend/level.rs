@@ -44,6 +44,26 @@ impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>
             index_36,
         }
     }
+
+    fn change_extension(current: Level<Song, User>, new_extension: Level<Option<u64>, u64>) -> Level<Song, User> {
+        let Level {
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+            ..
+        } = new_extension;
+
+        Level {
+            base: current.base,
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+        }
+    }
 }
 
 impl<C: Cache> Extendable<C, Level<Option<NewgroundsSong>, u64>, Option<NewgroundsSong>> for Level<Option<u64>, u64>
@@ -72,23 +92,14 @@ where
     }
 
     fn combine(self, addon: Option<NewgroundsSong>) -> Level<Option<NewgroundsSong>, u64> {
-        let Level {
-            base,
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-        } = self;
+        change_level_song(self, addon)
+    }
 
-        Level {
-            base: Extendable::<C, _, _>::combine(base, addon),
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-        }
+    fn change_extension(
+        current: Level<Option<NewgroundsSong>, u64>,
+        new_extension: Option<NewgroundsSong>,
+    ) -> Level<Option<NewgroundsSong>, u64> {
+        change_level_song(current, new_extension)
     }
 }
 
@@ -114,62 +125,14 @@ where
     }
 
     fn combine(self, custom_song: Option<NewgroundsSong>) -> PartialLevel<Option<NewgroundsSong>, u64> {
-        let PartialLevel {
-            level_id,
-            name,
-            description,
-            version,
-            difficulty,
-            downloads,
-            main_song,
-            gd_version,
-            likes,
-            length,
-            stars,
-            featured,
-            index_31,
-            copy_of,
-            coin_amount,
-            coins_verified,
-            stars_requested,
-            index_40,
-            is_epic,
-            index_43,
-            object_amount,
-            index_46,
-            index_47,
-            creator,
-            ..
-        } = self;
+        change_partial_level_song(self, custom_song)
+    }
 
-        PartialLevel {
-            custom_song,
-
-            level_id,
-            name,
-            description,
-            version,
-            creator,
-            difficulty,
-            downloads,
-            main_song,
-            gd_version,
-            likes,
-            length,
-            stars,
-            featured,
-            index_31,
-            copy_of,
-            coin_amount,
-            coins_verified,
-            stars_requested,
-            index_40,
-            is_epic,
-            index_43,
-            object_amount,
-            index_46,
-            index_47,
-        }
+    fn change_extension(
+        current: PartialLevel<Option<NewgroundsSong>, u64>,
+        new_extension: Option<NewgroundsSong>,
+    ) -> PartialLevel<Option<NewgroundsSong>, u64> {
+        change_partial_level_song(current, new_extension)
     }
 }
 
@@ -196,23 +159,11 @@ where
     }
 
     fn combine(self, addon: Option<Creator>) -> Level<Song, Option<Creator>> {
-        let Level {
-            base,
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-        } = self;
+        change_level_user(self, addon)
+    }
 
-        Level {
-            base: Extendable::<C, _, _>::combine(base, addon),
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-        }
+    fn change_extension(current: Level<Song, Option<Creator>>, new_extension: Option<Creator>) -> Level<Song, Option<Creator>> {
+        change_level_user(current, new_extension)
     }
 }
 
@@ -235,61 +186,183 @@ where
     }
 
     fn combine(self, creator: Option<Creator>) -> PartialLevel<Song, Option<Creator>> {
-        let PartialLevel {
-            level_id,
-            name,
-            description,
-            version,
-            difficulty,
-            downloads,
-            main_song,
-            gd_version,
-            likes,
-            length,
-            stars,
-            featured,
-            index_31,
-            copy_of,
-            coin_amount,
-            coins_verified,
-            stars_requested,
-            index_40,
-            is_epic,
-            index_43,
-            object_amount,
-            index_46,
-            index_47,
-            custom_song,
-            ..
-        } = self;
+        change_partial_level_user(self, creator)
+    }
 
-        PartialLevel {
-            custom_song,
+    fn change_extension(
+        current: PartialLevel<Song, Option<Creator>>,
+        new_extension: Option<Creator>,
+    ) -> PartialLevel<Song, Option<Creator>> {
+        change_partial_level_user(current, new_extension)
+    }
+}
 
-            level_id,
-            name,
-            description,
-            version,
-            creator,
-            difficulty,
-            downloads,
-            main_song,
-            gd_version,
-            likes,
-            length,
-            stars,
-            featured,
-            index_31,
-            copy_of,
-            coin_amount,
-            coins_verified,
-            stars_requested,
-            index_40,
-            is_epic,
-            index_43,
-            object_amount,
-            index_46,
-            index_47,
-        }
+fn change_partial_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
+    partial_level: PartialLevel<OldSong, User>,
+    new_song: NewSong,
+) -> PartialLevel<NewSong, User> {
+    let PartialLevel {
+        level_id,
+        name,
+        description,
+        version,
+        difficulty,
+        downloads,
+        main_song,
+        gd_version,
+        likes,
+        length,
+        stars,
+        featured,
+        index_31,
+        copy_of,
+        coin_amount,
+        coins_verified,
+        stars_requested,
+        index_40,
+        is_epic,
+        index_43,
+        object_amount,
+        index_46,
+        index_47,
+        creator,
+        ..
+    } = partial_level;
+
+    PartialLevel {
+        custom_song: new_song,
+
+        level_id,
+        name,
+        description,
+        version,
+        creator,
+        difficulty,
+        downloads,
+        main_song,
+        gd_version,
+        likes,
+        length,
+        stars,
+        featured,
+        index_31,
+        copy_of,
+        coin_amount,
+        coins_verified,
+        stars_requested,
+        index_40,
+        is_epic,
+        index_43,
+        object_amount,
+        index_46,
+        index_47,
+    }
+}
+
+fn change_partial_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
+    partial_level: PartialLevel<Song, OldUser>,
+    new_user: NewUser,
+) -> PartialLevel<Song, NewUser> {
+    let PartialLevel {
+        level_id,
+        name,
+        description,
+        version,
+        difficulty,
+        downloads,
+        main_song,
+        gd_version,
+        likes,
+        length,
+        stars,
+        featured,
+        index_31,
+        copy_of,
+        coin_amount,
+        coins_verified,
+        stars_requested,
+        index_40,
+        is_epic,
+        index_43,
+        object_amount,
+        index_46,
+        index_47,
+        custom_song,
+        ..
+    } = partial_level;
+
+    PartialLevel {
+        creator: new_user,
+
+        level_id,
+        name,
+        description,
+        version,
+        custom_song,
+        difficulty,
+        downloads,
+        main_song,
+        gd_version,
+        likes,
+        length,
+        stars,
+        featured,
+        index_31,
+        copy_of,
+        coin_amount,
+        coins_verified,
+        stars_requested,
+        index_40,
+        is_epic,
+        index_43,
+        object_amount,
+        index_46,
+        index_47,
+    }
+}
+
+fn change_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
+    level: Level<Song, OldUser>,
+    new_user: NewUser,
+) -> Level<Song, NewUser> {
+    let Level {
+        base,
+        level_data,
+        password,
+        time_since_update,
+        time_since_upload,
+        index_36,
+    } = level;
+
+    Level {
+        base: change_partial_level_user(base, new_user),
+        level_data,
+        password,
+        time_since_update,
+        time_since_upload,
+        index_36,
+    }
+}
+
+fn change_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
+    level: Level<OldSong, User>,
+    new_song: NewSong,
+) -> Level<NewSong, User> {
+    let Level {
+        base,
+        level_data,
+        password,
+        time_since_update,
+        time_since_upload,
+        index_36,
+    } = level;
+
+    Level {
+        base: change_partial_level_song(base, new_song),
+        level_data,
+        password,
+        time_since_update,
+        time_since_upload,
+        index_36,
     }
 }

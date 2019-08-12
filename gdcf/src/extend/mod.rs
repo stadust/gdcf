@@ -21,6 +21,8 @@ pub trait Extendable<C: Cache, Into, Ext> {
 
     // TODO: maybe put this into a Combinable trait
     fn combine(self, addon: Ext) -> Into;
+
+    fn change_extension(current: Into, new_extension: Ext) -> Into;
 }
 
 #[allow(missing_debug_implementations)]

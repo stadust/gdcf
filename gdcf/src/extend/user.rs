@@ -19,4 +19,8 @@ impl<C: Cache> Extendable<C, User, User> for SearchedUser {
     fn combine(self, user: User) -> User {
         user
     }
+
+    fn change_extension(current: User, new_extension: User) -> User {
+        new_extension
+    }
 }
