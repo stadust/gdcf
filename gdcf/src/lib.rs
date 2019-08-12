@@ -170,6 +170,14 @@ impl std::fmt::Display for Secondary {
     }
 }
 
+pub trait ProcessRequest2<A: ApiClient, C: Cache, R: Request, T> {
+    type Future: Future<Item = T, Error = GdcfError<A::Err, C::Err>>;
+
+    fn process_request(&self, request: R) -> Result<Self::Future, C::Err>;
+
+    // TODO: pagination
+}
+
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
     fn process_request(&self, request: R) -> Result<GdcfFuture<T, A::Err, C>, C::Err>;
 
@@ -381,16 +389,127 @@ where
 }
 
 enum ExtendManyFuture<From, A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-        A: ApiClient,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,{
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
+{
     WaitingOnInner(Gdcf<A, C>, bool, From),
     Extending(C, C::CacheEntryMeta, Vec<ExtensionModes<A, C, Into, Ext, E>>),
-    Exhausted
+    Exhausted,
+}
+
+impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext, E>
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
+{
+    type Error = GdcfError<A::Err, C::Err>;
+    type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        let (return_value, next_state) = match self {
+            ExtendManyFuture::WaitingOnInner(gdcf, forces_refresh, inner) =>
+                match inner.poll()? {
+                    Async::Ready(base) =>
+                        match base {
+                            CacheEntry::DeducedAbsent => (Async::Ready(CacheEntry::DeducedAbsent), ExtendManyFuture::Exhausted),
+                            CacheEntry::MarkedAbsent(meta) => (Async::Ready(CacheEntry::MarkedAbsent(meta)), ExtendManyFuture::Exhausted),
+                            CacheEntry::Missing => unreachable!(),
+                            CacheEntry::Cached(objects, meta) => {
+                                // TODO: figure out if this is really needed
+                                futures::task::current().notify();
+
+                                (
+                                    Async::NotReady,
+                                    ExtendManyFuture::Extending(
+                                        gdcf.cache(),
+                                        meta,
+                                        objects
+                                            .into_iter()
+                                            .map(|object| ExtensionModes::new(object, gdcf, *forces_refresh))
+                                            .collect::<Result<Vec<_>, _>>()?,
+                                    ),
+                                )
+                            },
+                        },
+                    Async::NotReady => return Ok(Async::NotReady),
+                },
+            ExtendManyFuture::Extending(ref cache, _, ref mut extensions) => {
+                let mut are_we_there_yet = true;
+
+                for extension in extensions {
+                    match extension {
+                        ExtensionModes::ExtensionWasOutdated(_, _, ref mut future)
+                        | ExtensionModes::ExtensionWasMissing(_, ref mut future) =>
+                            match future.poll()? {
+                                Async::NotReady => are_we_there_yet = false,
+                                Async::Ready(CacheEntry::Missing) => unreachable!(),
+                                Async::Ready(CacheEntry::DeducedAbsent) | Async::Ready(CacheEntry::MarkedAbsent(_)) =>
+                                    if let ExtensionModes::ExtensionWasMissing(to_extend, _)
+                                    | ExtensionModes::ExtensionWasOutdated(to_extend, ..) =
+                                        std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
+                                    {
+                                        std::mem::replace(
+                                            extension,
+                                            ExtensionModes::ExtensionWasCached(
+                                                to_extend
+                                                    .combine(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                            ),
+                                        );
+                                    },
+                                Async::Ready(CacheEntry::Cached(request_result, _)) => {
+                                    if let ExtensionModes::ExtensionWasMissing(to_extend, _)
+                                    | ExtensionModes::ExtensionWasOutdated(to_extend, ..) =
+                                        std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
+                                    {
+                                        let ext = to_extend.lookup_extension(cache, request_result).map_err(GdcfError::Cache)?;
+
+                                        std::mem::replace(extension, ExtensionModes::ExtensionWasCached(to_extend.combine(ext)));
+                                    }
+                                },
+                            },
+                        _ => (),
+                    }
+                }
+
+                if are_we_there_yet {
+                    if let ExtendManyFuture::Extending(_, meta, extensions) = std::mem::replace(self, ExtendManyFuture::Exhausted) {
+                        return Ok(Async::Ready(CacheEntry::Cached(
+                            extensions
+                                .into_iter()
+                                .map(|extension| {
+                                    if let ExtensionModes::ExtensionWasCached(object) = extension {
+                                        object
+                                    } else {
+                                        unreachable!()
+                                    }
+                                })
+                                .collect(),
+                            meta,
+                        )))
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    return Ok(Async::NotReady)
+                }
+            },
+            _ => unimplemented!(),
+            ExtendManyFuture::Exhausted => panic!("Future already polled to completion"),
+        };
+
+        std::mem::replace(self, next_state);
+
+        Ok(return_value)
+    }
 }
 
 impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext, E>
@@ -463,6 +582,7 @@ where
                         }
                     },
                 },
+            _ => unreachable!(),
             ExtensionFuture::Exhausted => panic!("Future already polled to completion"),
         };
 
@@ -471,7 +591,6 @@ where
         Ok(return_value)
     }
 }
-
 
 enum ExtensionModes<A, C, Into, Ext, E>
 where
@@ -484,6 +603,7 @@ where
     ExtensionWasCached(Into),
     ExtensionWasOutdated(E, Ext, RefreshCacheFuture<E::Request, A, C>),
     ExtensionWasMissing(E, RefreshCacheFuture<E::Request, A, C>),
+    FixMeItIsLateAndICannotThinkOfABetterSolution,
 }
 
 impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
