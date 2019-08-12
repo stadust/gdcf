@@ -24,7 +24,7 @@ where
 }
 
 #[allow(missing_debug_implementations)]
-pub enum ExtendManyFuture<From, A, C, Into, Ext, E>
+pub enum MultiExtensionFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
@@ -37,7 +37,7 @@ where
     Exhausted,
 }
 
-impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, Ext, E> Future for MultiExtensionFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
@@ -50,12 +50,12 @@ where
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
         let (return_value, next_state) = match self {
-            ExtendManyFuture::WaitingOnInner(gdcf, forces_refresh, inner) =>
+            MultiExtensionFuture::WaitingOnInner(gdcf, forces_refresh, inner) =>
                 match inner.poll()? {
                     Async::Ready(base) =>
                         match base {
-                            CacheEntry::DeducedAbsent => (Async::Ready(CacheEntry::DeducedAbsent), ExtendManyFuture::Exhausted),
-                            CacheEntry::MarkedAbsent(meta) => (Async::Ready(CacheEntry::MarkedAbsent(meta)), ExtendManyFuture::Exhausted),
+                            CacheEntry::DeducedAbsent => (Async::Ready(CacheEntry::DeducedAbsent), MultiExtensionFuture::Exhausted),
+                            CacheEntry::MarkedAbsent(meta) => (Async::Ready(CacheEntry::MarkedAbsent(meta)), MultiExtensionFuture::Exhausted),
                             CacheEntry::Missing => unreachable!(),
                             CacheEntry::Cached(objects, meta) => {
                                 // TODO: figure out if this is really needed
@@ -63,7 +63,7 @@ where
 
                                 (
                                     Async::NotReady,
-                                    ExtendManyFuture::Extending(
+                                    MultiExtensionFuture::Extending(
                                         gdcf.cache(),
                                         meta,
                                         objects
@@ -76,7 +76,7 @@ where
                         },
                     Async::NotReady => return Ok(Async::NotReady),
                 },
-            ExtendManyFuture::Extending(ref cache, _, ref mut extensions) => {
+            MultiExtensionFuture::Extending(ref cache, _, ref mut extensions) => {
                 let mut are_we_there_yet = true;
 
                 for extension in extensions {
@@ -115,7 +115,7 @@ where
                 }
 
                 if are_we_there_yet {
-                    if let ExtendManyFuture::Extending(_, meta, extensions) = std::mem::replace(self, ExtendManyFuture::Exhausted) {
+                    if let MultiExtensionFuture::Extending(_, meta, extensions) = std::mem::replace(self, MultiExtensionFuture::Exhausted) {
                         return Ok(Async::Ready(CacheEntry::Cached(
                             extensions
                                 .into_iter()
@@ -137,7 +137,7 @@ where
                 }
             },
             _ => unimplemented!(),
-            ExtendManyFuture::Exhausted => panic!("Future already polled to completion"),
+            MultiExtensionFuture::Exhausted => panic!("Future already polled to completion"),
         };
 
         std::mem::replace(self, next_state);
@@ -147,7 +147,7 @@ where
 }
 
 // TODO: this impl is tricky
-impl<From, A, C, Into, Ext, E> GdcfFuture for ExtendManyFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, Ext, E> GdcfFuture for MultiExtensionFuture<From, A, C, Into, Ext, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
