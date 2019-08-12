@@ -7,7 +7,6 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
     future::refresh::RefreshCacheFuture,
-    ProcessRequestOld,
 };
 use futures::{future::Either, task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
@@ -58,36 +57,7 @@ where
         }
     }
 }
-
-pub(crate) type GdcfInnerFuture<T, A, C> =
-    Box<dyn Future<Item = CacheEntry<T, <C as Cache>::CacheEntryMeta>, Error = GdcfError<A, <C as Cache>::Err>> + Send + 'static>;
-
-#[allow(missing_debug_implementations)]
-pub enum GdcfFuture<T, A: ApiError, C: Cache> {
-    Empty,
-    Uncached(GdcfInnerFuture<T, A, C>),
-    Outdated(CacheEntry<T, C::CacheEntryMeta>, GdcfInnerFuture<T, A, C>),
-    UpToDate(CacheEntry<T, C::CacheEntryMeta>),
-}
-
-impl<T, A: ApiError, C: Cache> Future for GdcfFuture<T, A, C> {
-    type Error = GdcfError<A, C::Err>;
-    type Item = CacheEntry<T, C::CacheEntryMeta>;
-
-    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        match self {
-            GdcfFuture::Empty => Ok(Async::NotReady),
-            GdcfFuture::Uncached(future) => future.poll(),
-            GdcfFuture::Outdated(_, future) => future.poll(),
-            fut =>
-                match std::mem::replace(fut, GdcfFuture::Empty) {
-                    GdcfFuture::UpToDate(inner) => Ok(Async::Ready(inner)),
-                    _ => unreachable!(),
-                },
-        }
-    }
-}
-
+/*
 #[allow(missing_debug_implementations)]
 pub struct GdcfStream<A, C, R, T, M>
 where
@@ -136,3 +106,4 @@ where
         }
     }
 }
+*/

@@ -122,7 +122,6 @@ use gdcf_model::{
 };
 use log::{error, info};
 
-pub use crate::future::{GdcfFuture, GdcfStream};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
@@ -221,25 +220,6 @@ where
     }
 }
 
-pub trait ProcessRequestOld<A: ApiClient, C: Cache, R: Request, T> {
-    fn process_request_old(&self, request: R) -> Result<GdcfFuture<T, A::Err, C>, C::Err>;
-
-    fn paginate(&self, request: R) -> Result<GdcfStream<A, C, R, T, Self>, C::Err>
-    where
-        R: PaginatableRequest,
-        Self: Sized + Clone,
-    {
-        let next = request.next();
-        let current = self.process_request_old(request)?;
-
-        Ok(GdcfStream {
-            next_request: next,
-            current_request: current,
-            source: self.clone(),
-        })
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Gdcf<A, C>
 where
@@ -327,21 +307,6 @@ where
             Some(value) => EitherOrBoth::Both(value, future),
             None => EitherOrBoth::B(future),
         })
-    }
-}
-
-impl<A, R, C> ProcessRequestOld<A, C, R, R::Result> for Gdcf<A, C>
-where
-    R: Request + Send + Sync + 'static,
-    A: ApiClient + MakeRequest<R>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<R>,
-{
-    fn process_request_old(&self, request: R) -> Result<GdcfFuture<R::Result, A::Err, C>, C::Err> {
-        match self.process(request)? {
-            EitherOrBoth::A(entry) => Ok(GdcfFuture::UpToDate(entry)),
-            EitherOrBoth::B(future) => Ok(GdcfFuture::Uncached(Box::new(future))),
-            EitherOrBoth::Both(entry, future) => Ok(GdcfFuture::Outdated(entry, Box::new(future))),
-        }
     }
 }
 
