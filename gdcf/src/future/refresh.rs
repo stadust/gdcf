@@ -1,34 +1,45 @@
-use crate::api::request::Request;
-use crate::api::ApiClient;
-use crate::api::client::{MakeRequest, Response};
-use gdcf_model::user::Creator;
-use gdcf_model::song::NewgroundsSong;
-use crate::error::GdcfError;
+use crate::{
+    api::{
+        client::{MakeRequest, Response},
+        request::Request,
+        ApiClient,
+    },
+    cache::{Cache, CacheEntry, CanCache, Store},
+    error::{ApiError, GdcfError},
+    Secondary,
+};
 use futures::{Async, Future};
-use crate::Secondary;
-use log::{warn};
-use crate::cache::{Store, Cache, CacheEntry, CanCache};
-use crate::error::ApiError;
+use gdcf_model::{song::NewgroundsSong, user::Creator};
+use log::warn;
 
 #[allow(missing_debug_implementations)]
 pub struct RefreshCacheFuture<Req, A, C>
-    where Req: Request, A: ApiClient + MakeRequest<Req>, C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req> {
+where
+    Req: Request,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+{
     inner: <A as MakeRequest<Req>>::Future,
     cache: C,
     cache_key: u64,
 }
 
-impl<Req, A, C> RefreshCacheFuture<Req, A, C> where Req: Request, A: ApiClient + MakeRequest<Req>, C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req> {
+impl<Req, A, C> RefreshCacheFuture<Req, A, C>
+where
+    Req: Request,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+{
     pub(crate) fn new(cache: C, cache_key: u64, inner: <A as MakeRequest<Req>>::Future) -> Self {
-        RefreshCacheFuture{inner, cache, cache_key}
+        RefreshCacheFuture { inner, cache, cache_key }
     }
 }
 
 impl<Req, A, C> Future for RefreshCacheFuture<Req, A, C>
-    where
-        Req: Request,
-        A: ApiClient + MakeRequest<Req>,
-        C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+where
+    Req: Request,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
@@ -61,7 +72,7 @@ impl<Req, A, C> Future for RefreshCacheFuture<Req, A, C>
                                 Secondary::MissingCreator(cid) => Store::<Creator>::mark_absent(&mut self.cache, *cid),
                                 Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSong>::mark_absent(&mut self.cache, *nid),
                             }
-                                .map_err(GdcfError::Cache)?;
+                            .map_err(GdcfError::Cache)?;
                         }
 
                         self.cache

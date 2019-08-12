@@ -1,21 +1,21 @@
-use crate::{Gdcf};
-use crate::error::GdcfError;
-use gdcf_model::user::Creator;
-use crate::api::ApiClient;
-use crate::api::client::MakeRequest;
-use gdcf_model::song::NewgroundsSong;
+use crate::{
+    api::{client::MakeRequest, ApiClient},
+    cache::{Cache, CacheEntry, CanCache, Store},
+    error::GdcfError,
+    extend::{Extendable, ExtensionModes},
+    Gdcf,
+};
 use futures::{Async, Future};
-use crate::cache::{CacheEntry, Store, CanCache, Cache};
-use crate::extend::{Extendable, ExtensionModes};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 enum ExtensionFuture<From, A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        From: Future<Item=CacheEntry<E, C::CacheEntryMeta>, Error=GdcfError<A::Err, C::Err>>,
-        A: ApiClient,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
     Extending(C, C::CacheEntryMeta, ExtensionModes<A, C, Into, Ext, E>),
@@ -23,13 +23,13 @@ enum ExtensionFuture<From, A, C, Into, Ext, E>
 }
 
 enum ExtendManyFuture<From, A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        From: Future<Item=CacheEntry<Vec<E>, C::CacheEntryMeta>, Error=GdcfError<A::Err, C::Err>>,
-        A: ApiClient,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
     Extending(C, C::CacheEntryMeta, Vec<ExtensionModes<A, C, Into, Ext, E>>),
@@ -37,13 +37,13 @@ enum ExtendManyFuture<From, A, C, Into, Ext, E>
 }
 
 impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        From: Future<Item=CacheEntry<Vec<E>, C::CacheEntryMeta>, Error=GdcfError<A::Err, C::Err>>,
-        A: ApiClient,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
@@ -72,7 +72,7 @@ impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext
                                             .collect::<Result<Vec<_>, _>>()?,
                                     ),
                                 )
-                            }
+                            },
                         },
                     Async::NotReady => return Ok(Async::NotReady),
                 },
@@ -89,7 +89,7 @@ impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext
                                 Async::Ready(CacheEntry::DeducedAbsent) | Async::Ready(CacheEntry::MarkedAbsent(_)) =>
                                     if let ExtensionModes::ExtensionWasMissing(to_extend, _)
                                     | ExtensionModes::ExtensionWasOutdated(to_extend, ..) =
-                                    std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
+                                        std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
                                     {
                                         std::mem::replace(
                                             extension,
@@ -102,13 +102,13 @@ impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext
                                 Async::Ready(CacheEntry::Cached(request_result, _)) => {
                                     if let ExtensionModes::ExtensionWasMissing(to_extend, _)
                                     | ExtensionModes::ExtensionWasOutdated(to_extend, ..) =
-                                    std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
+                                        std::mem::replace(extension, ExtensionModes::FixMeItIsLateAndICannotThinkOfABetterSolution)
                                     {
                                         let ext = to_extend.lookup_extension(cache, request_result).map_err(GdcfError::Cache)?;
 
                                         std::mem::replace(extension, ExtensionModes::ExtensionWasCached(to_extend.combine(ext)));
                                     }
-                                }
+                                },
                             },
                         _ => (),
                     }
@@ -128,14 +128,14 @@ impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext
                                 })
                                 .collect(),
                             meta,
-                        )));
+                        )))
                     } else {
                         unreachable!()
                     }
                 } else {
-                    return Ok(Async::NotReady);
+                    return Ok(Async::NotReady)
                 }
-            }
+            },
             _ => unimplemented!(),
             ExtendManyFuture::Exhausted => panic!("Future already polled to completion"),
         };
@@ -147,12 +147,12 @@ impl<From, A, C, Into, Ext, E> Future for ExtendManyFuture<From, A, C, Into, Ext
 }
 
 impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        From: Future<Item=CacheEntry<E, C::CacheEntryMeta>, Error=GdcfError<A::Err, C::Err>>,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Into, C::CacheEntryMeta>;
@@ -174,19 +174,19 @@ impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext,
                                     Async::NotReady,
                                     ExtensionFuture::Extending(gdcf.cache(), meta, ExtensionModes::new(object, gdcf, *forces_refresh)?),
                                 )
-                            }
+                            },
                         },
                     Async::NotReady => return Ok(Async::NotReady),
                 },
             ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasCached(_)) => {
                 if let ExtensionFuture::Extending(_, meta, ExtensionModes::ExtensionWasCached(object)) =
-                std::mem::replace(self, ExtensionFuture::Exhausted)
+                    std::mem::replace(self, ExtensionFuture::Exhausted)
                 {
-                    return Ok(Async::Ready(CacheEntry::Cached(object, meta)));
+                    return Ok(Async::Ready(CacheEntry::Cached(object, meta)))
                 } else {
                     unreachable!()
                 }
-            }
+            },
             ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasMissing(_, ref mut refresh_future))
             | ExtensionFuture::Extending(_, _, ExtensionModes::ExtensionWasOutdated(_, _, ref mut refresh_future)) =>
                 match refresh_future.poll()? {
@@ -209,11 +209,11 @@ impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext,
                             CacheEntry::Cached(request_result, _) => {
                                 let extension = base.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
 
-                                return Ok(Async::Ready(CacheEntry::Cached(base.combine(extension), meta)));
-                            }
+                                return Ok(Async::Ready(CacheEntry::Cached(base.combine(extension), meta)))
+                            },
                             _ => unreachable!(),
                         }
-                    }
+                    },
                 },
             _ => unreachable!(),
             ExtensionFuture::Exhausted => panic!("Future already polled to completion"),

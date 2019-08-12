@@ -107,7 +107,7 @@
 
 use crate::{
     api::{
-        client::{MakeRequest},
+        client::MakeRequest,
         request::{LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest},
         ApiClient,
     },
@@ -126,9 +126,9 @@ pub use crate::future::{GdcfFuture, GdcfStream};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
+    future::refresh::RefreshCacheFuture,
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
-use crate::future::refresh::RefreshCacheFuture;
 
 #[macro_use]
 mod macros;
@@ -137,8 +137,8 @@ pub mod api;
 pub mod cache;
 pub mod error;
 mod exchange;
-mod future;
 pub mod extend;
+mod future;
 
 // FIXME: move this somewhere more fitting
 #[derive(Debug, Clone, PartialEq)]
@@ -233,7 +233,6 @@ enum EitherOrBoth<A, B> {
     Both(A, B),
 }
 
-
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
@@ -247,7 +246,7 @@ where
     {
         info!("Performing refresh on request {}", request);
 
-        RefreshCacheFuture ::new(self.cache(), request.key(), self.client().make(request))
+        RefreshCacheFuture::new(self.cache(), request.key(), self.client().make(request))
     }
 
     fn process<R>(&self, request: R) -> Result<EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, RefreshCacheFuture<R, A, C>>, C::Err>

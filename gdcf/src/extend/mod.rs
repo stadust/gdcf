@@ -1,16 +1,11 @@
-use crate::api::request::Request;
-use crate::api::ApiClient;
-use crate::api::client::MakeRequest;
-use gdcf_model::user::Creator;
-use gdcf_model::song::NewgroundsSong;
-use crate::error::GdcfError;
-use crate::EitherOrBoth;
-use crate::future::refresh::RefreshCacheFuture;
-use crate::cache::CacheEntry;
-use crate::cache::Cache;
-use crate::cache::Store;
-use crate::cache::CanCache;
-use crate::Gdcf;
+use crate::{
+    api::{client::MakeRequest, request::Request, ApiClient},
+    cache::{Cache, CacheEntry, CanCache, Store},
+    error::GdcfError,
+    future::refresh::RefreshCacheFuture,
+    EitherOrBoth, Gdcf,
+};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 pub trait Extendable<C: Cache, Into, Ext> {
     type Request: Request;
@@ -26,12 +21,12 @@ pub trait Extendable<C: Cache, Into, Ext> {
 
 #[allow(missing_debug_implementations)]
 pub enum ExtensionModes<A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        A: ApiClient,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    A: ApiClient,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     ExtensionWasCached(Into),
     ExtensionWasOutdated(E, Ext, RefreshCacheFuture<E::Request, A, C>),
@@ -40,11 +35,11 @@ pub enum ExtensionModes<A, C, Into, Ext, E>
 }
 
 impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
-    where
-        A: ApiClient + MakeRequest<E::Request>,
-        C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-        C: Cache,
-        E: Extendable<C, Into, Ext>,
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache,
+    E: Extendable<C, Into, Ext>,
 {
     pub(crate) fn new(to_extend: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
         let cache = gdcf.cache();
@@ -66,13 +61,13 @@ impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
                         let request = to_extend.extension_request();
 
                         ExtensionModes::ExtensionWasMissing(to_extend, gdcf.refresh(request))
-                    }
+                    },
                 },
             // Up-to-date extension request result
             EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
                 let extension = to_extend.lookup_extension(&cache, request_result).map_err(GdcfError::Cache)?;
                 ExtensionModes::ExtensionWasCached(to_extend.combine(extension))
-            }
+            },
             // Missing extension request result cache entry
             EitherOrBoth::B(refresh_future) => ExtensionModes::ExtensionWasMissing(to_extend, refresh_future),
             // Outdated absent marker
@@ -84,14 +79,14 @@ impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
                         let request = to_extend.extension_request();
 
                         ExtensionModes::ExtensionWasMissing(to_extend, gdcf.refresh(request))
-                    }
+                    },
                 },
             // Outdated entry
             EitherOrBoth::Both(CacheEntry::Cached(extension, _), refresh_future) => {
                 let extension = to_extend.lookup_extension(&cache, extension).map_err(GdcfError::Cache)?;
 
                 ExtensionModes::ExtensionWasOutdated(to_extend, extension, refresh_future)
-            }
+            },
         };
 
         Ok(mode)

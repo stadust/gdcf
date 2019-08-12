@@ -8,8 +8,8 @@ use futures::{future::Either, task, Async, Future, Stream};
 use log::info;
 use std::mem;
 
-pub mod refresh;
 pub mod extend;
+pub mod refresh;
 
 pub(crate) type GdcfInnerFuture<T, A, C> =
     Box<dyn Future<Item = CacheEntry<T, <C as Cache>::CacheEntryMeta>, Error = GdcfError<A, <C as Cache>::Err>> + Send + 'static>;
