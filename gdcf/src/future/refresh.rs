@@ -6,6 +6,7 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
+    future::GdcfFuture,
     Secondary,
 };
 use futures::{Async, Future};

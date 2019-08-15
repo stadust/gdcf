@@ -95,8 +95,7 @@ where
                                         std::mem::replace(
                                             extension,
                                             ExtensionModes::ExtensionWasCached(
-                                                to_extend
-                                                    .extend(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                                to_extend.extend(E::on_extension_absent().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                             ),
                                         );
                                     },
@@ -249,15 +248,40 @@ impl<From, A, C, Into, Ext, E> GdcfFuture for ExtensionFuture<From, A, C, Into, 
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     C: Cache,
     E: Extendable<C, Into, Ext>,
 {
+
     fn has_result_cached(&self) -> bool {
         unimplemented!()
     }
 
     fn into_cached(self) -> Option<Self::Item> {
-        unimplemented!()
+        match self {
+            ExtensionFuture::WaitingOnInner(gdcf, _, inner) =>
+                if let Some(CacheEntry::Cached(to_extend, meta)) = inner.into_cached() {
+                    let to_extend: E = to_extend;
+                    let req = to_extend.extension_request();
+                    let cache = gdcf.cache();
+
+                    cache
+                        .lookup_request(&req)
+                        .ok()
+                        .and_then(|result| result.into())
+                        .and_then(|result| to_extend.lookup_extension(&cache, result).ok())
+                        .map(|extension| CacheEntry::Cached(to_extend.extend(extension), meta))
+                } else {
+                    None
+                },
+            ExtensionFuture::Extending(_, meta, ext_mode) =>
+                match ext_mode {
+                    ExtensionModes::ExtensionWasCached(extended) => Some(CacheEntry::Cached(extended, meta)),
+                    ExtensionModes::ExtensionWasOutdated(to_extend, extension, _) =>
+                        Some(CacheEntry::Cached(to_extend.extend(extension), meta)),
+                    _ => None,
+                },
+            ExtensionFuture::Exhausted => None,
+        }
     }
 }

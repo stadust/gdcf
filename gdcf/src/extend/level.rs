@@ -1,15 +1,13 @@
 use super::Extendable;
 use crate::{
-    api::request::{LevelRequest, LevelsRequest},
+    api::request::{LevelRequest, LevelsRequest, UserRequest},
     cache::{Cache, Lookup},
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
-    user::Creator,
+    user::{Creator, SearchedUser, User},
 };
-use crate::api::request::UserRequest;
-use gdcf_model::user::{User, SearchedUser};
 
 // FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>, Level<Option<u64>, u64>> for PartialLevel<Song, User> {
