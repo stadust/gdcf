@@ -10,40 +10,37 @@ use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 #[allow(missing_debug_implementations)]
-pub enum ExtensionFuture<From, A, C, Into, Ext, E>
+pub enum ExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
-    Extending(C, C::CacheEntryMeta, ExtensionModes<A, C, Into, Ext, E>),
+    Extending(C, C::CacheEntryMeta, ExtensionModes<A, C, Into, E>),
     Exhausted,
 }
 
 #[allow(missing_debug_implementations)]
-pub enum MultiExtensionFuture<From, A, C, Into, Ext, E>
+pub enum MultiExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
-    Extending(C, C::CacheEntryMeta, Vec<ExtensionModes<A, C, Into, Ext, E>>),
+    Extending(C, C::CacheEntryMeta, Vec<ExtensionModes<A, C, Into, E>>),
     Exhausted,
 }
 
-impl<From, A, C, Into, Ext, E> Future for MultiExtensionFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, E> Future for MultiExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
@@ -147,13 +144,12 @@ where
 }
 
 // TODO: this impl is tricky
-impl<From, A, C, Into, Ext, E> GdcfFuture for MultiExtensionFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, E> GdcfFuture for MultiExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     fn has_result_cached(&self) -> bool {
         unimplemented!()
@@ -164,13 +160,12 @@ where
     }
 }
 
-impl<From, A, C, Into, Ext, E> Future for ExtensionFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, E> Future for ExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Into, C::CacheEntryMeta>;
@@ -244,15 +239,13 @@ where
 }
 
 // TODO: this impl is gonna be tricky as well
-impl<From, A, C, Into, Ext, E> GdcfFuture for ExtensionFuture<From, A, C, Into, Ext, E>
+impl<From, A, C, Into, E> GdcfFuture for ExtensionFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
-
     fn has_result_cached(&self) -> bool {
         unimplemented!()
     }

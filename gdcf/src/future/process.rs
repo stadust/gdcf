@@ -64,10 +64,8 @@ where
 
     fn into_cached(self) -> Option<Self::Item> {
         match self {
-            ProcessRequestFuture::Empty => None,
-            ProcessRequestFuture::Uncached(_) => None,
-            ProcessRequestFuture::Outdated(cached, _) => Some(cached),
-            ProcessRequestFuture::UpToDate(cached) => Some(cached),
+            ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => None,
+            ProcessRequestFuture::Outdated(cached, _) | ProcessRequestFuture::UpToDate(cached) => Some(cached),
         }
     }
 }

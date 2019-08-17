@@ -1,8 +1,9 @@
 use crate::{api::request::UserRequest, cache::Cache, extend::Extendable};
 use gdcf_model::user::{SearchedUser, User};
 
-impl<C: Cache> Extendable<C, User, User> for SearchedUser {
+impl<C: Cache> Extendable<C, User> for SearchedUser {
     type Request = UserRequest;
+    type Extension = User;
 
     fn lookup_extension(&self, cache: &C, request_result: User) -> Result<User, <C as Cache>::Err> {
         Ok(request_result)

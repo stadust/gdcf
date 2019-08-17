@@ -10,8 +10,9 @@ use gdcf_model::{
 };
 
 // FIXME: this impl isn't usable from Gdcf yet yet
-impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>, Level<Option<u64>, u64>> for PartialLevel<Song, User> {
+impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>> for PartialLevel<Song, User> {
     type Request = LevelRequest;
+    type Extension = Level<Option<u64>, u64>;
 
     fn lookup_extension(&self, cache: &C, request_result: Level<Option<u64>, u64>) -> Result<Level<Option<u64>, u64>, <C as Cache>::Err> {
         Ok(request_result)
@@ -66,11 +67,12 @@ impl<C: Cache, Song: PartialEq, User: PartialEq> Extendable<C, Level<Song, User>
     }
 }
 
-impl<C: Cache> Extendable<C, Level<Option<NewgroundsSong>, u64>, Option<NewgroundsSong>> for Level<Option<u64>, u64>
+impl<C: Cache> Extendable<C, Level<Option<NewgroundsSong>, u64>> for Level<Option<u64>, u64>
 where
     C: Lookup<NewgroundsSong>,
 {
     type Request = LevelsRequest;
+    type Extension = Option<NewgroundsSong>;
 
     fn lookup_extension(
         &self,
@@ -103,11 +105,12 @@ where
     }
 }
 
-impl<C: Cache> Extendable<C, PartialLevel<Option<NewgroundsSong>, u64>, Option<NewgroundsSong>> for PartialLevel<Option<u64>, u64>
+impl<C: Cache> Extendable<C, PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64>
 where
     C: Lookup<NewgroundsSong>,
 {
     type Request = LevelsRequest;
+    type Extension = Option<NewgroundsSong>;
 
     fn lookup_extension(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Option<NewgroundsSong>, <C as Cache>::Err> {
         Ok(match self.custom_song {
@@ -136,11 +139,12 @@ where
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<Creator>>, Option<Creator>> for Level<Song, u64>
+impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<Creator>>> for Level<Song, u64>
 where
     C: Lookup<Creator>,
 {
     type Request = LevelsRequest;
+    type Extension = Option<Creator>;
 
     fn lookup_extension(
         &self,
@@ -167,11 +171,12 @@ where
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<Creator>>, Option<Creator>> for PartialLevel<Song, u64>
+impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
 where
     C: Lookup<Creator>,
 {
     type Request = LevelsRequest;
+    type Extension = Option<Creator>;
 
     fn lookup_extension(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Option<Creator>, <C as Cache>::Err> {
         Ok(cache.lookup(self.creator)?.into())
@@ -197,8 +202,9 @@ where
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<User>>, Option<User>> for PartialLevel<Song, u64> {
+impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, u64> {
     type Request = UserRequest;
+    type Extension = Option<User>;
 
     fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
         Ok(Some(request_result))
@@ -221,8 +227,9 @@ impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<User>>, 
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<User>>, Option<User>> for Level<Song, u64> {
+impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<User>>> for Level<Song, u64> {
     type Request = UserRequest;
+    type Extension = Option<User>;
 
     fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
         Ok(Some(request_result))

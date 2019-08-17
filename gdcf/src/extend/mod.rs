@@ -10,42 +10,42 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 pub mod level;
 pub mod user;
 
-pub trait Extendable<C: Cache, Into, Ext> {
+pub trait Extendable<C: Cache, Into> {
     type Request: Request;
+    type Extension;
 
-    fn lookup_extension(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Ext, C::Err>;
+    fn lookup_extension(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Extension, C::Err>;
 
-    fn on_extension_absent() -> Option<Ext>;
+    fn on_extension_absent() -> Option<Self::Extension>;
 
     fn extension_request(&self) -> Self::Request;
 
     // TODO: maybe put this into a Combinable trait
-    fn extend(self, addon: Ext) -> Into;
+    fn extend(self, addon: Self::Extension) -> Into;
 
-    fn change_extension(current: Into, new_extension: Ext) -> Into;
+    fn change_extension(current: Into, new_extension: Self::Extension) -> Into;
 }
 
 #[allow(missing_debug_implementations)]
-pub enum ExtensionModes<A, C, Into, Ext, E>
+pub enum ExtensionModes<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    A: ApiClient,
     C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     ExtensionWasCached(Into),
-    ExtensionWasOutdated(E, Ext, RefreshCacheFuture<E::Request, A, C>),
+    ExtensionWasOutdated(E, E::Extension, RefreshCacheFuture<E::Request, A, C>),
     ExtensionWasMissing(E, RefreshCacheFuture<E::Request, A, C>),
     FixMeItIsLateAndICannotThinkOfABetterSolution,
 }
 
-impl<A, C, Into, Ext, E> ExtensionModes<A, C, Into, Ext, E>
+impl<A, C, Into, E> ExtensionModes<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     C: Cache,
-    E: Extendable<C, Into, Ext>,
+    E: Extendable<C, Into>,
 {
     pub(crate) fn new(to_extend: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
         let cache = gdcf.cache();

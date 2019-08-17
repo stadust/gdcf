@@ -207,7 +207,6 @@ where
         A,
         C,
         PartialLevel<Option<NewgroundsSong>, u64>,
-        Option<NewgroundsSong>,
         PartialLevel<Option<u64>, u64>,
     >;
 
