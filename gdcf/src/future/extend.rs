@@ -80,31 +80,31 @@ where
 
                 for extension in extensions {
                     match extension {
-                        UpgradeMode::ExtensionWasOutdated(_, _, ref mut future)
-                        | UpgradeMode::ExtensionWasMissing(_, ref mut future) =>
+                        UpgradeMode::UpgradeOutdated(_, _, ref mut future)
+                        | UpgradeMode::UpgradeMissing(_, ref mut future) =>
                             match future.poll()? {
                                 Async::NotReady => are_we_there_yet = false,
                                 Async::Ready(CacheEntry::Missing) => unreachable!(),
                                 Async::Ready(CacheEntry::DeducedAbsent) | Async::Ready(CacheEntry::MarkedAbsent(_)) =>
-                                    if let UpgradeMode::ExtensionWasMissing(to_extend, _)
-                                    | UpgradeMode::ExtensionWasOutdated(to_extend, ..) =
+                                    if let UpgradeMode::UpgradeMissing(to_extend, _)
+                                    | UpgradeMode::UpgradeOutdated(to_extend, ..) =
                                         std::mem::replace(extension, UpgradeMode::FixMeItIsLateAndICannotThinkOfABetterSolution)
                                     {
                                         std::mem::replace(
                                             extension,
-                                            UpgradeMode::ExtensionWasCached(
+                                            UpgradeMode::UpgradeCached(
                                                 to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                             ),
                                         );
                                     },
                                 Async::Ready(CacheEntry::Cached(request_result, _)) => {
-                                    if let UpgradeMode::ExtensionWasMissing(to_extend, _)
-                                    | UpgradeMode::ExtensionWasOutdated(to_extend, ..) =
+                                    if let UpgradeMode::UpgradeMissing(to_extend, _)
+                                    | UpgradeMode::UpgradeOutdated(to_extend, ..) =
                                         std::mem::replace(extension, UpgradeMode::FixMeItIsLateAndICannotThinkOfABetterSolution)
                                     {
                                         let upgrade = E::lookup_upgrade(to_extend.current(), cache, request_result).map_err(GdcfError::Cache)?;
 
-                                        std::mem::replace(extension, UpgradeMode::ExtensionWasCached(to_extend.upgrade(upgrade)));
+                                        std::mem::replace(extension, UpgradeMode::UpgradeCached(to_extend.upgrade(upgrade)));
                                     }
                                 },
                             },
@@ -118,7 +118,7 @@ where
                             extensions
                                 .into_iter()
                                 .map(|extension| {
-                                    if let UpgradeMode::ExtensionWasCached(object) = extension {
+                                    if let UpgradeMode::UpgradeCached(object) = extension {
                                         object
                                     } else {
                                         unreachable!()
@@ -198,8 +198,8 @@ where
                         },
                     Async::NotReady => return Ok(Async::NotReady),
                 },
-            UpgradeFuture::Extending(_, _, UpgradeMode::ExtensionWasCached(_)) => {
-                if let UpgradeFuture::Extending(_, meta, UpgradeMode::ExtensionWasCached(object)) =
+            UpgradeFuture::Extending(_, _, UpgradeMode::UpgradeCached(_)) => {
+                if let UpgradeFuture::Extending(_, meta, UpgradeMode::UpgradeCached(object)) =
                     std::mem::replace(self, UpgradeFuture::Exhausted)
                 {
                     return Ok(Async::Ready(CacheEntry::Cached(object, meta)))
@@ -207,15 +207,15 @@ where
                     unreachable!()
                 }
             },
-            UpgradeFuture::Extending(_, _, UpgradeMode::ExtensionWasMissing(_, ref mut refresh_future))
-            | UpgradeFuture::Extending(_, _, UpgradeMode::ExtensionWasOutdated(_, _, ref mut refresh_future)) =>
+            UpgradeFuture::Extending(_, _, UpgradeMode::UpgradeMissing(_, ref mut refresh_future))
+            | UpgradeFuture::Extending(_, _, UpgradeMode::UpgradeOutdated(_, _, ref mut refresh_future)) =>
                 match refresh_future.poll()? {
                     Async::NotReady => return Ok(Async::NotReady),
                     Async::Ready(CacheEntry::Missing) => unreachable!(),
                     Async::Ready(cache_entry) => {
                         let (cache, base, meta) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
-                            UpgradeFuture::Extending(cache, meta, UpgradeMode::ExtensionWasMissing(base, _))
-                            | UpgradeFuture::Extending(cache, meta, UpgradeMode::ExtensionWasOutdated(base, ..)) =>
+                            UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeMissing(base, _))
+                            | UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeOutdated(base, ..)) =>
                                 (cache, base, meta),
                             _ => unreachable!(),
                         };

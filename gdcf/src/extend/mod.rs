@@ -60,9 +60,9 @@ where
     C: Cache,
     E: Upgrade<C, Into>,
 {
-    ExtensionWasCached(Into),
-    ExtensionWasOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
-    ExtensionWasMissing(E, RefreshCacheFuture<E::Request, A, C>),
+    UpgradeCached(Into),
+    UpgradeOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
+    UpgradeMissing(E, RefreshCacheFuture<E::Request, A, C>),
     FixMeItIsLateAndICannotThinkOfABetterSolution,
 }
 
@@ -81,7 +81,7 @@ where
         // {to_extend.extension_request()};
         let request = match E::upgrade_request(to_extend.current()) {
             Some(request) => request,
-            None => return Ok(UpgradeMode::ExtensionWasCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)))
+            None => return Ok(UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)))
         };
 
 
@@ -92,30 +92,30 @@ where
             // This violates snapshot consistency! TOdO: document
             EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
                 match E::default_upgrade() {
-                    Some(default_extension) => UpgradeMode::ExtensionWasCached(to_extend.upgrade(default_extension)),
+                    Some(default_extension) => UpgradeMode::UpgradeCached(to_extend.upgrade(default_extension)),
                     None => {
                         match E::upgrade_request(to_extend.current()) {
-                            None => UpgradeMode::ExtensionWasCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
-                            Some(request) => UpgradeMode::ExtensionWasMissing(to_extend, gdcf.refresh(request))
+                            None => UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request))
                         }
                     },
                 },
             // Up-to-date extension request result
             EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
                 let upgrade = E::lookup_upgrade(to_extend.current(), &cache, request_result).map_err(GdcfError::Cache)?;
-                UpgradeMode::ExtensionWasCached(to_extend.upgrade(upgrade))
+                UpgradeMode::UpgradeCached(to_extend.upgrade(upgrade))
             },
             // Missing extension request result cache entry
-            EitherOrBoth::B(refresh_future) => UpgradeMode::ExtensionWasMissing(to_extend, refresh_future),
+            EitherOrBoth::B(refresh_future) => UpgradeMode::UpgradeMissing(to_extend, refresh_future),
             // Outdated absent marker
             EitherOrBoth::Both(CacheEntry::MarkedAbsent(_), refresh_future)
             | EitherOrBoth::Both(CacheEntry::DeducedAbsent, refresh_future) =>
                 match E::default_upgrade() {
-                    Some(default_extension) => UpgradeMode::ExtensionWasOutdated(to_extend, default_extension, refresh_future),
+                    Some(default_extension) => UpgradeMode::UpgradeOutdated(to_extend, default_extension, refresh_future),
                     None => {
                         match E::upgrade_request(to_extend.current()) {
-                            None => UpgradeMode::ExtensionWasCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
-                            Some(request) => UpgradeMode::ExtensionWasMissing(to_extend, gdcf.refresh(request))
+                            None => UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request))
                         }
                     },
                 },
@@ -123,7 +123,7 @@ where
             EitherOrBoth::Both(CacheEntry::Cached(request_result, _), refresh_future) => {
                 let upgrade = E::lookup_upgrade(to_extend.current(), &cache, request_result).map_err(GdcfError::Cache)?;
 
-                UpgradeMode::ExtensionWasOutdated(to_extend, upgrade, refresh_future)
+                UpgradeMode::UpgradeOutdated(to_extend, upgrade, refresh_future)
             },
         };
 
