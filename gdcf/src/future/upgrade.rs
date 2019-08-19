@@ -253,7 +253,9 @@ where
     fn cached_extension(&self) -> Option<&Self::Extension> {
         match self {
             UpgradeFuture::WaitingOnInner(_, _, inner_future) => {
-                //inner_future.cached_extension()
+                let inner = inner_future.cached_extension()?;
+
+
                 ()
             },
             UpgradeFuture::Extending(..) => {},
