@@ -6,6 +6,10 @@ pub mod refresh;
 pub mod stream;
 
 pub trait GdcfFuture: Future {
+    type Extension;
+
+    fn cached_extension(&self) -> Option<&Self::Extension>;
+
     fn has_result_cached(&self) -> bool;
     fn into_cached(self) -> Option<Self::Item>;
 

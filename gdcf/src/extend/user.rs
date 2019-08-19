@@ -1,27 +1,29 @@
 use crate::{api::request::UserRequest, cache::Cache, extend::Extendable};
 use gdcf_model::user::{SearchedUser, User};
+use crate::extend::Upgrade;
 
-impl<C: Cache> Extendable<C, User> for SearchedUser {
+impl<C: Cache> Upgrade<C, User> for SearchedUser {
     type Request = UserRequest;
-    type Extension = User;
+    type From = SearchedUser;
+    type Upgrade = User;
 
-    fn lookup_extension(&self, cache: &C, request_result: User) -> Result<User, <C as Cache>::Err> {
-        Ok(request_result)
+    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
+        Some(from.account_id.into())
     }
 
-    fn on_extension_absent() -> Option<User> {
+    fn current(&self) -> &Self::From {
+        self
+    }
+
+    fn default_upgrade() -> Option<Self::Upgrade> {
         None
     }
 
-    fn extension_request(&self) -> Self::Request {
-        self.account_id.into()
+    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+        Ok(request_result)
     }
 
-    fn extend(self, user: User) -> User {
-        user
-    }
-
-    fn change_extension(current: User, new_extension: User) -> User {
-        new_extension
+    fn upgrade(self, upgrade: Self::Upgrade) -> User {
+        upgrade
     }
 }

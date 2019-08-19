@@ -125,7 +125,7 @@ use log::{error, info};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
-    future::{extend::MultiExtensionFuture, process::ProcessRequestFuture, refresh::RefreshCacheFuture, GdcfFuture},
+    future::{extend::MultiUpgradeFuture, process::ProcessRequestFuture, refresh::RefreshCacheFuture, GdcfFuture},
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
@@ -202,7 +202,7 @@ where
     A: ApiClient + MakeRequest<LevelsRequest>,
     C: Cache + CanCache<LevelsRequest> + Store<NewgroundsSong> + Store<Creator> + Lookup<NewgroundsSong>,
 {
-    type Future = MultiExtensionFuture<
+    type Future = MultiUpgradeFuture<
         <Gdcf<A, C> as ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>>::Future,
         A,
         C,
@@ -211,7 +211,7 @@ where
     >;
 
     fn process_request(&self, request: LevelsRequest) -> Result<Self::Future, <C as Cache>::Err> {
-        Ok(MultiExtensionFuture::WaitingOnInner(
+        Ok(MultiUpgradeFuture::WaitingOnInner(
             self.clone(),
             request.force_refresh,
             self.process_request(request)?,

@@ -55,6 +55,12 @@ where
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
+    type Extension = ();
+
+    fn cached_extension(&self) -> Option<&Self::Extension> {
+        unimplemented!()
+    }
+
     fn has_result_cached(&self) -> bool {
         match self {
             ProcessRequestFuture::Outdated(..) | ProcessRequestFuture::UpToDate(..) => true,
