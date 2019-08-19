@@ -1,7 +1,7 @@
 use crate::{
     api::request::{LevelRequest, LevelsRequest, Request, SearchFilters, UserRequest},
     cache::{Cache, Lookup},
-    extend::Upgrade,
+    upgrade::Upgrade,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},

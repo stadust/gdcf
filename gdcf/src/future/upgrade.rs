@@ -2,13 +2,13 @@ use crate::{
     api::{client::MakeRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
-    extend::{UpgradeMode},
+    upgrade::{UpgradeMode},
     future::GdcfFuture,
     Gdcf,
 };
 use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use crate::extend::Upgrade;
+use crate::upgrade::Upgrade;
 
 #[allow(missing_debug_implementations)]
 pub enum UpgradeFuture<From, A, C, Into, E>

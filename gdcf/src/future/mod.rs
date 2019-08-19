@@ -1,6 +1,6 @@
 use futures::Future;
 
-pub mod extend;
+pub mod upgrade;
 pub mod process;
 pub mod refresh;
 pub mod stream;
