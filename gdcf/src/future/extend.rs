@@ -15,7 +15,7 @@ pub enum UpgradeFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     E: Upgrade<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
@@ -28,7 +28,7 @@ pub enum MultiUpgradeFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     E: Upgrade<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
@@ -40,7 +40,7 @@ impl<From, A, C, Into, E> Future for MultiUpgradeFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     E: Upgrade<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
@@ -149,7 +149,7 @@ impl<From, A, C, Into, E> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     E: Upgrade<C, Into>,
 {
     type Extension = ();//E::Extension;
@@ -171,7 +171,7 @@ impl<From, A, C, Into, E> Future for UpgradeFuture<From, A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: Future<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     E: Upgrade<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
