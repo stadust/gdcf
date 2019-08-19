@@ -35,22 +35,6 @@ pub trait Upgrade<C: Cache, Into> {
     fn upgrade(self, upgrade: Self::Upgrade) -> Into;
 }
 
-pub trait Extendable<C: Cache, Into> {
-    type Request: Request;
-    type Extension;
-
-    fn lookup_extension(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Extension, C::Err>;
-
-    fn on_extension_absent() -> Option<Self::Extension>;
-
-    fn extension_request(&self) -> Self::Request;
-
-    // TODO: maybe put this into a Combinable trait
-    fn extend(self, addon: Self::Extension) -> Into;
-
-    // TODO: pretty sure we dont need this
-    fn change_extension(current: Into, new_extension: Self::Extension) -> Into;
-}
 
 #[allow(missing_debug_implementations)]
 pub enum UpgradeMode<A, C, Into, E>

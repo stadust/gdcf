@@ -2,7 +2,7 @@ use crate::{
     api::{client::MakeRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
-    extend::{Extendable, UpgradeMode},
+    extend::{UpgradeMode},
     future::GdcfFuture,
     Gdcf,
 };

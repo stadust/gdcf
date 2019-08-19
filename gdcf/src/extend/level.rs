@@ -1,4 +1,3 @@
-use super::Extendable;
 use crate::{
     api::request::{LevelRequest, LevelsRequest, Request, SearchFilters, UserRequest},
     cache::{Cache, Lookup},
@@ -9,6 +8,7 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, SearchedUser, User},
 };
+use crate::api::request::LevelRequestType;
 
 // FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache, Song: PartialEq, User: PartialEq> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
@@ -94,10 +94,7 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     type Upgrade = Option<NewgroundsSong>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        match from {
-            Some(song_id) => Some(LevelsRequest::default().filter(SearchFilters::default().custom_song(*song_id))),
-            None => None,
-        }
+        from.map(|song_id|LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)))
     }
 
     fn default_upgrade() -> Option<Self::Upgrade> {
@@ -120,152 +117,118 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     }
 }
 
-impl<C: Cache> Extendable<C, PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64>
-where
-    C: Lookup<NewgroundsSong>,
-{
-    type Extension = Option<NewgroundsSong>;
+impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64> where C: Cache +Lookup<Creator>, Song: PartialEq {
     type Request = LevelsRequest;
+    type From = u64;
+    type Upgrade = Option<Creator>;
 
-    fn lookup_extension(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Option<NewgroundsSong>, <C as Cache>::Err> {
-        Ok(match self.custom_song {
-            Some(song_id) => cache.lookup(song_id)?.into(),
-            None => None,
-        })
+    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
+        Some(LevelsRequest::default().request_type(LevelRequestType::User).search(from.to_string()))
     }
 
-    fn on_extension_absent() -> Option<Option<NewgroundsSong>> {
+    fn current(&self) -> &Self::From {
+        &self.base.creator
+    }
+
+    fn default_upgrade() -> Option<Self::Upgrade> {
         Some(None)
     }
 
-    fn extension_request(&self) -> Self::Request {
-        LevelsRequest::default().with_id(self.level_id)
+    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+        Ok(cache.lookup(*from)?.into())
     }
 
-    fn extend(self, custom_song: Option<NewgroundsSong>) -> PartialLevel<Option<NewgroundsSong>, u64> {
-        change_partial_level_song(self, custom_song)
-    }
-
-    fn change_extension(
-        current: PartialLevel<Option<NewgroundsSong>, u64>,
-        new_extension: Option<NewgroundsSong>,
-    ) -> PartialLevel<Option<NewgroundsSong>, u64> {
-        change_partial_level_song(current, new_extension)
+    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Song, Option<Creator>> {
+        change_level_user(self, upgrade)
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<Creator>>> for Level<Song, u64>
-where
-    C: Lookup<Creator>,
-{
-    type Extension = Option<Creator>;
+impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64> where C: Cache +Lookup<Creator>, Song: PartialEq {
     type Request = LevelsRequest;
+    type From = u64;
+    type Upgrade = Option<Creator>;
 
-    fn lookup_extension(
-        &self,
-        cache: &C,
-        request_result: Vec<PartialLevel<Option<u64>, u64>>,
-    ) -> Result<Option<Creator>, <C as Cache>::Err> {
-        Ok(cache.lookup(self.base.creator)?.into())
+    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
+        Some(LevelsRequest::default().request_type(LevelRequestType::User).search(from.to_string()))
     }
 
-    fn on_extension_absent() -> Option<Option<Creator>> {
+    fn current(&self) -> &Self::From {
+        &self.creator
+    }
+
+    fn default_upgrade() -> Option<Self::Upgrade> {
         Some(None)
     }
 
-    fn extension_request(&self) -> Self::Request {
-        LevelsRequest::default().with_id(self.base.level_id)
+    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+        Ok(cache.lookup(*from)?.into())
     }
 
-    fn extend(self, addon: Option<Creator>) -> Level<Song, Option<Creator>> {
-        change_level_user(self, addon)
-    }
-
-    fn change_extension(current: Level<Song, Option<Creator>>, new_extension: Option<Creator>) -> Level<Song, Option<Creator>> {
-        change_level_user(current, new_extension)
+    fn upgrade(self, upgrade: Self::Upgrade) -> PartialLevel<Song, Option<Creator>> {
+        change_partial_level_user(self, upgrade)
     }
 }
 
-impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
-where
-    C: Lookup<Creator>,
-{
-    type Extension = Option<Creator>;
-    type Request = LevelsRequest;
-
-    fn lookup_extension(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Option<Creator>, <C as Cache>::Err> {
-        Ok(cache.lookup(self.creator)?.into())
-    }
-
-    fn on_extension_absent() -> Option<Option<Creator>> {
-        Some(None)
-    }
-
-    fn extension_request(&self) -> Self::Request {
-        LevelsRequest::default().with_id(self.level_id)
-    }
-
-    fn extend(self, creator: Option<Creator>) -> PartialLevel<Song, Option<Creator>> {
-        change_partial_level_user(self, creator)
-    }
-
-    fn change_extension(
-        current: PartialLevel<Song, Option<Creator>>,
-        new_extension: Option<Creator>,
-    ) -> PartialLevel<Song, Option<Creator>> {
-        change_partial_level_user(current, new_extension)
-    }
-}
-
-// FIXME: this impl needs to go from Option<Creator>, not u64 since we need the account id, not user
-// id
-impl<C: Cache, Song: PartialEq> Extendable<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, u64> {
-    type Extension = Option<User>;
+impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
     type Request = UserRequest;
+    type From = Option<Creator>;
+    type Upgrade = Option<User>;
 
-    fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
+    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
+        match from {
+            Some(creator) => match creator.account_id {
+                Some(account_id) => Some(account_id.into()),
+                _ => None
+            },
+            _ => None
+        }
+    }
+
+    fn current(&self) -> &Self::From {
+        &self.creator
+    }
+
+    fn default_upgrade() -> Option<Self::Upgrade> {
+        Some(None)
+    }
+
+    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 
-    fn on_extension_absent() -> Option<Option<User>> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> PartialLevel<Song, Option<User>> {
+        change_partial_level_user(self, upgrade)
+    }
+}
+impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
+    type Request = UserRequest;
+    type From = Option<Creator>;
+    type Upgrade = Option<User>;
+
+    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
+        match from {
+            Some(creator) => match creator.account_id {
+                Some(account_id) => Some(account_id.into()),
+                _ => None
+            },
+            _ => None
+        }
+    }
+
+    fn current(&self) -> &Self::From {
+        &self.base.creator
+    }
+
+    fn default_upgrade() -> Option<Self::Upgrade> {
         Some(None)
     }
 
-    fn extension_request(&self) -> Self::Request {
-        self.creator.into()
-    }
-
-    fn extend(self, addon: Option<User>) -> PartialLevel<Song, Option<User>> {
-        change_partial_level_user(self, addon)
-    }
-
-    fn change_extension(current: PartialLevel<Song, Option<User>>, new_extension: Option<User>) -> PartialLevel<Song, Option<User>> {
-        change_partial_level_user(current, new_extension)
-    }
-}
-
-impl<C: Cache, Song: PartialEq> Extendable<C, Level<Song, Option<User>>> for Level<Song, u64> {
-    type Extension = Option<User>;
-    type Request = UserRequest;
-
-    fn lookup_extension(&self, cache: &C, request_result: User) -> Result<Option<User>, <C as Cache>::Err> {
+    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 
-    fn on_extension_absent() -> Option<Option<User>> {
-        Some(None)
-    }
-
-    fn extension_request(&self) -> Self::Request {
-        self.base.creator.into()
-    }
-
-    fn extend(self, addon: Option<User>) -> Level<Song, Option<User>> {
-        change_level_user(self, addon)
-    }
-
-    fn change_extension(current: Level<Song, Option<User>>, new_extension: Option<User>) -> Level<Song, Option<User>> {
-        change_level_user(current, new_extension)
+    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Song, Option<User>> {
+        change_level_user(self, upgrade)
     }
 }
 

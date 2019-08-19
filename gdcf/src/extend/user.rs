@@ -1,4 +1,4 @@
-use crate::{api::request::UserRequest, cache::Cache, extend::Extendable};
+use crate::{api::request::UserRequest, cache::Cache};
 use gdcf_model::user::{SearchedUser, User};
 use crate::extend::Upgrade;
 
