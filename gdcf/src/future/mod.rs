@@ -1,9 +1,9 @@
 use futures::Future;
 
-pub mod upgrade;
 pub mod process;
 pub mod refresh;
 pub mod stream;
+pub mod upgrade;
 
 pub trait GdcfFuture: Future {
     type Extension;

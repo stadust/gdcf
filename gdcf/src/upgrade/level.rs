@@ -1,5 +1,5 @@
 use crate::{
-    api::request::{LevelRequest, LevelsRequest, Request, SearchFilters, UserRequest},
+    api::request::{LevelRequest, LevelRequestType, LevelsRequest, Request, SearchFilters, UserRequest},
     cache::{Cache, Lookup},
     upgrade::Upgrade,
 };
@@ -8,7 +8,6 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, SearchedUser, User},
 };
-use crate::api::request::LevelRequestType;
 
 // FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache, Song: PartialEq, User: PartialEq> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
@@ -94,7 +93,7 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     type Upgrade = Option<NewgroundsSong>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        from.map(|song_id|LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)))
+        from.map(|song_id| LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)))
     }
 
     fn default_upgrade() -> Option<Self::Upgrade> {
@@ -117,13 +116,21 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     }
 }
 
-impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64> where C: Cache +Lookup<Creator>, Song: PartialEq {
-    type Request = LevelsRequest;
+impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64>
+where
+    C: Cache + Lookup<Creator>,
+    Song: PartialEq,
+{
     type From = u64;
+    type Request = LevelsRequest;
     type Upgrade = Option<Creator>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        Some(LevelsRequest::default().request_type(LevelRequestType::User).search(from.to_string()))
+        Some(
+            LevelsRequest::default()
+                .request_type(LevelRequestType::User)
+                .search(from.to_string()),
+        )
     }
 
     fn current(&self) -> &Self::From {
@@ -134,7 +141,11 @@ impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64> wher
         Some(None)
     }
 
-    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(
+        from: &Self::From,
+        cache: &C,
+        request_result: Vec<PartialLevel<Option<u64>, u64>>,
+    ) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(*from)?.into())
     }
 
@@ -143,13 +154,21 @@ impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64> wher
     }
 }
 
-impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64> where C: Cache +Lookup<Creator>, Song: PartialEq {
-    type Request = LevelsRequest;
+impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
+where
+    C: Cache + Lookup<Creator>,
+    Song: PartialEq,
+{
     type From = u64;
+    type Request = LevelsRequest;
     type Upgrade = Option<Creator>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        Some(LevelsRequest::default().request_type(LevelRequestType::User).search(from.to_string()))
+        Some(
+            LevelsRequest::default()
+                .request_type(LevelRequestType::User)
+                .search(from.to_string()),
+        )
     }
 
     fn current(&self) -> &Self::From {
@@ -160,7 +179,11 @@ impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<S
         Some(None)
     }
 
-    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(
+        from: &Self::From,
+        cache: &C,
+        request_result: Vec<PartialLevel<Option<u64>, u64>>,
+    ) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(*from)?.into())
     }
 
@@ -170,17 +193,18 @@ impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<S
 }
 
 impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
-    type Request = UserRequest;
     type From = Option<Creator>;
+    type Request = UserRequest;
     type Upgrade = Option<User>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
         match from {
-            Some(creator) => match creator.account_id {
-                Some(account_id) => Some(account_id.into()),
-                _ => None
-            },
-            _ => None
+            Some(creator) =>
+                match creator.account_id {
+                    Some(account_id) => Some(account_id.into()),
+                    _ => None,
+                },
+            _ => None,
         }
     }
 
@@ -201,17 +225,18 @@ impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for
     }
 }
 impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
-    type Request = UserRequest;
     type From = Option<Creator>;
+    type Request = UserRequest;
     type Upgrade = Option<User>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
         match from {
-            Some(creator) => match creator.account_id {
-                Some(account_id) => Some(account_id.into()),
-                _ => None
-            },
-            _ => None
+            Some(creator) =>
+                match creator.account_id {
+                    Some(account_id) => Some(account_id.into()),
+                    _ => None,
+                },
+            _ => None,
         }
     }
 

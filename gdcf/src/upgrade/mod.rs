@@ -35,7 +35,6 @@ pub trait Upgrade<C: Cache, Into> {
     fn upgrade(self, upgrade: Self::Upgrade) -> Into;
 }
 
-
 #[allow(missing_debug_implementations)]
 pub enum UpgradeMode<A, C, Into, E>
 where
@@ -65,9 +64,11 @@ where
         // {to_extend.extension_request()};
         let request = match E::upgrade_request(to_extend.current()) {
             Some(request) => request,
-            None => return Ok(UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)))
+            None =>
+                return Ok(UpgradeMode::UpgradeCached(
+                    to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                )),
         };
-
 
         let mode = match gdcf.process(request).map_err(GdcfError::Cache)? {
             // Not possible, we'd have gotten EitherOrBoth::B because of how `process` works
@@ -77,12 +78,14 @@ where
             EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
                 match E::default_upgrade() {
                     Some(default_extension) => UpgradeMode::UpgradeCached(to_extend.upgrade(default_extension)),
-                    None => {
+                    None =>
                         match E::upgrade_request(to_extend.current()) {
-                            None => UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
-                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request))
-                        }
-                    },
+                            None =>
+                                UpgradeMode::UpgradeCached(
+                                    to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                ),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request)),
+                        },
                 },
             // Up-to-date extension request result
             EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
@@ -96,12 +99,14 @@ where
             | EitherOrBoth::Both(CacheEntry::DeducedAbsent, refresh_future) =>
                 match E::default_upgrade() {
                     Some(default_extension) => UpgradeMode::UpgradeOutdated(to_extend, default_extension, refresh_future),
-                    None => {
+                    None =>
                         match E::upgrade_request(to_extend.current()) {
-                            None => UpgradeMode::UpgradeCached(to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)),
-                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request))
-                        }
-                    },
+                            None =>
+                                UpgradeMode::UpgradeCached(
+                                    to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                ),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_extend, gdcf.refresh(request)),
+                        },
                 },
             // Outdated entry
             EitherOrBoth::Both(CacheEntry::Cached(request_result, _), refresh_future) => {

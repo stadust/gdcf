@@ -125,7 +125,7 @@ use log::{error, info};
 use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
-    future::{upgrade::MultiUpgradeFuture, process::ProcessRequestFuture, refresh::RefreshCacheFuture, GdcfFuture},
+    future::{process::ProcessRequestFuture, refresh::RefreshCacheFuture, upgrade::MultiUpgradeFuture, GdcfFuture},
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
@@ -135,8 +135,8 @@ mod macros;
 pub mod api;
 pub mod cache;
 pub mod error;
-pub mod upgrade;
 mod future;
+pub mod upgrade;
 
 // FIXME: move this somewhere more fitting
 #[derive(Debug, Clone, PartialEq)]
