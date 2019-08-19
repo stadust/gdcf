@@ -10,37 +10,37 @@ use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 #[allow(missing_debug_implementations)]
-pub enum UpgradeFuture<From, A, C, Into, E>
+pub enum UpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
-    Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, E>),
+    Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
     Exhausted,
 }
 
 #[allow(missing_debug_implementations)]
-pub enum MultiUpgradeFuture<From, A, C, Into, E>
+pub enum MultiUpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
     WaitingOnInner(Gdcf<A, C>, bool, From),
-    Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, E>>),
+    Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
     Exhausted,
 }
 
-impl<From, A, C, Into, E> Future for MultiUpgradeFuture<From, A, C, Into, E>
+impl<From, A, C, Into, U> Future for MultiUpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
@@ -73,10 +73,10 @@ where
                         },
                     Async::NotReady => return Ok(Async::NotReady),
                 },
-            MultiUpgradeFuture::Extending(ref cache, _, ref mut extensions) => {
+            MultiUpgradeFuture::Extending(ref cache, _, ref mut upgrades) => {
                 let mut are_we_there_yet = true;
 
-                for extension in extensions {
+                for extension in upgrades {
                     match extension {
                         UpgradeMode::UpgradeOutdated(_, _, ref mut future) | UpgradeMode::UpgradeMissing(_, ref mut future) =>
                             match future.poll()? {
@@ -89,7 +89,7 @@ where
                                         std::mem::replace(
                                             extension,
                                             UpgradeMode::UpgradeCached(
-                                                to_extend.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                                to_extend.upgrade(U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                             ),
                                         );
                                     },
@@ -98,7 +98,7 @@ where
                                         std::mem::replace(extension, UpgradeMode::FixMeItIsLateAndICannotThinkOfABetterSolution)
                                     {
                                         let upgrade =
-                                            E::lookup_upgrade(to_extend.current(), cache, request_result).map_err(GdcfError::Cache)?;
+                                            U::lookup_upgrade(to_extend.current(), cache, request_result).map_err(GdcfError::Cache)?;
 
                                         std::mem::replace(extension, UpgradeMode::UpgradeCached(to_extend.upgrade(upgrade)));
                                     }
@@ -141,16 +141,14 @@ where
 }
 
 // TODO: this impl is tricky
-impl<From, A, C, Into, E> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, E>
+impl<From, A, C, Into, U> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<E>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
     type Extension = ();
-
-    //E::Extension;
 
     fn cached_extension(&self) -> Option<&Self::Extension> {
         unimplemented!();
@@ -165,12 +163,12 @@ where
     }
 }
 
-impl<From, A, C, Into, E> Future for UpgradeFuture<From, A, C, Into, E>
+impl<From, A, C, Into, U> Future for UpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
     type Error = GdcfError<A::Err, C::Err>;
     type Item = CacheEntry<Into, C::CacheEntryMeta>;
@@ -211,7 +209,7 @@ where
                     Async::NotReady => return Ok(Async::NotReady),
                     Async::Ready(CacheEntry::Missing) => unreachable!(),
                     Async::Ready(cache_entry) => {
-                        let (cache, base, meta) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
+                        let (cache, to_upgrade, meta) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
                             UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeMissing(base, _))
                             | UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeOutdated(base, ..)) => (cache, base, meta),
                             _ => unreachable!(),
@@ -220,13 +218,13 @@ where
                         match cache_entry {
                             CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
                                 return Ok(Async::Ready(CacheEntry::Cached(
-                                    base.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
+                                    to_upgrade.upgrade(U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
                                     meta,
                                 ))),
                             CacheEntry::Cached(request_result, _) => {
-                                let extension = E::lookup_upgrade(base.current(), &cache, request_result).map_err(GdcfError::Cache)?;
+                                let upgrade = U::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
 
-                                return Ok(Async::Ready(CacheEntry::Cached(base.upgrade(extension), meta)))
+                                return Ok(Async::Ready(CacheEntry::Cached(to_upgrade.upgrade(upgrade), meta)))
                             },
                             _ => unreachable!(),
                         }
@@ -243,14 +241,14 @@ where
 }
 
 // TODO: this impl is gonna be tricky as well
-impl<From, A, C, Into, E> GdcfFuture for UpgradeFuture<From, A, C, Into, E>
+impl<From, A, C, Into, U> GdcfFuture for UpgradeFuture<From, A, C, Into, U>
 where
-    A: ApiClient + MakeRequest<E::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    From: GdcfFuture<Item = CacheEntry<E, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    E: Upgrade<C, Into>,
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
 {
-    type Extension = E::Upgrade;
+    type Extension = U::Upgrade;
 
     fn cached_extension(&self) -> Option<&Self::Extension> {
         match self {
@@ -274,7 +272,7 @@ where
         /*match self {
             UpgradeFuture::WaitingOnInner(gdcf, _, inner) =>
                 if let Some(CacheEntry::Cached(to_extend, meta)) = inner.into_cached() {
-                    let to_extend: E = to_extend;
+                    let to_extend: U = to_extend;
                     let req = to_extend.extension_request();
                     let cache = gdcf.cache();
 
