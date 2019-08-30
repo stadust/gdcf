@@ -1,6 +1,6 @@
 use crate::{api::request::UserRequest, cache::Cache, upgrade::Upgrade};
 use gdcf_model::user::{SearchedUser, User};
-
+/*
 impl<C: Cache> Upgrade<C, User> for SearchedUser {
     type From = SearchedUser;
     type Request = UserRequest;
@@ -26,3 +26,4 @@ impl<C: Cache> Upgrade<C, User> for SearchedUser {
         upgrade
     }
 }
+*/

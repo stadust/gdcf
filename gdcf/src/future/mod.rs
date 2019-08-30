@@ -6,12 +6,16 @@ pub mod stream;
 pub mod upgrade;
 
 pub trait GdcfFuture: Future {
-    type Extension;
+    #[doc(hidden)]
+    type ToPeek;
 
-    fn cached_extension(&self) -> Option<&Self::Extension>;
+    //fn has_result_cached(&self) -> bool;
+    //fn into_cached(self) -> Result<Self::Item, Self>;
 
-    fn has_result_cached(&self) -> bool;
-    fn into_cached(self) -> Option<Self::Item>;
+    //fn clone_cached(&self)  ->Option<Self::Item> where Self::Item : Clone;
+
+    #[doc(hidden)]
+    fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self;
 
     // implementations do this: check if current future is resolvable from cache (if not, return false)
     // if yes, extend -> call closure -> un-extend. If we get our Self::Item from an inner future, wrap

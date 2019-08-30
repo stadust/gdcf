@@ -8,7 +8,7 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, SearchedUser, User},
 };
-
+/*
 // FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache, Song: PartialEq, User: PartialEq> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
     type From = Self;
@@ -426,3 +426,4 @@ fn change_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
         index_36,
     }
 }
+*/

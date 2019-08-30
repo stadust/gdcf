@@ -135,7 +135,7 @@ mod macros;
 pub mod api;
 pub mod cache;
 pub mod error;
-mod future;
+pub mod future;
 pub mod upgrade;
 
 // FIXME: move this somewhere more fitting
@@ -194,7 +194,7 @@ where
         }
     }
 }
-
+/*
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<NewgroundsSong>, u64>>> for Gdcf<A, C>
 where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>,
@@ -216,7 +216,7 @@ where
             self.process_request(request)?,
         ))
     }
-}
+}*/
 
 #[derive(Debug, Clone)]
 pub struct Gdcf<A, C>

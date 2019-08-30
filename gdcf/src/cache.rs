@@ -81,6 +81,15 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
             _ => true,
         }
     }
+
+    pub(crate) fn map_empty<U>(self) -> CacheEntry<U, Meta> {
+        match self {
+            CacheEntry::Missing => CacheEntry::Missing,
+            CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
+            CacheEntry::MarkedAbsent(absent_meta) => CacheEntry::MarkedAbsent(absent_meta),
+            CacheEntry::Cached(..) => panic!("CacheEntry::map_empty called on `Cached` variant"),
+        }
+    }
 }
 
 impl<T, Meta: CacheEntryMeta> Into<Option<T>> for CacheEntry<T, Meta> {

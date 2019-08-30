@@ -10,7 +10,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 pub mod level;
 pub mod user;
 
-pub trait Upgrade<C: Cache, Into> {
+pub trait Upgrade<C: Cache, Into>: Sized {
     type Request: Request;
     type From;
     type Upgrade;
@@ -32,7 +32,8 @@ pub trait Upgrade<C: Cache, Into> {
 
     fn lookup_upgrade(from: &Self::From, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> Into;
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
+    fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
 }
 
 #[allow(missing_debug_implementations)]
@@ -46,7 +47,6 @@ where
     UpgradeCached(Into),
     UpgradeOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
     UpgradeMissing(E, RefreshCacheFuture<E::Request, A, C>),
-    FixMeItIsLateAndICannotThinkOfABetterSolution,
 }
 
 impl<A, C, Into, E> UpgradeMode<A, C, Into, E>
@@ -56,35 +56,57 @@ where
     C: Cache,
     E: Upgrade<C, Into>,
 {
+    pub(crate) fn cached(to_upgrade: E, upgrade: E::Upgrade) -> Self {
+        UpgradeMode::UpgradeCached(to_upgrade.upgrade(upgrade).0)
+    }
+
+    pub(crate) fn default_upgrade(to_upgrade: E) -> Result<Self, GdcfError<A::Err, C::Err>> {
+        Ok(UpgradeMode::UpgradeCached(
+            to_upgrade
+                .upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)
+                .0,
+        ))
+    }
+
+    pub(crate) fn future(&mut self) -> Option<&mut RefreshCacheFuture<E::Request, A, C>> {
+        match self {
+            UpgradeMode::UpgradeOutdated(_, _, ref mut future) | UpgradeMode::UpgradeMissing(_, ref mut future) => Some(future),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn to_upgrade(self) -> Option<E> {
+        match self {
+            UpgradeMode::UpgradeOutdated(to_upgrade, ..) | UpgradeMode::UpgradeMissing(to_upgrade, _) => Some(to_upgrade),
+            _ => None,
+        }
+    }
+
     pub(crate) fn new(to_upgrade: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
         let cache = gdcf.cache();
+
+        let request = match E::upgrade_request(to_upgrade.current()) {
+            Some(request) => request,
+            None => return Self::default_upgrade(to_upgrade),
+        };
 
         // FIXME: add set_force_refresh(bool) to Request trait
         //let request = if force_refresh { to_extend.extension_request().force_refresh()} else
         // {to_extend.extension_request()};
-        let request = match E::upgrade_request(to_upgrade.current()) {
-            Some(request) => request,
-            None =>
-                return Ok(UpgradeMode::UpgradeCached(
-                    to_upgrade.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
-                )),
-        };
 
         let mode = match gdcf.process(request).map_err(GdcfError::Cache)? {
             // Not possible, we'd have gotten EitherOrBoth::B because of how `process` works
             EitherOrBoth::Both(CacheEntry::Missing, _) | EitherOrBoth::A(CacheEntry::Missing) => unreachable!(),
 
             // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
-            // This violates snapshot consistency! TOdO: document
+            // This violates snapshot consistency! TODO: document
             EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
+            // TODO: investigate what the fuck I have done here
                 match E::default_upgrade() {
-                    Some(default_extension) => UpgradeMode::UpgradeCached(to_upgrade.upgrade(default_extension)),
+                    Some(default_upgrade) => Self::cached(to_upgrade, default_upgrade),
                     None =>
                         match E::upgrade_request(to_upgrade.current()) {
-                            None =>
-                                UpgradeMode::UpgradeCached(
-                                    to_upgrade.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
-                                ),
+                            None => Self::default_upgrade(to_upgrade)?,
                             Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(request)),
                         },
                 },
@@ -92,7 +114,7 @@ where
             // Up-to-date extension request result
             EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
                 let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
-                UpgradeMode::UpgradeCached(to_upgrade.upgrade(upgrade))
+                UpgradeMode::cached(to_upgrade, upgrade)
             },
 
             // Missing extension request result cache entry
@@ -105,10 +127,7 @@ where
                     Some(default_extension) => UpgradeMode::UpgradeOutdated(to_upgrade, default_extension, refresh_future),
                     None =>
                         match E::upgrade_request(to_upgrade.current()) {
-                            None =>
-                                UpgradeMode::UpgradeCached(
-                                    to_upgrade.upgrade(E::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?),
-                                ),
+                            None => UpgradeMode::default_upgrade(to_upgrade)?,
                             Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(request)),
                         },
                 },
@@ -119,6 +138,8 @@ where
 
                 UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, refresh_future)
             },
+
+            _ => unimplemented!(),
         };
 
         Ok(mode)

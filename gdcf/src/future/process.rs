@@ -55,13 +55,9 @@ where
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
-    type Extension = ();
+    type ToPeek = Req::Result;
 
-    fn cached_extension(&self) -> Option<&Self::Extension> {
-        unimplemented!()
-    }
-
-    fn has_result_cached(&self) -> bool {
+    /*fn has_result_cached(&self) -> bool {
         match self {
             ProcessRequestFuture::Outdated(..) | ProcessRequestFuture::UpToDate(..) => true,
             _ => false,
@@ -72,6 +68,16 @@ where
         match self {
             ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => None,
             ProcessRequestFuture::Outdated(cached, _) | ProcessRequestFuture::UpToDate(cached) => Some(cached),
+        }
+    }*/
+
+    fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+        match self {
+            ProcessRequestFuture::Outdated(CacheEntry::Cached(object, meta), future) =>
+                ProcessRequestFuture::Outdated(CacheEntry::Cached(f(object), meta), future),
+            ProcessRequestFuture::UpToDate(CacheEntry::Cached(object, meta)) =>
+                ProcessRequestFuture::UpToDate(CacheEntry::Cached(f(object), meta)),
+            _ => self,
         }
     }
 }
