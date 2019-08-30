@@ -372,12 +372,46 @@ where
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         match self {
             MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, inner) => {
-                inner.peek_cached(|e: Vec<U>| unimplemented!());
+                let cache = gdcf.cache();
+
+                let post_peek = inner.peek_cached(move |e: Vec<U>| {
+                    let mut temporarily_upgraded = Vec::new();
+                    let mut downgrades = Vec::new();
+
+                    let mut failed = Vec::new();
+
+                    for to_upgrade in e {
+                        if !failed.is_empty() {
+                            failed.push(to_upgrade)
+                        } else {
+                            match temporary_upgrade(&cache, to_upgrade) {
+                                Ok((upgraded, downgrade)) => {
+                                    temporarily_upgraded.push(upgraded);
+                                    downgrades.push(downgrade);
+                                },
+                                Err(not_upgraded) => failed.push(not_upgraded),
+                            }
+                        }
+                    }
+
+                    if !failed.is_empty() {
+                        temporarily_upgraded = f(temporarily_upgraded);
+                    }
+
+                    let mut undone: Vec<U> = temporarily_upgraded
+                        .into_iter()
+                        .zip(downgrades.into_iter())
+                        .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
+                        .collect();
+                    undone.extend(failed);
+                    undone
+                });
+
+                MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, post_peek)
             },
-            MultiUpgradeFuture::Extending(..) => {},
-            MultiUpgradeFuture::Exhausted => {},
+            MultiUpgradeFuture::Extending(..) => unimplemented!(),
+            MultiUpgradeFuture::Exhausted => MultiUpgradeFuture::Exhausted,
         }
-        unimplemented!()
     }
 }
 
