@@ -25,10 +25,39 @@ where
     WaitingOnInner {
         gdcf: Gdcf<A, C>,
         forced_refresh: bool,
-        inner_future: From
+        has_result_cached: bool,
+        inner_future: From,
     },
     Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
     Exhausted,
+}
+
+impl<From, A, C, Into, U> UpgradeFuture<From, A, C, Into, U>
+where
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U>,
+    U: Upgrade<C, Into>,
+{
+    pub fn new(gdcf: Gdcf<A, C>, forced_refresh: bool, inner_future: From) -> Self {
+        let mut has_result_cached = false;
+        let cache = gdcf.cache();
+
+        UpgradeFuture::WaitingOnInner {
+            forced_refresh,
+            gdcf,
+            inner_future: inner_future.peek_cached(move |peeked| {
+                match temporary_upgrade(&cache, peeked) {
+                    Ok((upgraded, downgrade)) => {
+                        has_result_cached = true;
+                        U::downgrade(upgraded, downgrade).0
+                    },
+                    Err(not_upgraded) => not_upgraded,
+                }
+            }),
+            has_result_cached,
+        }
+    }
 }
 
 impl<From, A, C, Into, U> Future for UpgradeFuture<From, A, C, Into, U>
@@ -43,9 +72,23 @@ where
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
         let (ready, new_self) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
-            UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, mut inner_future} =>
+            UpgradeFuture::WaitingOnInner {
+                gdcf,
+                forced_refresh,
+                has_result_cached,
+                mut inner_future,
+            } =>
                 match inner_future.poll()? {
-                    Async::NotReady => (Async::NotReady, UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, inner_future}),
+                    Async::NotReady =>
+                        (
+                            Async::NotReady,
+                            UpgradeFuture::WaitingOnInner {
+                                gdcf,
+                                forced_refresh,
+                                has_result_cached,
+                                inner_future,
+                            },
+                        ),
                     Async::Ready(CacheEntry::Cached(inner_object, meta)) => {
                         // TODO: figure out if this is really needed
                         futures::task::current().notify();
@@ -99,36 +142,41 @@ where
 {
     type ToPeek = Into;
 
+    fn has_result_cached(&self) -> bool {
+        match self {
+            UpgradeFuture::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
+            UpgradeFuture::Extending(_, _, upgrade_mode) =>
+                match upgrade_mode {
+                    UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
+                    UpgradeMissing(..) => false,
+                },
+            UpgradeFuture::Exhausted => false,
+        }
+    }
+
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         match self {
-            UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, inner_future} => {
+            UpgradeFuture::WaitingOnInner {
+                gdcf,
+                forced_refresh,
+                mut has_result_cached,
+                inner_future,
+            } => {
                 let cache = gdcf.cache();
 
                 let post_peek = inner_future.peek_cached(move |peeked| {
-                    let request = match U::upgrade_request(peeked.current()) {
-                        Some(request) => request,
-                        None => return peeked,
-                    };
-                    let cached_result = match cache.lookup_request(&request) {
-                        Ok(result) =>
-                            match result.into() {
-                                Some(result) => result,
-                                None => return peeked,
-                            },
-                        _ => return peeked,
-                    };
-
-                    let upgrade = match U::lookup_upgrade(peeked.current(), &cache, cached_result) {
-                        Ok(upgrade) => upgrade,
-                        _ => return peeked,
-                    };
-
-                    let (upgraded, downgrade) = peeked.upgrade(upgrade);
-
-                    U::downgrade(f(upgraded), downgrade).0
+                    match temporary_upgrade(&cache, peeked) {
+                        Ok((upgraded, downgrade)) => U::downgrade(f(upgraded), downgrade).0,
+                        Err(not_upgraded) => not_upgraded,
+                    }
                 });
 
-                UpgradeFuture::WaitingOnInner {gdcf, forced_refresh, inner_future: post_peek}
+                UpgradeFuture::WaitingOnInner {
+                    gdcf,
+                    forced_refresh,
+                    has_result_cached,
+                    inner_future: post_peek,
+                }
             },
             UpgradeFuture::Extending(cache, meta, upgrade_mode) =>
                 match upgrade_mode {
@@ -313,11 +361,11 @@ where
 {
     type ToPeek = Vec<Into>;
 
-    /*fn has_result_cached(&self) -> bool {
+    fn has_result_cached(&self) -> bool {
         unimplemented!()
     }
 
-    fn into_cached(self) -> Option<Self::Item> {
+    /*fn into_cached(self) -> Option<Self::Item> {
         unimplemented!()
     }*/
 
@@ -331,4 +379,26 @@ where
         }
         unimplemented!()
     }
+}
+
+fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(cache: &C, to_upgrade: U) -> Result<(Into, U::From), U> {
+    let request = match U::upgrade_request(to_upgrade.current()) {
+        Some(request) => request,
+        _ => return Err(to_upgrade),
+    };
+    let cached_result = match cache.lookup_request(&request) {
+        Ok(result) =>
+            match result.into() {
+                Some(result) => result,
+                None => return Err(to_upgrade),
+            },
+        _ => return Err(to_upgrade),
+    };
+
+    let upgrade = match U::lookup_upgrade(to_upgrade.current(), &cache, cached_result) {
+        Ok(upgrade) => upgrade,
+        _ => return Err(to_upgrade),
+    };
+
+    Ok(to_upgrade.upgrade(upgrade))
 }

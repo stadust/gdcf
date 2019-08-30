@@ -9,7 +9,7 @@ pub trait GdcfFuture: Future {
     #[doc(hidden)]
     type ToPeek;
 
-    //fn has_result_cached(&self) -> bool;
+    fn has_result_cached(&self) -> bool;
     //fn into_cached(self) -> Result<Self::Item, Self>;
 
     //fn clone_cached(&self)  ->Option<Self::Item> where Self::Item : Clone;

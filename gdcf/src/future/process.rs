@@ -57,14 +57,14 @@ where
 {
     type ToPeek = Req::Result;
 
-    /*fn has_result_cached(&self) -> bool {
+    fn has_result_cached(&self) -> bool {
         match self {
             ProcessRequestFuture::Outdated(..) | ProcessRequestFuture::UpToDate(..) => true,
             _ => false,
         }
     }
 
-    fn into_cached(self) -> Option<Self::Item> {
+    /*fn into_cached(self) -> Option<Self::Item> {
         match self {
             ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => None,
             ProcessRequestFuture::Outdated(cached, _) | ProcessRequestFuture::UpToDate(cached) => Some(cached),
