@@ -22,7 +22,11 @@ where
     From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     U: Upgrade<C, Into>,
 {
-    WaitingOnInner(Gdcf<A, C>, bool, From),
+    WaitingOnInner {
+        gdcf: Gdcf<A, C>,
+        forced_refresh: bool,
+        inner_future: From
+    },
     Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
     Exhausted,
 }
@@ -39,15 +43,15 @@ where
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
         let (ready, new_self) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
-            UpgradeFuture::WaitingOnInner(gdcf, forces_refresh, mut inner) =>
-                match inner.poll()? {
-                    Async::NotReady => (Async::NotReady, UpgradeFuture::WaitingOnInner(gdcf, forces_refresh, inner)),
+            UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, mut inner_future} =>
+                match inner_future.poll()? {
+                    Async::NotReady => (Async::NotReady, UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, inner_future}),
                     Async::Ready(CacheEntry::Cached(inner_object, meta)) => {
                         // TODO: figure out if this is really needed
                         futures::task::current().notify();
                         (
                             Async::NotReady,
-                            UpgradeFuture::Extending(gdcf.cache(), meta, UpgradeMode::new(inner_object, &gdcf, forces_refresh)?),
+                            UpgradeFuture::Extending(gdcf.cache(), meta, UpgradeMode::new(inner_object, &gdcf, forced_refresh)?),
                         )
                     },
                     Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), UpgradeFuture::Exhausted),
@@ -97,36 +101,34 @@ where
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         match self {
-            UpgradeFuture::WaitingOnInner(gdcf, force_refresh, inner) => {
+            UpgradeFuture::WaitingOnInner{gdcf, forced_refresh, inner_future} => {
                 let cache = gdcf.cache();
 
-                UpgradeFuture::WaitingOnInner(
-                    gdcf,
-                    force_refresh,
-                    inner.peek_cached(move |peeked| {
-                        let request = match U::upgrade_request(peeked.current()) {
-                            Some(request) => request,
-                            None => return peeked,
-                        };
-                        let cached_result = match cache.lookup_request(&request) {
-                            Ok(result) =>
-                                match result.into() {
-                                    Some(result) => result,
-                                    None => return peeked,
-                                },
-                            _ => return peeked,
-                        };
+                let post_peek = inner_future.peek_cached(move |peeked| {
+                    let request = match U::upgrade_request(peeked.current()) {
+                        Some(request) => request,
+                        None => return peeked,
+                    };
+                    let cached_result = match cache.lookup_request(&request) {
+                        Ok(result) =>
+                            match result.into() {
+                                Some(result) => result,
+                                None => return peeked,
+                            },
+                        _ => return peeked,
+                    };
 
-                        let upgrade = match U::lookup_upgrade(peeked.current(), &cache, cached_result) {
-                            Ok(upgrade) => upgrade,
-                            _ => return peeked,
-                        };
+                    let upgrade = match U::lookup_upgrade(peeked.current(), &cache, cached_result) {
+                        Ok(upgrade) => upgrade,
+                        _ => return peeked,
+                    };
 
-                        let (upgraded, downgrade) = peeked.upgrade(upgrade);
+                    let (upgraded, downgrade) = peeked.upgrade(upgrade);
 
-                        U::downgrade(f(upgraded), downgrade).0
-                    }),
-                )
+                    U::downgrade(f(upgraded), downgrade).0
+                });
+
+                UpgradeFuture::WaitingOnInner {gdcf, forced_refresh, inner_future: post_peek}
             },
             UpgradeFuture::Extending(cache, meta, upgrade_mode) =>
                 match upgrade_mode {
