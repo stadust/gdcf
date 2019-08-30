@@ -292,7 +292,7 @@ where
                 }
             },
 
-    MultiUpgradeFuture::Exhausted => panic!("Future already polled to completion"),
+            MultiUpgradeFuture::Exhausted => panic!("Future already polled to completion"),
         };
 
         *self = new_self;
