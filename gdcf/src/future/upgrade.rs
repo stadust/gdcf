@@ -118,7 +118,7 @@ where
                         };
 
                         let upgrade = match U::lookup_upgrade(peeked.current(), &cache, cached_result) {
-                            Ok(upgrade) => upgrade,
+Ok(upgrade) => upgrade,
                             _ => return peeked,
                         };
 
