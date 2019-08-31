@@ -368,36 +368,16 @@ where
                 let cache = gdcf.cache();
 
                 let post_peek = inner.peek_cached(move |e: Vec<U>| {
-                    let mut temporarily_upgraded = Vec::new();
-                    let mut downgrades = Vec::new();
-
-                    let mut failed = Vec::new();
-
-                    for to_upgrade in e {
-                        if !failed.is_empty() {
-                            failed.push(to_upgrade)
-                        } else {
-                            match temporary_upgrade(&cache, to_upgrade) {
-                                Ok((upgraded, downgrade)) => {
-                                    temporarily_upgraded.push(upgraded);
-                                    downgrades.push(downgrade);
-                                },
-                                Err(not_upgraded) => failed.push(not_upgraded),
-                            }
-                        }
+                    match temporary_upgrade_all(&cache, e) {
+                        Ok((upgraded, downgrades)) => {
+                            f(upgraded)
+                                .into_iter()
+                                .zip(downgrades.into_iter())
+                                .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
+                                .collect()
+                        },
+                        Err(failed) => failed
                     }
-
-                    if !failed.is_empty() {
-                        temporarily_upgraded = f(temporarily_upgraded);
-                    }
-
-                    let mut undone: Vec<U> = temporarily_upgraded
-                        .into_iter()
-                        .zip(downgrades.into_iter())
-                        .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
-                        .collect();
-                    undone.extend(failed);
-                    undone
                 });
 
                 MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, post_peek)
@@ -428,4 +408,44 @@ fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>
     };
 
     Ok(to_upgrade.upgrade(upgrade))
+}
+
+fn temporary_upgrade_all<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(
+    cache: &C,
+    to_upgrade: Vec<U>,
+) -> Result<(Vec<Into>, Vec<U::From>), Vec<U>> {
+    let mut temporarily_upgraded = Vec::new();
+    let mut downgrades = Vec::new();
+
+    let mut failed = Vec::new();
+
+    for to_upgrade in to_upgrade {
+        if !failed.is_empty() {
+            failed.push(to_upgrade)
+        } else {
+            match temporary_upgrade(cache, to_upgrade) {
+                Ok((upgraded, downgrade)) => {
+                    temporarily_upgraded.push(upgraded);
+                    downgrades.push(downgrade);
+                },
+                Err(not_upgraded) => {
+                    // At this point, `failed` is still an empty vec!
+                    while !temporarily_upgraded.is_empty() {
+                        let upgraded = temporarily_upgraded.remove(0);
+                        let downgrade = downgrades.remove(0);
+
+                        failed.push(U::downgrade(upgraded, downgrade).0)
+                    }
+
+                    failed.push(not_upgraded)
+                },
+            }
+        }
+    }
+
+    if !failed.is_empty() {
+        Ok((temporarily_upgraded, downgrades))
+    } else {
+        Err(failed)
+    }
 }
