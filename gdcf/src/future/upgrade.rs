@@ -154,6 +154,17 @@ where
         }
     }
 
+    fn into_cached(self) -> Result<Self::Item, Self>
+    where
+        Self: Sized,
+    {
+        if !self.has_result_cached() {
+            return Err(self)
+        }
+
+        unimplemented!()
+    }
+
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         if !self.has_result_cached() {
             return self
@@ -422,6 +433,13 @@ where
                 }),
             MultiUpgradeFuture::Exhausted => false,
         }
+    }
+
+    fn into_cached(self) -> Result<Self::Item, Self>
+    where
+        Self: Sized,
+    {
+        unimplemented!()
     }
 
     /*fn into_cached(self) -> Option<Self::Item> {

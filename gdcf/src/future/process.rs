@@ -64,6 +64,16 @@ where
         }
     }
 
+    fn into_cached(self) -> Result<Self::Item, Self>
+    where
+        Self: Sized,
+    {
+        match self {
+            ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => Err(self),
+            ProcessRequestFuture::Outdated(cache_entry, _) | ProcessRequestFuture::UpToDate(cache_entry) => Ok(cache_entry),
+        }
+    }
+
     /*fn into_cached(self) -> Option<Self::Item> {
         match self {
             ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => None,
