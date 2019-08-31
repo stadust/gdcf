@@ -260,6 +260,7 @@ where
     WaitingOnInner {
         gdcf: Gdcf<A, C>,
         forced_refresh: bool,
+        has_result_cached: bool,
         inner_future: From,
     },
     Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
@@ -303,6 +304,7 @@ where
             MultiUpgradeFuture::WaitingOnInner {
                 gdcf,
                 forced_refresh,
+                has_result_cached,
                 mut inner_future,
             } => {
                 match inner_future.poll()? {
@@ -311,6 +313,7 @@ where
                             Async::NotReady,
                             MultiUpgradeFuture::WaitingOnInner {
                                 gdcf,
+                                has_result_cached,
                                 forced_refresh,
                                 inner_future,
                             },
@@ -402,10 +405,12 @@ where
             MultiUpgradeFuture::WaitingOnInner {
                 gdcf,
                 forced_refresh,
+                has_result_cached,
                 inner_future,
             } =>
                 MultiUpgradeFuture::WaitingOnInner {
                     forced_refresh,
+                    has_result_cached,
                     inner_future: Self::peek_inner(&gdcf.cache(), inner_future, f),
                     gdcf,
                 },
