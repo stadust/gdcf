@@ -41,22 +41,25 @@ where
 {
     pub fn new(gdcf: Gdcf<A, C>, forced_refresh: bool, inner_future: From) -> Self {
         let mut has_result_cached = false;
-        let cache = gdcf.cache();
 
         UpgradeFuture::WaitingOnInner {
             forced_refresh,
-            gdcf,
-            inner_future: inner_future.peek_cached(move |peeked| {
-                match temporary_upgrade(&cache, peeked) {
-                    Ok((upgraded, downgrade)) => {
-                        has_result_cached = true;
-                        U::downgrade(upgraded, downgrade).0
-                    },
-                    Err(not_upgraded) => not_upgraded,
-                }
+            inner_future: Self::peek_inner(&gdcf.cache(), inner_future, |cached| {
+                has_result_cached = true;
+                cached
             }),
+            gdcf,
             has_result_cached,
         }
+    }
+
+    fn peek_inner(cache: &C, inner: From, f: impl FnOnce(Into) -> Into) -> From {
+        inner.peek_cached(move |peeked| {
+            match temporary_upgrade(cache, peeked) {
+                Ok((upgraded, downgrade)) => U::downgrade(f(upgraded), downgrade).0,
+                Err(not_upgraded) => not_upgraded,
+            }
+        })
     }
 }
 
@@ -159,25 +162,15 @@ where
             UpgradeFuture::WaitingOnInner {
                 gdcf,
                 forced_refresh,
-                mut has_result_cached,
+                has_result_cached,
                 inner_future,
-            } => {
-                let cache = gdcf.cache();
-
-                let post_peek = inner_future.peek_cached(move |peeked| {
-                    match temporary_upgrade(&cache, peeked) {
-                        Ok((upgraded, downgrade)) => U::downgrade(f(upgraded), downgrade).0,
-                        Err(not_upgraded) => not_upgraded,
-                    }
-                });
-
+            } =>
                 UpgradeFuture::WaitingOnInner {
-                    gdcf,
                     forced_refresh,
                     has_result_cached,
-                    inner_future: post_peek,
-                }
-            },
+                    inner_future: Self::peek_inner(&gdcf.cache(), inner_future, f),
+                    gdcf,
+                },
             UpgradeFuture::Extending(cache, meta, upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(cached) => UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeCached(f(cached))),
