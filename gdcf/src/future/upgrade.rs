@@ -164,22 +164,30 @@ where
         }
 
         match self {
-            UpgradeFuture::WaitingOnInner { gdcf, inner_future,..} => {
-                let base: CacheEntry<_,_> = match inner_future.into_cached()? {
+            UpgradeFuture::WaitingOnInner { gdcf, inner_future, .. } => {
+                let base: CacheEntry<_, _> = match inner_future.into_cached()? {
                     Ok(base) => base,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 Ok(Ok(match base {
                     cache_entry => cache_entry.map_empty(),
-                    CacheEntry::Cached(to_upgrade, meta) => CacheEntry::Cached(match temporary_upgrade(&gdcf.cache(), to_upgrade) {
-                        Ok((upgraded, _)) => upgraded,
-                        _ => unreachable!()
-                    }, meta),
+                    CacheEntry::Cached(to_upgrade, meta) =>
+                        CacheEntry::Cached(
+                            match temporary_upgrade(&gdcf.cache(), to_upgrade) {
+                                Ok((upgraded, _)) => upgraded,
+                                _ => unreachable!(),
+                            },
+                            meta,
+                        ),
                 }))
             },
-            UpgradeFuture::Extending(cache, meta, upgrade_mode) => unimplemented!(),
-            UpgradeFuture::Exhausted => unreachable!()
+            UpgradeFuture::Extending(cache, meta, upgrade_mode) => match upgrade_mode {
+                UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
+                UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
+                UpgradeMode::UpgradeMissing(_, _) => unreachable!(),
+            },
+            UpgradeFuture::Exhausted => unreachable!(),
         }
     }
 
@@ -529,22 +537,23 @@ where
 }
 
 fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(cache: &C, to_upgrade: U) -> Result<(Into, U::From), U> {
-    let request = match U::upgrade_request(to_upgrade.current()) {
-        Some(request) => request,
-        _ => return Err(to_upgrade),
-    };
-    let cached_result = match cache.lookup_request(&request) {
-        Ok(result) =>
-            match result.into() {
-                Some(result) => result,
-                None => return Err(to_upgrade),
+    let upgrade = match U::upgrade_request(to_upgrade.current()) {
+        Some(request) => match cache.lookup_request(&request) {
+            Ok(CacheEntry::Cached(cached_result, _)) => match U::lookup_upgrade(to_upgrade.current(), cache, cached_result) {
+                Ok(upgrade) => upgrade,
+                _ => return Err(to_upgrade) // cache error on upgrade lookup
+            }
+            Ok(CacheEntry::Missing) => return Err(to_upgrade), // no information about the upgrade was cached
+            Ok(_) => match U::default_upgrade() { // upgrade was marked/deduced as absent
+                Some(upgrade) => upgrade,
+                _ => return Err(to_upgrade)
             },
-        _ => return Err(to_upgrade),
-    };
-
-    let upgrade = match U::lookup_upgrade(to_upgrade.current(), &cache, cached_result) {
-        Ok(upgrade) => upgrade,
-        _ => return Err(to_upgrade),
+            _ => return Err(to_upgrade) // error during request lookup
+        },
+        None => match U::default_upgrade() {
+            Some(upgrade) => upgrade,
+            _ => return Err(to_upgrade) // no upgrade request and no default (incorrect Upgrade impl, but that's something we check later)
+        },
     };
 
     Ok(to_upgrade.upgrade(upgrade))
