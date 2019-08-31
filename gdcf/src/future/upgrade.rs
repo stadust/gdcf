@@ -155,6 +155,10 @@ where
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+        if !self.has_result_cached() {
+            return self
+        }
+
         match self {
             UpgradeFuture::WaitingOnInner {
                 gdcf,
@@ -425,6 +429,10 @@ where
     }*/
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+        if !self.has_result_cached() {
+            return self
+        }
+
         match self {
             MultiUpgradeFuture::WaitingOnInner {
                 gdcf,
