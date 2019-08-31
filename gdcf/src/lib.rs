@@ -171,7 +171,7 @@ impl std::fmt::Display for Secondary {
 }
 
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    type Future: GdcfFuture<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>;
+    type Future: GdcfFuture<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = T>;
 
     fn process_request(&self, request: R) -> Result<Self::Future, C::Err>;
 
@@ -194,7 +194,7 @@ where
         }
     }
 }
-/*
+
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<NewgroundsSong>, u64>>> for Gdcf<A, C>
 where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>,
@@ -210,13 +210,13 @@ where
     >;
 
     fn process_request(&self, request: LevelsRequest) -> Result<Self::Future, <C as Cache>::Err> {
-        Ok(MultiUpgradeFuture::WaitingOnInner(
+        Ok(MultiUpgradeFuture::new(
             self.clone(),
             request.force_refresh,
             self.process_request(request)?,
         ))
     }
-}*/
+}
 
 #[derive(Debug, Clone)]
 pub struct Gdcf<A, C>

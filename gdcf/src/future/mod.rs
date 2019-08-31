@@ -10,11 +10,9 @@ pub trait GdcfFuture: Future {
     type ToPeek;
 
     fn has_result_cached(&self) -> bool;
-    fn into_cached(self) -> Result<Self::Item, Self>
+    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
     where
         Self: Sized;
-
-    //fn clone_cached(&self)  ->Option<Self::Item> where Self::Item : Clone;
 
     #[doc(hidden)]
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self;

@@ -10,6 +10,7 @@ use crate::{
     upgrade::{Upgrade, UpgradeMode},
     Gdcf,
 };
+use failure::_core::hint::unreachable_unchecked;
 
 #[allow(missing_debug_implementations)]
 pub enum UpgradeFuture<From, A, C, Into, U>
@@ -154,15 +155,32 @@ where
         }
     }
 
-    fn into_cached(self) -> Result<Self::Item, Self>
+    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
     where
         Self: Sized,
     {
         if !self.has_result_cached() {
-            return Err(self)
+            return Ok(Err(self))
         }
 
-        unimplemented!()
+        match self {
+            UpgradeFuture::WaitingOnInner { gdcf, inner_future,..} => {
+                let base: CacheEntry<_,_> = match inner_future.into_cached()? {
+                    Ok(base) => base,
+                    _ => unreachable!()
+                };
+
+                Ok(Ok(match base {
+                    cache_entry => cache_entry.map_empty(),
+                    CacheEntry::Cached(to_upgrade, meta) => CacheEntry::Cached(match temporary_upgrade(&gdcf.cache(), to_upgrade) {
+                        Ok((upgraded, _)) => upgraded,
+                        _ => unreachable!()
+                    }, meta),
+                }))
+            },
+            UpgradeFuture::Extending(cache, meta, upgrade_mode) => unimplemented!(),
+            UpgradeFuture::Exhausted => unreachable!()
+        }
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
@@ -209,30 +227,6 @@ where
     From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, Upgrade=U::From>,
     U: Upgrade<C, Into>,
 {
-    type Upgrade = U::Upgrade;
-
-    fn cached_extension(&self) -> Option<&Self::Upgrade> {
-        match self {
-            UpgradeFuture::WaitingOnInner(gdcf, _, inner_future) => {
-                let inner = inner_future.cached_extension()?;
-                let request = U::upgrade_request(inner)?;//.or_else(||U::default_upgrade())?;
-                let cached_result: CacheEntry<_, _> = gdcf.cache().lookup_request(&request).ok()?; // FIXME: proper error handling
-                let cached_result: Option<_> = cached_result.into();
-                let lookup_result = U::lookup_upgrade(inner, &gdcf.cache(), cached_result?).ok()?;
-
-                return Some(&lookup_result)
-            },
-            UpgradeFuture::Extending(..) => {},
-            UpgradeFuture::Exhausted => (),
-        }
-
-        unimplemented!()
-    }
-
-    fn has_result_cached(&self) -> bool {
-        unimplemented!()
-    }
-
     fn into_cached(self) -> Option<Self::Item> {
         unimplemented!()
         /*match self {
@@ -435,16 +429,12 @@ where
         }
     }
 
-    fn into_cached(self) -> Result<Self::Item, Self>
+    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
     where
         Self: Sized,
     {
         unimplemented!()
     }
-
-    /*fn into_cached(self) -> Option<Self::Item> {
-        unimplemented!()
-    }*/
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         if !self.has_result_cached() {
