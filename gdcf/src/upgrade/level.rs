@@ -8,15 +8,19 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, SearchedUser, User},
 };
-/*
+
 // FIXME: this impl isn't usable from Gdcf yet yet
-impl<C: Cache, Song: PartialEq, User: PartialEq> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
+impl<C: Cache> Upgrade<C, Level<Option<u64>, u64>> for PartialLevel<Option<u64>, u64> {
     type From = Self;
     type Request = LevelRequest;
     type Upgrade = Level<Option<u64>, u64>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
         Some(from.level_id.into())
+    }
+
+    fn current(&self) -> &Self::From {
+        self
     }
 
     fn default_upgrade() -> Option<Self::Upgrade> {
@@ -27,28 +31,31 @@ impl<C: Cache, Song: PartialEq, User: PartialEq> Upgrade<C, Level<Song, User>> f
         Ok(request_result)
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Song, User> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Option<u64>, u64>, Self::From) {
         let Level {
             level_data,
             password,
             time_since_update,
             time_since_upload,
             index_36,
-            ..
+            base,
         } = upgrade;
 
-        Level {
-            base: self,
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-        }
+        (
+            Level {
+                base: self,
+                level_data,
+                password,
+                time_since_update,
+                time_since_upload,
+                index_36,
+            },
+            base,
+        )
     }
 
-    fn current(&self) -> &Self::From {
-        self
+    fn downgrade(upgraded: Level<Option<u64>, u64>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        (downgrade, upgraded)
     }
 }
 
@@ -67,6 +74,10 @@ where
         }
     }
 
+    fn current(&self) -> &Self::From {
+        &self.base.custom_song
+    }
+
     fn default_upgrade() -> Option<Self::Upgrade> {
         Some(None)
     }
@@ -78,12 +89,12 @@ where
         })
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Option<NewgroundsSong>, u64> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Option<NewgroundsSong>, u64>, Self::From) {
         change_level_song(self, upgrade)
     }
 
-    fn current(&self) -> &Self::From {
-        &self.base.custom_song
+    fn downgrade(upgraded: Level<Option<NewgroundsSong>, u64>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_level_song(upgraded, downgrade)
     }
 }
 
@@ -96,6 +107,10 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
         from.map(|song_id| LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)))
     }
 
+    fn current(&self) -> &Self::From {
+        &self.custom_song
+    }
+
     fn default_upgrade() -> Option<Self::Upgrade> {
         Some(None)
     }
@@ -107,12 +122,12 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
         })
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> PartialLevel<Option<NewgroundsSong>, u64> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (PartialLevel<Option<NewgroundsSong>, u64>, Self::From) {
         change_partial_level_song(self, upgrade)
     }
 
-    fn current(&self) -> &Self::From {
-        &self.custom_song
+    fn downgrade(upgraded: PartialLevel<Option<NewgroundsSong>, u64>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_partial_level_song(upgraded, downgrade)
     }
 }
 
@@ -149,8 +164,12 @@ where
         Ok(cache.lookup(*from)?.into())
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Song, Option<Creator>> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Song, Option<Creator>>, Self::From) {
         change_level_user(self, upgrade)
+    }
+
+    fn downgrade(upgraded: Level<Song, Option<Creator>>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_level_user(upgraded, downgrade)
     }
 }
 
@@ -187,8 +206,12 @@ where
         Ok(cache.lookup(*from)?.into())
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> PartialLevel<Song, Option<Creator>> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (PartialLevel<Song, Option<Creator>>, Self::From) {
         change_partial_level_user(self, upgrade)
+    }
+
+    fn downgrade(upgraded: PartialLevel<Song, Option<Creator>>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_partial_level_user(upgraded, downgrade)
     }
 }
 
@@ -220,8 +243,12 @@ impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for
         Ok(Some(request_result))
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> PartialLevel<Song, Option<User>> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (PartialLevel<Song, Option<User>>, Self::From) {
         change_partial_level_user(self, upgrade)
+    }
+
+    fn downgrade(upgraded: PartialLevel<Song, Option<User>>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_partial_level_user(upgraded, downgrade)
     }
 }
 impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
@@ -252,15 +279,19 @@ impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<
         Ok(Some(request_result))
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> Level<Song, Option<User>> {
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Song, Option<User>>, Self::From) {
         change_level_user(self, upgrade)
+    }
+
+    fn downgrade(upgraded: Level<Song, Option<User>>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        change_level_user(upgraded, downgrade)
     }
 }
 
 fn change_partial_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
     partial_level: PartialLevel<OldSong, User>,
     new_song: NewSong,
-) -> PartialLevel<NewSong, User> {
+) -> (PartialLevel<NewSong, User>, OldSong) {
     let PartialLevel {
         level_id,
         name,
@@ -286,43 +317,46 @@ fn change_partial_level_song<OldSong: PartialEq, NewSong: PartialEq, User: Parti
         index_46,
         index_47,
         creator,
-        ..
+        custom_song,
     } = partial_level;
 
-    PartialLevel {
-        custom_song: new_song,
+    (
+        PartialLevel {
+            custom_song: new_song,
 
-        level_id,
-        name,
-        description,
-        version,
-        creator,
-        difficulty,
-        downloads,
-        main_song,
-        gd_version,
-        likes,
-        length,
-        stars,
-        featured,
-        index_31,
-        copy_of,
-        coin_amount,
-        coins_verified,
-        stars_requested,
-        index_40,
-        is_epic,
-        index_43,
-        object_amount,
-        index_46,
-        index_47,
-    }
+            level_id,
+            name,
+            description,
+            version,
+            creator,
+            difficulty,
+            downloads,
+            main_song,
+            gd_version,
+            likes,
+            length,
+            stars,
+            featured,
+            index_31,
+            copy_of,
+            coin_amount,
+            coins_verified,
+            stars_requested,
+            index_40,
+            is_epic,
+            index_43,
+            object_amount,
+            index_46,
+            index_47,
+        },
+        custom_song,
+    )
 }
 
 fn change_partial_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
     partial_level: PartialLevel<Song, OldUser>,
     new_user: NewUser,
-) -> PartialLevel<Song, NewUser> {
+) -> (PartialLevel<Song, NewUser>, OldUser) {
     let PartialLevel {
         level_id,
         name,
@@ -348,43 +382,46 @@ fn change_partial_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: Parti
         index_46,
         index_47,
         custom_song,
-        ..
+        creator,
     } = partial_level;
 
-    PartialLevel {
-        creator: new_user,
+    (
+        PartialLevel {
+            creator: new_user,
 
-        level_id,
-        name,
-        description,
-        version,
-        custom_song,
-        difficulty,
-        downloads,
-        main_song,
-        gd_version,
-        likes,
-        length,
-        stars,
-        featured,
-        index_31,
-        copy_of,
-        coin_amount,
-        coins_verified,
-        stars_requested,
-        index_40,
-        is_epic,
-        index_43,
-        object_amount,
-        index_46,
-        index_47,
-    }
+            level_id,
+            name,
+            description,
+            version,
+            custom_song,
+            difficulty,
+            downloads,
+            main_song,
+            gd_version,
+            likes,
+            length,
+            stars,
+            featured,
+            index_31,
+            copy_of,
+            coin_amount,
+            coins_verified,
+            stars_requested,
+            index_40,
+            is_epic,
+            index_43,
+            object_amount,
+            index_46,
+            index_47,
+        },
+        creator,
+    )
 }
 
 fn change_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
     level: Level<Song, OldUser>,
     new_user: NewUser,
-) -> Level<Song, NewUser> {
+) -> (Level<Song, NewUser>, OldUser) {
     let Level {
         base,
         level_data,
@@ -394,20 +431,25 @@ fn change_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
         index_36,
     } = level;
 
-    Level {
-        base: change_partial_level_user(base, new_user),
-        level_data,
-        password,
-        time_since_update,
-        time_since_upload,
-        index_36,
-    }
+    let (new_base, old_user) = change_partial_level_user(base, new_user);
+
+    (
+        Level {
+            base: new_base,
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+        },
+        old_user,
+    )
 }
 
 fn change_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
     level: Level<OldSong, User>,
     new_song: NewSong,
-) -> Level<NewSong, User> {
+) -> (Level<NewSong, User>, OldSong) {
     let Level {
         base,
         level_data,
@@ -417,13 +459,17 @@ fn change_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
         index_36,
     } = level;
 
-    Level {
-        base: change_partial_level_song(base, new_song),
-        level_data,
-        password,
-        time_since_update,
-        time_since_upload,
-        index_36,
-    }
+    let (new_base, old_song) = change_partial_level_song(base, new_song);
+
+    (
+        Level {
+            base: new_base,
+            level_data,
+            password,
+            time_since_update,
+            time_since_upload,
+            index_36,
+        },
+        old_song,
+    )
 }
-*/
