@@ -7,10 +7,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
     future::GdcfFuture,
-    upgrade::{
-        Upgrade,
-        UpgradeMode::{self, UpgradeCached, UpgradeMissing},
-    },
+    upgrade::{Upgrade, UpgradeMode},
     Gdcf,
 };
 
@@ -150,8 +147,8 @@ where
             UpgradeFuture::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
             UpgradeFuture::Extending(_, _, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
-                    UpgradeMissing(..) => false,
+                    UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
+                    UpgradeMode::UpgradeMissing(..) => false,
                 },
             UpgradeFuture::Exhausted => false,
         }
@@ -369,20 +366,89 @@ where
 
                 let post_peek = inner.peek_cached(move |e: Vec<U>| {
                     match temporary_upgrade_all(&cache, e) {
-                        Ok((upgraded, downgrades)) => {
+                        Ok((upgraded, downgrades)) =>
                             f(upgraded)
                                 .into_iter()
                                 .zip(downgrades.into_iter())
                                 .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
-                                .collect()
-                        },
-                        Err(failed) => failed
+                                .collect(),
+                        Err(failed) => failed,
                     }
                 });
 
                 MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, post_peek)
             },
-            MultiUpgradeFuture::Extending(..) => unimplemented!(),
+            MultiUpgradeFuture::Extending(cache, meta, upgrade_modes) => {
+                let mut upgraded = Vec::new();
+                let mut downgrades = Vec::new();
+                let mut futures = Vec::new();
+
+                let mut failed = Vec::new();
+
+                for upgrade_mode in upgrade_modes {
+                    if !failed.is_empty() {
+                        failed.push(upgrade_mode)
+                    } else {
+                        match upgrade_mode {
+                            UpgradeMode::UpgradeCached(cached) => {
+                                upgraded.push(cached);
+                                downgrades.push(None);
+                                futures.push(None);
+                            },
+                            UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, future) => {
+                                let (is_upgraded, downgrade) = to_upgrade.upgrade(upgrade);
+
+                                upgraded.push(is_upgraded);
+                                downgrades.push(Some(downgrade));
+                                futures.push(Some(future));
+                            },
+                            UpgradeMode::UpgradeMissing(..) => {
+                                while !upgraded.is_empty() {
+                                    let upgraded = upgraded.remove(0);
+                                    let downgrade = downgrades.remove(0);
+                                    let future = futures.remove(0);
+
+                                    failed.push(match downgrade {
+                                        None => UpgradeMode::UpgradeCached(upgraded),
+                                        Some(downgrade) => {
+                                            let (downgraded, upgrade) = U::downgrade(upgraded, downgrade);
+
+                                            UpgradeMode::UpgradeOutdated(downgraded, upgrade, future.unwrap())
+                                        },
+                                    });
+                                }
+
+                                failed.push(upgrade_mode)
+                            },
+                        }
+                    }
+                }
+
+                let upgrade_modes =  if failed.is_empty() {
+                    upgraded = f(upgraded);
+                    upgraded
+                        .into_iter()
+                        .zip(downgrades)
+                        .zip(futures)
+                        .map(|((upgraded, downgrade), future)| {
+                            match downgrade {
+                                None => UpgradeMode::UpgradeCached(upgraded),
+                                Some(downgrade) => {
+                                    let (downgraded, upgrade) = U::downgrade(upgraded, downgrade);
+
+                                    UpgradeMode::UpgradeOutdated(downgraded, upgrade, future.unwrap())
+                                },
+                            }
+                        })
+                        .collect()
+                } else {
+                    failed
+                };
+
+                MultiUpgradeFuture::Extending(cache, meta, upgrade_modes)
+
+
+            },
             MultiUpgradeFuture::Exhausted => MultiUpgradeFuture::Exhausted,
         }
     }
