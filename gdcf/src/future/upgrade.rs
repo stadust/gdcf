@@ -274,6 +274,20 @@ where
     From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = Vec<U>>,
     U: Upgrade<C, Into>,
 {
+    pub fn new(gdcf: Gdcf<A, C>, forced_refresh: bool, inner_future: From) -> Self {
+        let mut has_result_cached = false;
+
+        MultiUpgradeFuture::WaitingOnInner {
+            inner_future: Self::peek_inner(&gdcf.cache(), inner_future, |cached| {
+                has_result_cached = true;
+                cached
+            }),
+            gdcf,
+            has_result_cached,
+            forced_refresh,
+        }
+    }
+
     fn peek_inner(cache: &C, inner: From, f: impl FnOnce(Vec<Into>) -> Vec<Into>) -> From {
         inner.peek_cached(move |e: Vec<U>| {
             match temporary_upgrade_all(cache, e) {
