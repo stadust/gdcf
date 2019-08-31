@@ -257,7 +257,11 @@ where
     From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     U: Upgrade<C, Into>,
 {
-    WaitingOnInner(Gdcf<A, C>, bool, From),
+    WaitingOnInner {
+        gdcf: Gdcf<A, C>,
+        forced_refresh: bool,
+        inner_future: From,
+    },
     Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
     Exhausted,
 }
@@ -296,9 +300,21 @@ where
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
         let (ready, new_self) = match std::mem::replace(self, MultiUpgradeFuture::Exhausted) {
-            MultiUpgradeFuture::WaitingOnInner(gdcf, forces_refresh, mut inner) => {
-                match inner.poll()? {
-                    Async::NotReady => (Async::NotReady, MultiUpgradeFuture::WaitingOnInner(gdcf, forces_refresh, inner)),
+            MultiUpgradeFuture::WaitingOnInner {
+                gdcf,
+                forced_refresh,
+                mut inner_future,
+            } => {
+                match inner_future.poll()? {
+                    Async::NotReady =>
+                        (
+                            Async::NotReady,
+                            MultiUpgradeFuture::WaitingOnInner {
+                                gdcf,
+                                forced_refresh,
+                                inner_future,
+                            },
+                        ),
                     Async::Ready(CacheEntry::Cached(cached_objects, meta)) => {
                         // TODO: figure out if this is really needed
                         futures::task::current().notify();
@@ -310,7 +326,7 @@ where
                                 meta,
                                 cached_objects
                                     .into_iter()
-                                    .map(|object| UpgradeMode::new(object, &gdcf, forces_refresh))
+                                    .map(|object| UpgradeMode::new(object, &gdcf, forced_refresh))
                                     .collect::<Result<Vec<_>, _>>()?,
                             ),
                         )
@@ -383,10 +399,16 @@ where
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         match self {
-            MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, inner) => {
-                let cache = gdcf.cache();
-                MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, Self::peek_inner(&cache, inner, f))
-            },
+            MultiUpgradeFuture::WaitingOnInner {
+                gdcf,
+                forced_refresh,
+                inner_future,
+            } =>
+                MultiUpgradeFuture::WaitingOnInner {
+                    forced_refresh,
+                    inner_future: Self::peek_inner(&gdcf.cache(), inner_future, f),
+                    gdcf,
+                },
             MultiUpgradeFuture::Extending(cache, meta, upgrade_modes) => {
                 let mut upgraded = Vec::new();
                 let mut downgrades = Vec::new();
