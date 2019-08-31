@@ -407,7 +407,17 @@ where
     type ToPeek = Vec<Into>;
 
     fn has_result_cached(&self) -> bool {
-        unimplemented!()
+        match self {
+            MultiUpgradeFuture::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
+            MultiUpgradeFuture::Extending(_, _, upgrade_modes) =>
+                upgrade_modes.iter().all(|mode| {
+                    match mode {
+                        UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
+                        UpgradeMode::UpgradeMissing(..) => false,
+                    }
+                }),
+            MultiUpgradeFuture::Exhausted => false,
+        }
     }
 
     /*fn into_cached(self) -> Option<Self::Item> {
