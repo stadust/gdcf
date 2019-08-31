@@ -262,6 +262,28 @@ where
     Exhausted,
 }
 
+impl<From, A, C, Into, U> MultiUpgradeFuture<From, A, C, Into, U>
+where
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = Vec<U>>,
+    U: Upgrade<C, Into>,
+{
+    fn peek_inner(cache: &C, inner: From, f: impl FnOnce(Vec<Into>) -> Vec<Into>) -> From {
+        inner.peek_cached(move |e: Vec<U>| {
+            match temporary_upgrade_all(cache, e) {
+                Ok((upgraded, downgrades)) =>
+                    f(upgraded)
+                        .into_iter()
+                        .zip(downgrades.into_iter())
+                        .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
+                        .collect(),
+                Err(failed) => failed,
+            }
+        })
+    }
+}
+
 impl<From, A, C, Into, U> Future for MultiUpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
@@ -363,20 +385,7 @@ where
         match self {
             MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, inner) => {
                 let cache = gdcf.cache();
-
-                let post_peek = inner.peek_cached(move |e: Vec<U>| {
-                    match temporary_upgrade_all(&cache, e) {
-                        Ok((upgraded, downgrades)) =>
-                            f(upgraded)
-                                .into_iter()
-                                .zip(downgrades.into_iter())
-                                .map(|(upgraded, downgrade)| U::downgrade(upgraded, downgrade).0)
-                                .collect(),
-                        Err(failed) => failed,
-                    }
-                });
-
-                MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, post_peek)
+                MultiUpgradeFuture::WaitingOnInner(gdcf, force_refresh, Self::peek_inner(&cache, inner, f))
             },
             MultiUpgradeFuture::Extending(cache, meta, upgrade_modes) => {
                 let mut upgraded = Vec::new();
@@ -424,7 +433,7 @@ where
                     }
                 }
 
-                let upgrade_modes =  if failed.is_empty() {
+                let upgrade_modes = if failed.is_empty() {
                     upgraded = f(upgraded);
                     upgraded
                         .into_iter()
@@ -446,8 +455,6 @@ where
                 };
 
                 MultiUpgradeFuture::Extending(cache, meta, upgrade_modes)
-
-
             },
             MultiUpgradeFuture::Exhausted => MultiUpgradeFuture::Exhausted,
         }
