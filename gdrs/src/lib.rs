@@ -112,13 +112,14 @@ impl ApiClient for BoomlingsClient {
 impl<R: Handler> MakeRequest<R> for BoomlingsClient {
     type Future = GdrsFuture<R>;
 
-    fn make(&self, request: R) -> GdrsFuture<R> {
+    fn make(&self, request: &R) -> GdrsFuture<R> {
         GdrsFuture {
             inner: RetryIf::spawn(
                 ExponentialBackoff::from_millis(10).take(5),
                 ApiRequestAction {
                     client: self.client.clone(),
-                    request,
+                    encoded_request:serde_urlencoded::to_string(request.to_req()).unwrap(),
+                    phantom: PhantomData
                 },
                 ApiRetryCondition,
             )
@@ -129,7 +130,8 @@ impl<R: Handler> MakeRequest<R> for BoomlingsClient {
 
 struct ApiRequestAction<R: Handler> {
     client: Client<HttpConnector>,
-    request: R,
+    encoded_request: String,
+    phantom: PhantomData<R>
 }
 
 struct ApiRetryCondition;
@@ -220,20 +222,19 @@ impl<R: GdcfRequest + Handler> Action for ApiRequestAction<R> {
     type Item = Response<R::Result>;
 
     fn run(&mut self) -> Self::Future {
-        ProcessRequestFuture::WaitingForResponse(self.client.request(make_request(&self.request)), PhantomData)
+        ProcessRequestFuture::WaitingForResponse(self.client.request(make_request::<R>(&self.encoded_request)), PhantomData)
     }
 }
 
-fn make_request<R: GdcfRequest + Handler>(request: &R) -> Request<Body> {
-    let body = serde_urlencoded::to_string(request.to_req()).unwrap();
-    let len = body.len();
+fn make_request<R: GdcfRequest + Handler>(encoded_request: &str) -> Request<Body> {
+    let len = encoded_request.len();
 
-    info!("Preparing request {} to {}", body, R::endpoint());
+    info!("Preparing request {} to {}", encoded_request, R::endpoint());
 
-    let mut req = Request::new(Body::from(body));
+    let mut req = Request::new(Body::from(encoded_request.to_string()));
 
     *req.method_mut() = Method::POST;
-    *req.uri_mut() = R::endpoint().parse().unwrap(); //endpoint!(endpoint);
+    *req.uri_mut() = R::endpoint().parse().unwrap();
     req.headers_mut()
         .insert("Content-Type", HeaderValue::from_str("application/x-www-form-urlencoded").unwrap());
     req.headers_mut()

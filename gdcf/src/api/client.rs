@@ -15,5 +15,5 @@ pub enum Response<T> {
 pub trait MakeRequest<R: Request>: ApiClient {
     type Future: Future<Item = Response<R::Result>, Error = Self::Err> + Send + 'static;
 
-    fn make(&self, request: R) -> Self::Future; //ApiFuture<R, Self::Err>;
+    fn make(&self, request: &R) -> Self::Future; //ApiFuture<R, Self::Err>;
 }

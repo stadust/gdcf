@@ -261,7 +261,7 @@ where
     {
         info!("Performing refresh on request {}", request);
 
-        RefreshCacheFuture::new(self.cache(), request.key(), self.client().make(request))
+        RefreshCacheFuture::new(self.cache(), request.key(), self.client().make(&request))
     }
 
     fn process<R>(&self, request: R) -> Result<ProcessRequestFuture<R, A, C>, C::Err>
