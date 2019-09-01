@@ -6,7 +6,12 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
-    future::{refresh::RefreshCacheFuture, GdcfFuture},
+    future::{
+        refresh::RefreshCacheFuture,
+        upgrade::{MultiUpgradeFuture, UpgradeFuture},
+        GdcfFuture,
+    },
+    upgrade::Upgrade,
     Gdcf,
 };
 use futures::{future::Either, task, Async, Future, Stream};
@@ -25,6 +30,38 @@ where
     Uncached(RefreshCacheFuture<Req, A, C>),
     Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
     UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
+}
+
+impl<Req, A, C> ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+{
+    pub fn upgrade<Into>(self) -> UpgradeFuture<Self, A, C, Into, Req::Result>
+    where
+        Req::Result: Upgrade<C, Into>,
+        A: MakeRequest<<Req::Result as Upgrade<C, Into>>::Request>,
+        C: CanCache<<Req::Result as Upgrade<C, Into>>::Request>,
+    {
+        unimplemented!()
+    }
+}
+
+impl<Req, A, C, T: Send + Sync + 'static> ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request<Result = Vec<T>>,
+{
+    pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, A, C, Into, T>
+    where
+        T: Upgrade<C, Into>,
+        A: MakeRequest<<T as Upgrade<C, Into>>::Request>,
+        C: CanCache<<T as Upgrade<C, Into>>::Request>,
+    {
+        unimplemented!()
+    }
 }
 
 impl<Req, A, C> Future for ProcessRequestFuture<Req, A, C>
