@@ -1,44 +1,45 @@
-/*
+use crate::{
+    api::{request::PaginatableRequest, ApiClient},
+    cache::Cache,
+    error::{ApiError, GdcfError},
+    future::GdcfFuture,
+    Gdcf,
+};
+use futures::{task, Async, Stream};
+use log::info;
+
 #[allow(missing_debug_implementations)]
-pub struct GdcfStream<A, C, R, T, M>
-where
-    R: PaginatableRequest,
-    M: ProcessRequestOld<A, C, R, T>,
-    A: ApiClient,
-    C: Cache,
-{
-    pub(crate) next_request: R,
-    pub(crate) current_request: GdcfFuture<T, A::Err, C>,
-    pub(crate) source: M,
+pub struct GdcfStream<A: ApiClient, C: Cache, Req: PaginatableRequest, F: GdcfFuture> {
+    gdcf: Gdcf<A, C>,
+    request: Req,
+    current_future: F,
 }
 
-impl<A, C, R, T, M> Stream for GdcfStream<A, C, R, T, M>
+impl<A, C, Req, F> Stream for GdcfStream<A, C, Req, F>
 where
-    R: PaginatableRequest,
-    M: ProcessRequestOld<A, C, R, T>,
     A: ApiClient,
     C: Cache,
+    Req: PaginatableRequest,
+    F: GdcfFuture<Error = GdcfError<A::Err, C::Err>, Cache = C, ApiClient = A, Request = Req>,
 {
-    type Error = GdcfError<A::Err, C::Err>;
-    type Item = CacheEntry<T, C::CacheEntryMeta>;
+    type Error = F::Error;
+    type Item = F::Item;
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
-        match self.current_request.poll() {
+        match self.current_future.poll() {
             Ok(Async::NotReady) => Ok(Async::NotReady),
 
-            Ok(Async::Ready(result)) => {
+            Ok(Async::Ready(page)) => {
                 task::current().notify();
 
-                let next = self.next_request.next();
-                let cur = mem::replace(&mut self.next_request, next);
+                self.request.next();
+                self.current_future = F::new(self.gdcf.clone(), &self.request);
 
-                self.current_request = self.source.process_request_old(cur).map_err(GdcfError::Cache)?;
-
-                Ok(Async::Ready(Some(result)))
+                Ok(Async::Ready(Some(page)))
             },
 
             Err(GdcfError::Api(ref err)) if err.is_no_result() => {
-                info!("Stream over request {} terminating due to exhaustion!", self.next_request);
+                info!("Stream over request {} terminating due to exhaustion!", self.request);
 
                 Ok(Async::Ready(None))
             },
@@ -47,4 +48,3 @@ where
         }
     }
 }
-*/

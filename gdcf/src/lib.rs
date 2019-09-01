@@ -170,15 +170,15 @@ impl std::fmt::Display for Secondary {
         }
     }
 }
-
+/*
 pub trait ProcessRequest<A: ApiClient, C: Cache, R: Request, T> {
-    type Future: GdcfFuture<Item = CacheEntry<T, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = T>;
+    type Future: GdcfFuture<Item = CacheEntry<T, C::CacheEntryMeta>, ToPeek = T>;
 
     fn process_request(&self, request: R) -> Result<Self::Future, C::Err>;
 
     // TODO: pagination
-}
-
+}*/
+/*
 impl<A, Req, C> ProcessRequest<A, C, Req, Req::Result> for Gdcf<A, C>
 where
     Req: Request + Send + Sync + 'static,
@@ -193,10 +193,10 @@ where
             EitherOrBoth::B(future) => Ok(ProcessRequestFuture::Uncached(future)),
             EitherOrBoth::Both(entry, future) => Ok(ProcessRequestFuture::Outdated(entry, future)),
         }*/
-        self.process(request)
+        self.process(&request)
     }
-}
-
+}*/
+/*
 impl<A, C> ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<NewgroundsSong>, u64>>> for Gdcf<A, C>
 where
     Gdcf<A, C>: ProcessRequest<A, C, LevelsRequest, Vec<PartialLevel<Option<u64>, u64>>>,
@@ -218,7 +218,7 @@ where
             self.process_request(request)?,
         ))
     }
-}
+}*/
 
 #[derive(Debug, Clone)]
 pub struct Gdcf<A, C>
@@ -253,7 +253,7 @@ where
     A: ApiClient,
     C: Cache + Store<Creator> + Store<NewgroundsSong>,
 {
-    fn refresh<R>(&self, request: R) -> RefreshCacheFuture<R, A, C>
+    fn refresh<R>(&self, request: &R) -> RefreshCacheFuture<R, A, C>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -264,7 +264,7 @@ where
         RefreshCacheFuture::new(self.cache(), request.key(), self.client().make(&request))
     }
 
-    fn process<R>(&self, request: R) -> Result<ProcessRequestFuture<R, A, C>, C::Err>
+    fn process<R>(&self, request: &R) -> Result<ProcessRequestFuture<R, A, C>, C::Err>
     //Result<EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, RefreshCacheFuture<R, A, C>>, C::Err>
     where
         R: Request,
@@ -463,7 +463,7 @@ where
         }
     }
 }*/
-
+/*
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
@@ -584,3 +584,4 @@ where
         self.paginate(request.into())
     }*/
 }
+*/

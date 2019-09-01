@@ -94,7 +94,7 @@ where
         //let request = if force_refresh { to_extend.extension_request().force_refresh()} else
         // {to_extend.extension_request()};
 
-        let mode = match gdcf.process(request).map_err(GdcfError::Cache)? {
+        let mode = match gdcf.process(&request).map_err(GdcfError::Cache)? {
             // impossible variants
             ProcessRequestFuture::Outdated(CacheEntry::Missing, _) | ProcessRequestFuture::UpToDate(CacheEntry::Missing) => unreachable!(),
 
@@ -107,7 +107,7 @@ where
                     None =>
                         match E::upgrade_request(to_upgrade.current()) {
                             None => Self::default_upgrade(to_upgrade)?,
-                            Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(request)),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(&request)),
                         },
                 },
 
@@ -128,7 +128,7 @@ where
                     None =>
                         match E::upgrade_request(to_upgrade.current()) {
                             None => UpgradeMode::default_upgrade(to_upgrade)?,
-                            Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(request)),
+                            Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(&request)),
                         },
                 },
 

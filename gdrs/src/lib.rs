@@ -118,8 +118,8 @@ impl<R: Handler> MakeRequest<R> for BoomlingsClient {
                 ExponentialBackoff::from_millis(10).take(5),
                 ApiRequestAction {
                     client: self.client.clone(),
-                    encoded_request:serde_urlencoded::to_string(request.to_req()).unwrap(),
-                    phantom: PhantomData
+                    encoded_request: serde_urlencoded::to_string(request.to_req()).unwrap(),
+                    phantom: PhantomData,
                 },
                 ApiRetryCondition,
             )
@@ -131,7 +131,7 @@ impl<R: Handler> MakeRequest<R> for BoomlingsClient {
 struct ApiRequestAction<R: Handler> {
     client: Client<HttpConnector>,
     encoded_request: String,
-    phantom: PhantomData<R>
+    phantom: PhantomData<R>,
 }
 
 struct ApiRetryCondition;

@@ -199,11 +199,7 @@ impl Request for UserSearchRequest {
 }
 
 impl PaginatableRequest for UserSearchRequest {
-    fn next(&self) -> Self {
-        UserSearchRequest {
-            page: self.page + 1,
-            search_string: self.search_string.clone(),
-            ..*self
-        }
+    fn next(&mut self) {
+        self.page = self.page + 1;
     }
 }

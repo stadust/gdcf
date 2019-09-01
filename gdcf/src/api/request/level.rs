@@ -575,8 +575,8 @@ impl Request for LevelsRequest {
 }
 
 impl PaginatableRequest for LevelsRequest {
-    fn next(&self) -> Self {
-        self.clone().page(self.page + 1)
+    fn next(&mut self) {
+        self.page = self.page + 1;
     }
 }
 

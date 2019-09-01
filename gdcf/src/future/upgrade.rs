@@ -3,7 +3,7 @@ use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
-    api::{client::MakeRequest, ApiClient},
+    api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
     future::GdcfFuture,
@@ -138,9 +138,12 @@ impl<From, A, C, Into, U> GdcfFuture for UpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U, Cache = C, ApiClient = A>,
     U: Upgrade<C, Into>,
 {
+    type ApiClient = A;
+    type Cache = C;
+    type Request = <From as GdcfFuture>::Request;
     type ToPeek = Into;
 
     fn has_result_cached(&self) -> bool {
@@ -190,6 +193,10 @@ where
                 },
             UpgradeFuture::Exhausted => unreachable!(),
         }
+    }
+
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Self {
+        Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request))
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
@@ -378,9 +385,18 @@ impl<From, A, C, Into, U> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = Vec<U>>,
+    From: GdcfFuture<
+        Item = CacheEntry<Vec<U>, C::CacheEntryMeta>,
+        Error = GdcfError<A::Err, C::Err>,
+        ToPeek = Vec<U>,
+        Cache = C,
+        ApiClient = A,
+    >,
     U: Upgrade<C, Into>,
 {
+    type ApiClient = A;
+    type Cache = C;
+    type Request = <From as GdcfFuture>::Request;
     type ToPeek = Vec<Into>;
 
     fn has_result_cached(&self) -> bool {
@@ -439,6 +455,10 @@ where
             },
             MultiUpgradeFuture::Exhausted => unreachable!(),
         }
+    }
+
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Self {
+        Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request))
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {

@@ -113,5 +113,5 @@ pub trait Request: Display + Hash + Clone + Send + Sync + 'static {
 }
 
 pub trait PaginatableRequest: Request {
-    fn next(&self) -> Self;
+    fn next(&mut self);
 }

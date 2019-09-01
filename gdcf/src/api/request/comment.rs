@@ -126,11 +126,8 @@ impl Request for LevelCommentsRequest {
 }
 
 impl PaginatableRequest for LevelCommentsRequest {
-    fn next(&self) -> Self {
-        LevelCommentsRequest {
-            page: self.page + 1,
-            ..*self
-        }
+    fn next(&mut self) {
+        self.page = self.page + 1;
     }
 }
 // FIXME: figure out these impls
@@ -241,10 +238,7 @@ impl Request for ProfileCommentsRequest {
 }
 
 impl PaginatableRequest for ProfileCommentsRequest {
-    fn next(&self) -> Self {
-        ProfileCommentsRequest {
-            page: self.page + 1,
-            ..*self
-        }
+    fn next(&mut self) {
+        self.page = self.page + 1;
     }
 }

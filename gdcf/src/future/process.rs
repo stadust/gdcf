@@ -7,6 +7,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
     future::{refresh::RefreshCacheFuture, GdcfFuture},
+    Gdcf,
 };
 use futures::{future::Either, task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
@@ -55,6 +56,9 @@ where
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
+    type ApiClient = A;
+    type Cache = C;
+    type Request = Req;
     type ToPeek = Req::Result;
 
     fn has_result_cached(&self) -> bool {
@@ -72,6 +76,10 @@ where
             ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => Ok(Err(self)),
             ProcessRequestFuture::Outdated(cache_entry, _) | ProcessRequestFuture::UpToDate(cache_entry) => Ok(Ok(cache_entry)),
         }
+    }
+
+    fn new(gdcf: Gdcf<A, C>, request: &Self::Request) -> Self {
+        gdcf.process(request).unwrap() // FIXME: error handling
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {

@@ -1,3 +1,9 @@
+use crate::{
+    api::{request::Request, ApiClient},
+    cache::Cache,
+    error::GdcfError,
+    Gdcf,
+};
 use futures::Future;
 
 pub mod process;
@@ -15,6 +21,10 @@ pub trait GdcfFuture: Future {
     #[doc(hidden)]
     type ToPeek;
 
+    type Request: Request;
+    type Cache: Cache;
+    type ApiClient: ApiClient;
+
     /// Returns whether the result of this future can be satisfied from cache
     fn has_result_cached(&self) -> bool;
 
@@ -23,6 +33,8 @@ pub trait GdcfFuture: Future {
     fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
     where
         Self: Sized;
+
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Self;
 
     #[doc(hidden)]
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self;
