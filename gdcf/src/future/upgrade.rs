@@ -374,7 +374,6 @@ where
     }
 }
 
-// TODO: this impl is tricky
 impl<From, A, C, Into, U> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
@@ -407,7 +406,7 @@ where
         }
 
         match self {
-            MultiUpgradeFuture::WaitingOnInner { gdcf, inner_future,.. } => {
+            MultiUpgradeFuture::WaitingOnInner { gdcf, inner_future, .. } => {
                 let base = match inner_future.into_cached()? {
                     Ok(base) => base,
                     _ => unreachable!(),
@@ -432,7 +431,7 @@ where
                     match upgrade_mode {
                         UpgradeMode::UpgradeCached(cached) => result.push(cached),
                         UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => result.push(to_upgrade.upgrade(upgrade).0),
-                        UpgradeMode::UpgradeMissing(_, _) => unreachable!(),
+                        UpgradeMode::UpgradeMissing(..) => unreachable!(),
                     }
                 }
 

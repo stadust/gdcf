@@ -74,13 +74,6 @@ where
         }
     }
 
-    /*fn into_cached(self) -> Option<Self::Item> {
-        match self {
-            ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => None,
-            ProcessRequestFuture::Outdated(cached, _) | ProcessRequestFuture::UpToDate(cached) => Some(cached),
-        }
-    }*/
-
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
         match self {
             ProcessRequestFuture::Outdated(CacheEntry::Cached(object, meta), future) =>

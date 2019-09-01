@@ -2,8 +2,8 @@ use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
-    future::refresh::RefreshCacheFuture,
-    EitherOrBoth, Gdcf,
+    future::{process::ProcessRequestFuture, refresh::RefreshCacheFuture},
+    Gdcf,
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
@@ -95,12 +95,12 @@ where
         // {to_extend.extension_request()};
 
         let mode = match gdcf.process(request).map_err(GdcfError::Cache)? {
-            // Not possible, we'd have gotten EitherOrBoth::B because of how `process` works
-            EitherOrBoth::Both(CacheEntry::Missing, _) | EitherOrBoth::A(CacheEntry::Missing) => unreachable!(),
+            // impossible variants
+            ProcessRequestFuture::Outdated(CacheEntry::Missing, _) | ProcessRequestFuture::UpToDate(CacheEntry::Missing) => unreachable!(),
 
             // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
             // This violates snapshot consistency! TODO: document
-            EitherOrBoth::A(CacheEntry::DeducedAbsent) | EitherOrBoth::A(CacheEntry::MarkedAbsent(_)) =>
+            ProcessRequestFuture::UpToDate(CacheEntry::DeducedAbsent) | ProcessRequestFuture::UpToDate(CacheEntry::MarkedAbsent(_)) =>
             // TODO: investigate what the fuck I have done here
                 match E::default_upgrade() {
                     Some(default_upgrade) => Self::cached(to_upgrade, default_upgrade),
@@ -111,18 +111,18 @@ where
                         },
                 },
 
-            // Up-to-date extension request result
-            EitherOrBoth::A(CacheEntry::Cached(request_result, _)) => {
+            ProcessRequestFuture::UpToDate(CacheEntry::Cached(request_result, _)) => {
+                // Up-to-date extension request result
                 let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
                 UpgradeMode::cached(to_upgrade, upgrade)
             },
 
             // Missing extension request result cache entry
-            EitherOrBoth::B(refresh_future) => UpgradeMode::UpgradeMissing(to_upgrade, refresh_future),
+            ProcessRequestFuture::Uncached(refresh_future) => UpgradeMode::UpgradeMissing(to_upgrade, refresh_future),
 
             // Outdated absent marker
-            EitherOrBoth::Both(CacheEntry::MarkedAbsent(_), refresh_future)
-            | EitherOrBoth::Both(CacheEntry::DeducedAbsent, refresh_future) =>
+            ProcessRequestFuture::Outdated(CacheEntry::MarkedAbsent(_), refresh_future)
+            | ProcessRequestFuture::Outdated(CacheEntry::DeducedAbsent, refresh_future) =>
                 match E::default_upgrade() {
                     Some(default_extension) => UpgradeMode::UpgradeOutdated(to_upgrade, default_extension, refresh_future),
                     None =>
@@ -133,7 +133,7 @@ where
                 },
 
             // Outdated entry
-            EitherOrBoth::Both(CacheEntry::Cached(request_result, _), refresh_future) => {
+            ProcessRequestFuture::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
                 let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
 
                 UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, refresh_future)

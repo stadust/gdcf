@@ -126,6 +126,7 @@ use crate::{
     api::request::{comment::ProfileCommentsRequest, user::UserSearchRequest},
     cache::CacheUserExt,
     future::{process::ProcessRequestFuture, refresh::RefreshCacheFuture, upgrade::MultiUpgradeFuture, GdcfFuture},
+    upgrade::Upgrade,
 };
 use gdcf_model::{comment::ProfileComment, user::SearchedUser};
 
@@ -187,11 +188,12 @@ where
     type Future = ProcessRequestFuture<Req, A, C>;
 
     fn process_request(&self, request: Req) -> Result<ProcessRequestFuture<Req, A, C>, C::Err> {
-        match self.process(request)? {
+        /*match self.process(request)? {
             EitherOrBoth::A(entry) => Ok(ProcessRequestFuture::UpToDate(entry)),
             EitherOrBoth::B(future) => Ok(ProcessRequestFuture::Uncached(future)),
             EitherOrBoth::Both(entry, future) => Ok(ProcessRequestFuture::Outdated(entry, future)),
-        }
+        }*/
+        self.process(request)
     }
 }
 
@@ -246,13 +248,6 @@ where
     }
 }
 
-// TODO: eliminate this
-enum EitherOrBoth<A, B> {
-    A(A),
-    B(B),
-    Both(A, B),
-}
-
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
@@ -269,7 +264,8 @@ where
         RefreshCacheFuture::new(self.cache(), request.key(), self.client().make(request))
     }
 
-    fn process<R>(&self, request: R) -> Result<EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, RefreshCacheFuture<R, A, C>>, C::Err>
+    fn process<R>(&self, request: R) -> Result<ProcessRequestFuture<R, A, C>, C::Err>
+    //Result<EitherOrBoth<CacheEntry<R::Result, C::CacheEntryMeta>, RefreshCacheFuture<R, A, C>>, C::Err>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -295,15 +291,15 @@ where
                 } else {
                     info!("Cached entry for request {} is up-to-date!", request);
 
-                    return Ok(EitherOrBoth::A(entry))
+                    return Ok(ProcessRequestFuture::UpToDate(entry)) //Ok(EitherOrBoth::A(entry))
                 },
         };
 
         let future = self.refresh(request);
 
         Ok(match cached {
-            Some(value) => EitherOrBoth::Both(value, future),
-            None => EitherOrBoth::B(future),
+            Some(value) => ProcessRequestFuture::Outdated(value, future), //EitherOrBoth::Both(value, future),
+            None => ProcessRequestFuture::Uncached(future),               //EitherOrBoth::B(future),
         })
     }
 }
