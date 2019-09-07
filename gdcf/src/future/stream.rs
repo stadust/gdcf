@@ -1,11 +1,12 @@
 use crate::{
-    api::{request::PaginatableRequest, ApiClient},
-    cache::Cache,
+    api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
+    cache::{Cache, CanCache, Store},
     error::{ApiError, GdcfError},
-    future::GdcfFuture,
+    future::{process::ProcessRequestFuture, GdcfFuture},
     Gdcf,
 };
 use futures::{task, Async, Stream};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 
 #[allow(missing_debug_implementations)]
@@ -13,6 +14,22 @@ pub struct GdcfStream<A: ApiClient, C: Cache, Req: PaginatableRequest, F: GdcfFu
     gdcf: Gdcf<A, C>,
     request: Req,
     current_future: F,
+}
+
+impl<A, C, Req> GdcfStream<A, C, Req, ProcessRequestFuture<Req, A, C>>
+where
+    C: Store<NewgroundsSong> + Store<Creator>,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + CanCache<Req>,
+    Req: PaginatableRequest,
+{
+    pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
+        Ok(GdcfStream {
+            current_future: gdcf.process(&request)?,
+            request,
+            gdcf,
+        })
+    }
 }
 
 impl<A, C, Req, F> Stream for GdcfStream<A, C, Req, F>
