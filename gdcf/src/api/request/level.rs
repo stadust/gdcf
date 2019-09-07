@@ -564,6 +564,10 @@ impl Request for LevelRequest {
     fn forces_refresh(&self) -> bool {
         self.force_refresh
     }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
+    }
 }
 
 impl Request for LevelsRequest {
@@ -571,6 +575,10 @@ impl Request for LevelsRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
+    }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
     }
 }
 

@@ -84,6 +84,10 @@ impl Request for UserRequest {
     fn forces_refresh(&self) -> bool {
         self.force_refresh
     }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -195,6 +199,10 @@ impl Request for UserSearchRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
+    }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
     }
 }
 

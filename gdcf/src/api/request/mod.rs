@@ -110,6 +110,7 @@ pub trait Request: Display + Hash + Clone + Send + Sync + 'static {
     }
 
     fn forces_refresh(&self) -> bool;
+    fn set_force_refresh(&mut self, force_refresh: bool);
 }
 
 pub trait PaginatableRequest: Request {

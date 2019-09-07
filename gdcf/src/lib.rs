@@ -253,7 +253,6 @@ where
     }
 }
 
-
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,

@@ -123,6 +123,10 @@ impl Request for LevelCommentsRequest {
     fn forces_refresh(&self) -> bool {
         self.force_refresh
     }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
+    }
 }
 
 impl PaginatableRequest for LevelCommentsRequest {
@@ -234,6 +238,10 @@ impl Request for ProfileCommentsRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
+    }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        self.force_refresh = force_refresh
     }
 }
 

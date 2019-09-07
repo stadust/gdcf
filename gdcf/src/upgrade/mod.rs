@@ -85,14 +85,14 @@ where
     pub(crate) fn new(to_upgrade: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
         let cache = gdcf.cache();
 
-        let request = match E::upgrade_request(to_upgrade.current()) {
+        let mut request = match E::upgrade_request(to_upgrade.current()) {
             Some(request) => request,
             None => return Self::default_upgrade(to_upgrade),
         };
 
-        // FIXME: add set_force_refresh(bool) to Request trait
-        //let request = if force_refresh { to_extend.extension_request().force_refresh()} else
-        // {to_extend.extension_request()};
+        if force_refresh {
+            request.set_force_refresh(true);
+        }
 
         let mode = match gdcf.process(&request).map_err(GdcfError::Cache)? {
             // impossible variants

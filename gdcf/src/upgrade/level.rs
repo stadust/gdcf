@@ -9,7 +9,6 @@ use gdcf_model::{
     user::{Creator, SearchedUser, User},
 };
 
-// FIXME: this impl isn't usable from Gdcf yet yet
 impl<C: Cache> Upgrade<C, Level<Option<u64>, u64>> for PartialLevel<Option<u64>, u64> {
     type From = Self;
     type Request = LevelRequest;
