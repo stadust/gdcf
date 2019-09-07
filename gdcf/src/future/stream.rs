@@ -50,7 +50,7 @@ where
                 task::current().notify();
 
                 self.request.next();
-                self.current_future = F::new(self.gdcf.clone(), &self.request);
+                self.current_future = F::new(self.gdcf.clone(), &self.request).map_err(GdcfError::Cache)?;
 
                 Ok(Async::Ready(Some(page)))
             },

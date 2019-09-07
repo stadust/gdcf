@@ -115,8 +115,8 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<A, C>, request: &Self::Request) -> Self {
-        gdcf.process(request).unwrap() // FIXME: error handling
+    fn new(gdcf: Gdcf<A, C>, request: &Self::Request) -> Result<Self, C::Err> {
+        gdcf.process(request) // FIXME: error handling
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {

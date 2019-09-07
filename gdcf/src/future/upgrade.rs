@@ -195,8 +195,8 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Self {
-        Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request))
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
+        Ok(Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request)?))
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
@@ -457,8 +457,8 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Self {
-        Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request))
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
+        Ok(Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request)?))
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
