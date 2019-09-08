@@ -44,23 +44,23 @@ lookup_simply!(PartialLevel<Option<u64>, u64>, partial_level, partial_level_meta
 // Metadata table associating the hashes of cached requests with the level ids the requested
 // returned
 table! {
-    request_results (level_id, request_hash) {
+    level_request_results (level_id, request_hash) {
         level_id -> Int8,
         request_hash -> Int8,
     }
 }
 
 // # WTF
-impl Insertable<request_results::table> for (u64, u64) {
+impl Insertable<level_request_results::table> for (u64, u64) {
     type Values = <(
-        diesel::dsl::Eq<request_results::level_id, i64>,
-        diesel::dsl::Eq<request_results::request_hash, i64>,
-    ) as Insertable<request_results::table>>::Values;
+        diesel::dsl::Eq<level_request_results::level_id, i64>,
+        diesel::dsl::Eq<level_request_results::request_hash, i64>,
+    ) as Insertable<level_request_results::table>>::Values;
 
     fn values(self) -> Self::Values {
         (
-            request_results::level_id.eq(self.0 as i64),
-            request_results::request_hash.eq(self.1 as i64),
+            level_request_results::level_id.eq(self.0 as i64),
+            level_request_results::request_hash.eq(self.1 as i64),
         )
             .values()
     }
@@ -69,6 +69,6 @@ impl Insertable<request_results::table> for (u64, u64) {
 // Metadata table storing information about when a whole request result set was cached
 meta_table!(level_list_meta, request_hash);
 
-allow_tables_to_appear_in_same_query!(request_results, partial_level);
+allow_tables_to_appear_in_same_query!(level_request_results, partial_level);
 
-joinable!(request_results -> partial_level(level_id));
+joinable!(level_request_results -> partial_level(level_id));

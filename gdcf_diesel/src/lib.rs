@@ -177,8 +177,8 @@ impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
         }
 
         let levels = handle_missing!(partial_level::table
-            .inner_join(request_results::table.on(partial_level::level_id.eq(request_results::level_id)))
-            .filter(request_results::request_hash.eq(key as i64))
+            .inner_join(level_request_results::table.on(partial_level::level_id.eq(level_request_results::level_id)))
+            .filter(level_request_results::request_hash.eq(key as i64))
             .select(partial_level::all_columns)
             .load(&connection))
         .into_iter()
@@ -209,14 +209,14 @@ impl Store<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
 
         let conn = self.pool.get()?;
 
-        diesel::delete(request_results::table)
-            .filter(request_results::request_hash.eq(key as i64))
+        diesel::delete(level_request_results::table)
+            .filter(level_request_results::request_hash.eq(key as i64))
             .execute(&conn)?;
 
         for level in partial_levels {
             self.store(level, level.level_id)?;
 
-            diesel::insert_into(request_results::table)
+            diesel::insert_into(level_request_results::table)
                 .values((level.level_id, key))
                 .execute(&conn)?;
         }
