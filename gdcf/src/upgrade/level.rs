@@ -6,7 +6,7 @@ use crate::{
 use gdcf_model::{
     level::{Level, PartialLevel},
     song::NewgroundsSong,
-    user::{Creator, SearchedUser, User},
+    user::{Creator, User},
 };
 
 impl<C: Cache> Upgrade<C, Level<Option<u64>, u64>> for PartialLevel<Option<u64>, u64> {

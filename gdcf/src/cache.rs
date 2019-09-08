@@ -1,8 +1,4 @@
-use crate::{
-    api::request::Request,
-    error::{ApiError, CacheError, GdcfError},
-};
-use futures::Future;
+use crate::{api::request::Request, error::CacheError};
 use std::fmt::{Display, Formatter};
 
 pub trait Cache: Clone + Send + Sync + 'static {

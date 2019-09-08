@@ -1,11 +1,7 @@
 use crate::{
-    api::{
-        client::MakeRequest,
-        request::{PaginatableRequest, Request},
-        ApiClient,
-    },
+    api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
-    error::{ApiError, GdcfError},
+    error::GdcfError,
     future::{
         refresh::RefreshCacheFuture,
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
@@ -14,10 +10,8 @@ use crate::{
     upgrade::Upgrade,
     Gdcf,
 };
-use futures::{future::Either, task, Async, Future, Stream};
+use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use log::info;
-use std::mem;
 
 pub struct ProcessRequestFuture<Req, A, C>
 where

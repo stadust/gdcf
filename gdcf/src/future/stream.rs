@@ -3,14 +3,14 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
     future::{
-        process::{ProcessRequestFuture, ProcessRequestFutureState},
+        process::ProcessRequestFuture,
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
         GdcfFuture,
     },
     upgrade::Upgrade,
     Gdcf,
 };
-use futures::{task, Async, Future, Stream};
+use futures::{task, Async, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::{debug, info, trace};
 

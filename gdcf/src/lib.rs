@@ -1,13 +1,13 @@
 #![deny(
-bare_trait_objects,
-missing_debug_implementations,
-unused_extern_crates,
-patterns_in_fns_without_body,
-stable_features,
-unknown_lints,
-unused_features,
-//unused_imports,
-unused_parens
+    bare_trait_objects,
+    missing_debug_implementations,
+    unused_extern_crates,
+    patterns_in_fns_without_body,
+    stable_features,
+    unknown_lints,
+    unused_features,
+    unused_imports,
+    unused_parens
 )]
 
 //! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
@@ -105,33 +105,23 @@ unused_parens
 //! tokio::run(future);
 //! ```
 
-use futures::{future::ok, Future};
-use log::{error, info};
+use log::info;
 
-use gdcf_model::{
-    comment::ProfileComment,
-    level::{Level, PartialLevel},
-    song::NewgroundsSong,
-    user::{Creator, SearchedUser, User},
-};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
     api::{
         client::MakeRequest,
-        request::{
-            comment::ProfileCommentsRequest, user::UserSearchRequest, LevelRequest, LevelsRequest, PaginatableRequest, Request, UserRequest,
-        },
+        request::{comment::ProfileCommentsRequest, user::UserSearchRequest, LevelRequest, LevelsRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache, CacheEntry, CacheUserExt, CanCache, Lookup, Store},
-    error::{ApiError, GdcfError},
+    cache::{Cache, CacheEntry, CanCache, Store},
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
         stream::GdcfStream,
         GdcfFuture,
     },
-    upgrade::Upgrade,
 };
 
 #[macro_use]

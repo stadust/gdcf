@@ -1,10 +1,8 @@
 use futures::{Async, Future};
 
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache},
     error::GdcfError,
     future::GdcfFuture,
     upgrade::{Upgrade, UpgradeMode},

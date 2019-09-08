@@ -4,7 +4,7 @@ use crate::{
     error::GdcfError,
     Gdcf,
 };
-use futures::{Async, Future};
+use futures::Async;
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 pub mod process;
