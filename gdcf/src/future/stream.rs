@@ -2,7 +2,10 @@ use crate::{
     api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
     cache::{Cache, CanCache, Store},
     error::{ApiError, GdcfError},
-    future::{process::ProcessRequestFuture, GdcfFuture},
+    future::{
+        process::{ProcessRequestFuture, ProcessRequestFutureState},
+        GdcfFuture,
+    },
     Gdcf,
 };
 use futures::{task, Async, Stream};
@@ -25,9 +28,9 @@ where
 {
     pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
         Ok(GdcfStream {
-            current_future: gdcf.process(&request)?,
+            current_future: ProcessRequestFuture::new(gdcf.clone(), &request)?,
             request,
-            gdcf,
+            gdcf, // TODO: give GdcfFuture a .gdcf() method
         })
     }
 }

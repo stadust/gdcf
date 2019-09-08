@@ -125,7 +125,13 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CacheUserExt, CanCache, Lookup, Store},
     error::{ApiError, GdcfError},
-    future::{process::ProcessRequestFuture, refresh::RefreshCacheFuture, stream::GdcfStream, upgrade::MultiUpgradeFuture, GdcfFuture},
+    future::{
+        process::{ProcessRequestFuture, ProcessRequestFutureState},
+        refresh::RefreshCacheFuture,
+        stream::GdcfStream,
+        upgrade::MultiUpgradeFuture,
+        GdcfFuture,
+    },
     upgrade::Upgrade,
 };
 
@@ -214,7 +220,7 @@ where
         RefreshCacheFuture::new(self.clone(), request.key(), self.client().make(&request))
     }
 
-    fn process<R>(&self, request: &R) -> Result<ProcessRequestFuture<R, A, C>, C::Err>
+    fn process<R>(&self, request: &R) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -240,15 +246,15 @@ where
                 } else {
                     info!("Cached entry for request {} is up-to-date!", request);
 
-                    return Ok(ProcessRequestFuture::UpToDate(entry))
+                    return Ok(ProcessRequestFutureState::UpToDate(entry))
                 },
         };
 
         let future = self.refresh(request);
 
         Ok(match cached {
-            Some(value) => ProcessRequestFuture::Outdated(value, future),
-            None => ProcessRequestFuture::Uncached(future),
+            Some(value) => ProcessRequestFutureState::Outdated(value, future),
+            None => ProcessRequestFutureState::Uncached(future),
         })
     }
 }
@@ -286,7 +292,7 @@ where
         A: MakeRequest<LevelRequest>,
         C: CanCache<LevelRequest>,
     {
-        self.process(&request.into())
+        ProcessRequestFuture::new(self.clone(), &request.into())
     }
 
     /// Processes the given [`LevelsRequest`]
@@ -309,7 +315,7 @@ where
         A: MakeRequest<LevelsRequest>,
         C: CanCache<LevelsRequest>,
     {
-        self.process(&request.into())
+        ProcessRequestFuture::new(self.clone(), &request.into())
     }
 
     /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
@@ -331,7 +337,7 @@ where
         A: MakeRequest<UserRequest>,
         C: CanCache<UserRequest>,
     {
-        self.process(&request.into())
+        ProcessRequestFuture::new(self.clone(), &request.into())
     }
 
     pub fn search_user(&self, request: impl Into<UserSearchRequest>) -> Result<ProcessRequestFuture<UserSearchRequest, A, C>, C::Err>
@@ -339,7 +345,7 @@ where
         A: MakeRequest<UserSearchRequest>,
         C: CanCache<UserSearchRequest>,
     {
-        self.process(&request.into())
+        ProcessRequestFuture::new(self.clone(), &request.into())
     }
 
     pub fn profile_comments(
@@ -350,7 +356,7 @@ where
         A: MakeRequest<ProfileCommentsRequest>,
         C: CanCache<ProfileCommentsRequest>,
     {
-        self.process(&request.into())
+        ProcessRequestFuture::new(self.clone(), &request.into())
     }
 
     pub fn paginate_profile_comments(

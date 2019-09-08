@@ -34,7 +34,9 @@ pub trait GdcfFuture: Future {
     where
         Self: Sized;
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, <Self::Cache as Cache>::Err> where Self:Sized;
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, <Self::Cache as Cache>::Err>
+    where
+        Self: Sized;
 
     #[doc(hidden)]
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self;

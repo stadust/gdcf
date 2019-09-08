@@ -20,7 +20,19 @@ use log::info;
 use std::mem;
 
 #[allow(missing_debug_implementations)]
-pub enum ProcessRequestFuture<Req, A, C>
+pub struct ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+{
+    gdcf: Gdcf<A, C>,
+    forces_refresh: bool,
+    state: ProcessRequestFutureState<Req, A, C>,
+}
+
+#[allow(missing_debug_implementations)]
+pub(crate) enum ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
@@ -74,13 +86,13 @@ where
     type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        match self {
-            ProcessRequestFuture::Empty => panic!("Future already polled to completion"),
-            ProcessRequestFuture::Uncached(future) => future.poll(),
-            ProcessRequestFuture::Outdated(_, future) => future.poll(),
+        match &mut self.state {
+            ProcessRequestFutureState::Empty => panic!("Future already polled to completion"),
+            ProcessRequestFutureState::Uncached(future) => future.poll(),
+            ProcessRequestFutureState::Outdated(_, future) => future.poll(),
             fut =>
-                match std::mem::replace(fut, ProcessRequestFuture::Empty) {
-                    ProcessRequestFuture::UpToDate(inner) => Ok(Async::Ready(inner)),
+                match std::mem::replace(fut, ProcessRequestFutureState::Empty) {
+                    ProcessRequestFutureState::UpToDate(inner) => Ok(Async::Ready(inner)),
                     _ => unreachable!(),
                 },
         }
@@ -99,8 +111,8 @@ where
     type ToPeek = Req::Result;
 
     fn has_result_cached(&self) -> bool {
-        match self {
-            ProcessRequestFuture::Outdated(..) | ProcessRequestFuture::UpToDate(..) => true,
+        match self.state {
+            ProcessRequestFutureState::Outdated(..) | ProcessRequestFutureState::UpToDate(..) => true,
             _ => false,
         }
     }
@@ -109,23 +121,39 @@ where
     where
         Self: Sized,
     {
-        match self {
-            ProcessRequestFuture::Empty | ProcessRequestFuture::Uncached(_) => Ok(Err(self)),
-            ProcessRequestFuture::Outdated(cache_entry, _) | ProcessRequestFuture::UpToDate(cache_entry) => Ok(Ok(cache_entry)),
+        match self.state {
+            ProcessRequestFutureState::Empty | ProcessRequestFutureState::Uncached(_) => Ok(Err(self)),
+            ProcessRequestFutureState::Outdated(cache_entry, _) | ProcessRequestFutureState::UpToDate(cache_entry) => Ok(Ok(cache_entry)),
         }
     }
 
     fn new(gdcf: Gdcf<A, C>, request: &Self::Request) -> Result<Self, C::Err> {
-        gdcf.process(request) // FIXME: error handling
+        Ok(ProcessRequestFuture {
+            forces_refresh: request.forces_refresh(),
+            state: gdcf.process(request)?,
+            gdcf,
+        })
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
-        match self {
-            ProcessRequestFuture::Outdated(CacheEntry::Cached(object, meta), future) =>
-                ProcessRequestFuture::Outdated(CacheEntry::Cached(f(object), meta), future),
-            ProcessRequestFuture::UpToDate(CacheEntry::Cached(object, meta)) =>
-                ProcessRequestFuture::UpToDate(CacheEntry::Cached(f(object), meta)),
-            _ => self,
+        let ProcessRequestFuture {
+            gdcf,
+            forces_refresh,
+            state,
+        } = self;
+
+        let state = match state {
+            ProcessRequestFutureState::Outdated(CacheEntry::Cached(object, meta), future) =>
+                ProcessRequestFutureState::Outdated(CacheEntry::Cached(f(object), meta), future),
+            ProcessRequestFutureState::UpToDate(CacheEntry::Cached(object, meta)) =>
+                ProcessRequestFutureState::UpToDate(CacheEntry::Cached(f(object), meta)),
+            _ => state,
+        };
+
+        ProcessRequestFuture {
+            state,
+            gdcf,
+            forces_refresh,
         }
     }
 }

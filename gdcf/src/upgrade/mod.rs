@@ -2,7 +2,7 @@ use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
     error::GdcfError,
-    future::{process::ProcessRequestFuture, refresh::RefreshCacheFuture},
+    future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
     Gdcf,
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
@@ -96,11 +96,12 @@ where
 
         let mode = match gdcf.process(&request).map_err(GdcfError::Cache)? {
             // impossible variants
-            ProcessRequestFuture::Outdated(CacheEntry::Missing, _) | ProcessRequestFuture::UpToDate(CacheEntry::Missing) => unreachable!(),
+            ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) => unreachable!(),
 
             // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
             // This violates snapshot consistency! TODO: document
-            ProcessRequestFuture::UpToDate(CacheEntry::DeducedAbsent) | ProcessRequestFuture::UpToDate(CacheEntry::MarkedAbsent(_)) =>
+            ProcessRequestFutureState::UpToDate(CacheEntry::DeducedAbsent)
+            | ProcessRequestFutureState::UpToDate(CacheEntry::MarkedAbsent(_)) =>
             // TODO: investigate what the fuck I have done here
                 match E::default_upgrade() {
                     Some(default_upgrade) => Self::cached(to_upgrade, default_upgrade),
@@ -111,18 +112,18 @@ where
                         },
                 },
 
-            ProcessRequestFuture::UpToDate(CacheEntry::Cached(request_result, _)) => {
+            ProcessRequestFutureState::UpToDate(CacheEntry::Cached(request_result, _)) => {
                 // Up-to-date extension request result
                 let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
                 UpgradeMode::cached(to_upgrade, upgrade)
             },
 
             // Missing extension request result cache entry
-            ProcessRequestFuture::Uncached(refresh_future) => UpgradeMode::UpgradeMissing(to_upgrade, refresh_future),
+            ProcessRequestFutureState::Uncached(refresh_future) => UpgradeMode::UpgradeMissing(to_upgrade, refresh_future),
 
             // Outdated absent marker
-            ProcessRequestFuture::Outdated(CacheEntry::MarkedAbsent(_), refresh_future)
-            | ProcessRequestFuture::Outdated(CacheEntry::DeducedAbsent, refresh_future) =>
+            ProcessRequestFutureState::Outdated(CacheEntry::MarkedAbsent(_), refresh_future)
+            | ProcessRequestFutureState::Outdated(CacheEntry::DeducedAbsent, refresh_future) =>
                 match E::default_upgrade() {
                     Some(default_extension) => UpgradeMode::UpgradeOutdated(to_upgrade, default_extension, refresh_future),
                     None =>
@@ -133,7 +134,7 @@ where
                 },
 
             // Outdated entry
-            ProcessRequestFuture::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
+            ProcessRequestFutureState::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
                 let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
 
                 UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, refresh_future)
