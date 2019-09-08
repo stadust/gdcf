@@ -47,9 +47,6 @@ pub struct Stats {
 }
 
 impl<S, U> Level<S, U>
-where
-    U: PartialEq,
-    S: PartialEq,
 {
     pub fn decompress_data(&self) -> std::io::Result<String> {
         let mut s = String::new();

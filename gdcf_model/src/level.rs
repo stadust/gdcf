@@ -234,9 +234,6 @@ pub enum Password {
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PartialLevel<Song, User>
-where
-    Song: PartialEq,
-    User: PartialEq,
 {
     /// The [`Level`]'s unique level id
     ///
@@ -414,7 +411,7 @@ where
     pub index_47: Option<String>,
 }
 
-impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
+impl<Song, User> PartialLevel<Song, User> {
     pub fn is_auto(&self) -> bool {
         self.difficulty == LevelRating::Auto
     }
@@ -446,9 +443,6 @@ impl<Song: PartialEq, User: PartialEq> PartialLevel<Song, User> {
 #[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "serde_support", derive(Serialize))]
 pub struct Level<Song, User>
-where
-    Song: PartialEq,
-    User: PartialEq,
 {
     /// The [`PartialLevel`] this [`Level`] instance supplements
     pub base: PartialLevel<Song, User>,
@@ -494,9 +488,6 @@ where
 }
 
 impl<Song, User> Display for PartialLevel<Song, User>
-where
-    Song: PartialEq,
-    User: PartialEq,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "PartialLevel({}, {})", self.level_id, self.name)
@@ -504,9 +495,6 @@ where
 }
 
 impl<Song, User> Display for Level<Song, User>
-where
-    Song: PartialEq,
-    User: PartialEq,
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)

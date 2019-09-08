@@ -142,7 +142,6 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
 impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64>
 where
     C: Cache + Lookup<Creator>,
-    Song: PartialEq,
 {
     type From = u64;
     type Request = LevelsRequest;
@@ -184,7 +183,6 @@ where
 impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
 where
     C: Cache + Lookup<Creator>,
-    Song: PartialEq,
 {
     type From = u64;
     type Request = LevelsRequest;
@@ -223,7 +221,7 @@ where
     }
 }
 
-impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
+impl<C: Cache, Song> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
@@ -259,7 +257,7 @@ impl<C: Cache, Song: PartialEq> Upgrade<C, PartialLevel<Song, Option<User>>> for
         change_partial_level_user(upgraded, downgrade)
     }
 }
-impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
+impl<C: Cache, Song> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
@@ -296,7 +294,7 @@ impl<C: Cache, Song: PartialEq> Upgrade<C, Level<Song, Option<User>>> for Level<
     }
 }
 
-fn change_partial_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
+fn change_partial_level_song<OldSong, NewSong, User>(
     partial_level: PartialLevel<OldSong, User>,
     new_song: NewSong,
 ) -> (PartialLevel<NewSong, User>, OldSong) {
@@ -361,7 +359,7 @@ fn change_partial_level_song<OldSong: PartialEq, NewSong: PartialEq, User: Parti
     )
 }
 
-fn change_partial_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
+fn change_partial_level_user<OldUser, NewUser, Song>(
     partial_level: PartialLevel<Song, OldUser>,
     new_user: NewUser,
 ) -> (PartialLevel<Song, NewUser>, OldUser) {
@@ -426,7 +424,7 @@ fn change_partial_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: Parti
     )
 }
 
-fn change_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
+fn change_level_user<OldUser, NewUser, Song>(
     level: Level<Song, OldUser>,
     new_user: NewUser,
 ) -> (Level<Song, NewUser>, OldUser) {
@@ -454,7 +452,7 @@ fn change_level_user<OldUser: PartialEq, NewUser: PartialEq, Song: PartialEq>(
     )
 }
 
-fn change_level_song<OldSong: PartialEq, NewSong: PartialEq, User: PartialEq>(
+fn change_level_song<OldSong, NewSong, User>(
     level: Level<OldSong, User>,
     new_song: NewSong,
 ) -> (Level<NewSong, User>, OldSong) {
