@@ -322,7 +322,7 @@ where
     pub fn paginate_levels(
         &self,
         request: impl Into<LevelsRequest>,
-    ) -> Result<GdcfStream<A, C, LevelsRequest, ProcessRequestFuture<LevelsRequest, A, C>>, C::Err>
+    ) -> Result<GdcfStream<LevelsRequest, ProcessRequestFuture<LevelsRequest, A, C>>, C::Err>
     where
         A: MakeRequest<LevelsRequest>,
         C: CanCache<LevelsRequest>,
@@ -361,7 +361,7 @@ where
     pub fn paginate_profile_comments(
         &self,
         request: impl Into<ProfileCommentsRequest>,
-    ) -> Result<GdcfStream<A, C, ProfileCommentsRequest, ProcessRequestFuture<ProfileCommentsRequest, A, C>>, C::Err>
+    ) -> Result<GdcfStream<ProfileCommentsRequest, ProcessRequestFuture<ProfileCommentsRequest, A, C>>, C::Err>
     where
         A: MakeRequest<ProfileCommentsRequest>,
         C: CanCache<ProfileCommentsRequest>,

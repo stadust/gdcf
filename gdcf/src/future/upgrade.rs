@@ -246,6 +246,14 @@ where
             forced_refresh,
         }
     }
+
+    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
+        self.gdcf.clone()
+    }
+
+    fn forcing_refreshs(&self) -> bool {
+        self.forced_refresh
+    }
 }
 #[allow(missing_debug_implementations)]
 pub struct MultiUpgradeFuture<From, A, C, Into, U>
@@ -577,6 +585,14 @@ where
             gdcf,
             forced_refresh,
         }
+    }
+
+    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
+        self.gdcf.clone()
+    }
+
+    fn forcing_refreshs(&self) -> bool {
+        self.forced_refresh
     }
 }
 

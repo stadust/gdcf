@@ -13,34 +13,31 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 
 #[allow(missing_debug_implementations)]
-pub struct GdcfStream<A: ApiClient, C: Cache, Req: PaginatableRequest, F: GdcfFuture> {
-    gdcf: Gdcf<A, C>,
+pub struct GdcfStream<Req: PaginatableRequest, F: GdcfFuture> {
     request: Req,
     current_future: F,
 }
 
-impl<A, C, Req> GdcfStream<A, C, Req, ProcessRequestFuture<Req, A, C>>
+impl<A, C, Req> GdcfStream<Req, ProcessRequestFuture<Req, A, C>>
 where
-    C: Store<NewgroundsSong> + Store<Creator>,
+    C: Store<NewgroundsSong> + Store<Creator> + Cache + CanCache<Req>,
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + CanCache<Req>,
     Req: PaginatableRequest,
 {
     pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
         Ok(GdcfStream {
-            current_future: ProcessRequestFuture::new(gdcf.clone(), &request)?,
+            current_future: ProcessRequestFuture::new(gdcf, &request)?,
             request,
-            gdcf, // TODO: give GdcfFuture a .gdcf() method
         })
     }
 }
 
-impl<A, C, Req, F> Stream for GdcfStream<A, C, Req, F>
+impl<Req, F, A, C> Stream for GdcfStream<Req, F>
 where
+    Req: PaginatableRequest,
+    F: GdcfFuture<Request = Req, ApiClient = A, Cache = C, Error = GdcfError<A::Err, C::Err>>,
     A: ApiClient,
     C: Cache,
-    Req: PaginatableRequest,
-    F: GdcfFuture<Error = GdcfError<A::Err, C::Err>, Cache = C, ApiClient = A, Request = Req>,
 {
     type Error = F::Error;
     type Item = F::Item;
@@ -53,7 +50,7 @@ where
                 task::current().notify();
 
                 self.request.next();
-                self.current_future = F::new(self.gdcf.clone(), &self.request).map_err(GdcfError::Cache)?;
+                self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(GdcfError::Cache)?;
 
                 Ok(Async::Ready(Some(page)))
             },

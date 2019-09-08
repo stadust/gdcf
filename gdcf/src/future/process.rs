@@ -156,4 +156,12 @@ where
             forces_refresh,
         }
     }
+
+    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
+        self.gdcf.clone()
+    }
+
+    fn forcing_refreshs(&self) -> bool {
+        self.forces_refresh
+    }
 }

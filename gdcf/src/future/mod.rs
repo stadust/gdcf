@@ -38,6 +38,9 @@ pub trait GdcfFuture: Future {
     where
         Self: Sized;
 
+    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache>;
+    fn forcing_refreshs(&self) -> bool;
+
     #[doc(hidden)]
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self;
 }
