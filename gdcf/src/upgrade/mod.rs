@@ -37,7 +37,7 @@ pub trait Upgrade<C: Cache, Into>: Sized {
 }
 
 #[allow(missing_debug_implementations)]
-pub enum UpgradeMode<A, C, Into, E>
+pub(crate) enum UpgradeMode<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
     C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,

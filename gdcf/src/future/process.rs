@@ -8,7 +8,7 @@ use crate::{
     error::{ApiError, GdcfError},
     future::{
         refresh::RefreshCacheFuture,
-        upgrade::{UpgradeFuture},
+        upgrade::{MultiUpgradeFuture, UpgradeFuture},
         GdcfFuture,
     },
     upgrade::Upgrade,
@@ -18,7 +18,6 @@ use futures::{future::Either, task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 use std::mem;
-use crate::future::upgrade::MultiUpgradeFuture;
 
 #[allow(missing_debug_implementations)]
 pub struct ProcessRequestFuture<Req, A, C>

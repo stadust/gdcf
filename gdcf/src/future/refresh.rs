@@ -14,7 +14,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::warn;
 
 #[allow(missing_debug_implementations)]
-pub struct RefreshCacheFuture<Req, A, C>
+pub(crate) struct RefreshCacheFuture<Req, A, C>
 where
     Req: Request,
     A: ApiClient + MakeRequest<Req>,
@@ -31,11 +31,11 @@ where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
 {
-    pub fn gdcf(&self) -> Gdcf<A, C> {
+    fn gdcf(&self) -> Gdcf<A, C> {
         self.gdcf.clone()
     }
 
-    pub fn cache_key(&self) -> u64 {
+    fn cache_key(&self) -> u64 {
         self.cache_key
     }
 }
