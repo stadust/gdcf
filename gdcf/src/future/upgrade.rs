@@ -34,7 +34,7 @@ where
     U: Upgrade<C, Into>,
 {
     WaitingOnInner { has_result_cached: bool, inner_future: From },
-    Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
+    Extending(C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
     Exhausted,
 }
 
@@ -97,22 +97,18 @@ where
                         futures::task::current().notify();
                         (
                             Async::NotReady,
-                            UpgradeFutureState::Extending(
-                                self.gdcf.cache(),
-                                meta,
-                                UpgradeMode::new(inner_object, &self.gdcf, self.forced_refresh)?,
-                            ),
+                            UpgradeFutureState::Extending(meta, UpgradeMode::new(inner_object, &self.gdcf, self.forced_refresh)?),
                         )
                     },
                     Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), UpgradeFutureState::Exhausted),
                 },
 
-            UpgradeFutureState::Extending(_, meta, UpgradeMode::UpgradeCached(object)) =>
+            UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeCached(object)) =>
                 (Async::Ready(CacheEntry::Cached(object, meta)), UpgradeFutureState::Exhausted),
 
-            UpgradeFutureState::Extending(cache, meta, mut upgrade_mode) =>
+            UpgradeFutureState::Extending(meta, mut upgrade_mode) =>
                 match upgrade_mode.future().unwrap().poll()? {
-                    Async::NotReady => (Async::NotReady, UpgradeFutureState::Extending(cache, meta, upgrade_mode)),
+                    Async::NotReady => (Async::NotReady, UpgradeFutureState::Extending(meta, upgrade_mode)),
                     Async::Ready(cache_entry) =>
                         match upgrade_mode {
                             UpgradeMode::UpgradeMissing(to_upgrade, _) | UpgradeMode::UpgradeOutdated(to_upgrade, ..) => {
@@ -120,7 +116,8 @@ where
                                     CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
                                         U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
                                     CacheEntry::Cached(request_result, _) =>
-                                        U::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?,
+                                        U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
+                                            .map_err(GdcfError::Cache)?,
                                     _ => unreachable!(),
                                 };
                                 let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -155,7 +152,7 @@ where
     fn has_result_cached(&self) -> bool {
         match &self.state {
             UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            UpgradeFutureState::Extending(_, _, upgrade_mode) =>
+            UpgradeFutureState::Extending(_, upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
                     UpgradeMode::UpgradeMissing(..) => false,
@@ -191,7 +188,7 @@ where
                     cache_entry => cache_entry.map_empty(),
                 }))
             },
-            UpgradeFutureState::Extending(cache, meta, upgrade_mode) =>
+            UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
                     UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
@@ -229,17 +226,17 @@ where
                     has_result_cached,
                     inner_future: UpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
-            UpgradeFutureState::Extending(cache, meta, upgrade_mode) =>
+            UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeCached(f(cached))),
+                    UpgradeMode::UpgradeCached(cached) => UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeCached(f(cached))),
                     UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, future) => {
                         let (upgraded, downgrade) = to_upgrade.upgrade(upgrade);
                         let (downgraded, upgrade) = U::downgrade(f(upgraded), downgrade);
 
-                        UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeOutdated(downgraded, upgrade, future))
+                        UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeOutdated(downgraded, upgrade, future))
                     },
                     UpgradeMode::UpgradeMissing(to_upgrade, future) =>
-                        UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeMissing(to_upgrade, future)),
+                        UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeMissing(to_upgrade, future)),
                 },
             UpgradeFutureState::Exhausted => UpgradeFutureState::Exhausted,
         };
