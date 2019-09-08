@@ -13,40 +13,46 @@ use crate::{
 use failure::_core::hint::unreachable_unchecked;
 
 #[allow(missing_debug_implementations)]
-pub enum UpgradeFuture<From, A, C, Into, U>
+pub struct UpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
     From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     U: Upgrade<C, Into>,
 {
-    WaitingOnInner {
-        gdcf: Gdcf<A, C>,
-        forced_refresh: bool,
-        has_result_cached: bool,
-        inner_future: From,
-    },
+    gdcf: Gdcf<A, C>,
+    forced_refresh: bool,
+    state: UpgradeFutureState<From, A, C, Into, U>,
+}
+
+#[allow(missing_debug_implementations)]
+enum UpgradeFutureState<From, A, C, Into, U>
+where
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
+{
+    WaitingOnInner { has_result_cached: bool, inner_future: From },
     Extending(C, C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
     Exhausted,
 }
 
-impl<From, A, C, Into, U> UpgradeFuture<From, A, C, Into, U>
+impl<From, A, C, Into, U> UpgradeFutureState<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
     From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U>,
     U: Upgrade<C, Into>,
 {
-    pub fn new(gdcf: Gdcf<A, C>, forced_refresh: bool, inner_future: From) -> Self {
+    pub fn new(cache: &C, inner_future: From) -> Self {
         let mut has_result_cached = false;
 
-        UpgradeFuture::WaitingOnInner {
-            forced_refresh,
-            inner_future: Self::peek_inner(&gdcf.cache(), inner_future, |cached| {
+        UpgradeFutureState::WaitingOnInner {
+            inner_future: Self::peek_inner(&cache, inner_future, |cached| {
                 has_result_cached = true;
                 cached
             }),
-            gdcf,
             has_result_cached,
         }
     }
@@ -72,10 +78,8 @@ where
     type Item = CacheEntry<Into, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        let (ready, new_self) = match std::mem::replace(self, UpgradeFuture::Exhausted) {
-            UpgradeFuture::WaitingOnInner {
-                gdcf,
-                forced_refresh,
+        let (ready, new_state) = match std::mem::replace(&mut self.state, UpgradeFutureState::Exhausted) {
+            UpgradeFutureState::WaitingOnInner {
                 has_result_cached,
                 mut inner_future,
             } =>
@@ -83,9 +87,7 @@ where
                     Async::NotReady =>
                         (
                             Async::NotReady,
-                            UpgradeFuture::WaitingOnInner {
-                                gdcf,
-                                forced_refresh,
+                            UpgradeFutureState::WaitingOnInner {
                                 has_result_cached,
                                 inner_future,
                             },
@@ -95,18 +97,22 @@ where
                         futures::task::current().notify();
                         (
                             Async::NotReady,
-                            UpgradeFuture::Extending(gdcf.cache(), meta, UpgradeMode::new(inner_object, &gdcf, forced_refresh)?),
+                            UpgradeFutureState::Extending(
+                                self.gdcf.cache(),
+                                meta,
+                                UpgradeMode::new(inner_object, &self.gdcf, self.forced_refresh)?,
+                            ),
                         )
                     },
-                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), UpgradeFuture::Exhausted),
+                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), UpgradeFutureState::Exhausted),
                 },
 
-            UpgradeFuture::Extending(_, meta, UpgradeMode::UpgradeCached(object)) =>
-                (Async::Ready(CacheEntry::Cached(object, meta)), UpgradeFuture::Exhausted),
+            UpgradeFutureState::Extending(_, meta, UpgradeMode::UpgradeCached(object)) =>
+                (Async::Ready(CacheEntry::Cached(object, meta)), UpgradeFutureState::Exhausted),
 
-            UpgradeFuture::Extending(cache, meta, mut upgrade_mode) =>
+            UpgradeFutureState::Extending(cache, meta, mut upgrade_mode) =>
                 match upgrade_mode.future().unwrap().poll()? {
-                    Async::NotReady => (Async::NotReady, UpgradeFuture::Extending(cache, meta, upgrade_mode)),
+                    Async::NotReady => (Async::NotReady, UpgradeFutureState::Extending(cache, meta, upgrade_mode)),
                     Async::Ready(cache_entry) =>
                         match upgrade_mode {
                             UpgradeMode::UpgradeMissing(to_upgrade, _) | UpgradeMode::UpgradeOutdated(to_upgrade, ..) => {
@@ -119,16 +125,16 @@ where
                                 };
                                 let (upgraded, _) = to_upgrade.upgrade(upgrade);
 
-                                (Async::Ready(CacheEntry::Cached(upgraded, meta)), UpgradeFuture::Exhausted)
+                                (Async::Ready(CacheEntry::Cached(upgraded, meta)), UpgradeFutureState::Exhausted)
                             },
                             _ => unreachable!(),
                         },
                 },
 
-            UpgradeFuture::Exhausted => panic!("Future already polled to completion"),
+            UpgradeFutureState::Exhausted => panic!("Future already polled to completion"),
         };
 
-        *self = new_self;
+        self.state = new_state;
 
         Ok(ready)
     }
@@ -147,14 +153,14 @@ where
     type ToPeek = Into;
 
     fn has_result_cached(&self) -> bool {
-        match self {
-            UpgradeFuture::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            UpgradeFuture::Extending(_, _, upgrade_mode) =>
+        match &self.state {
+            UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
+            UpgradeFutureState::Extending(_, _, upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
                     UpgradeMode::UpgradeMissing(..) => false,
                 },
-            UpgradeFuture::Exhausted => false,
+            UpgradeFutureState::Exhausted => false,
         }
     }
 
@@ -166,8 +172,8 @@ where
             return Ok(Err(self))
         }
 
-        match self {
-            UpgradeFuture::WaitingOnInner { gdcf, inner_future, .. } => {
+        match self.state {
+            UpgradeFutureState::WaitingOnInner { inner_future, .. } => {
                 let base = match inner_future.into_cached()? {
                     Ok(base) => base,
                     _ => unreachable!(),
@@ -176,7 +182,7 @@ where
                 Ok(Ok(match base {
                     CacheEntry::Cached(to_upgrade, meta) =>
                         CacheEntry::Cached(
-                            match temporary_upgrade(&gdcf.cache(), to_upgrade) {
+                            match temporary_upgrade(&self.gdcf.cache(), to_upgrade) {
                                 Ok((upgraded, _)) => upgraded,
                                 _ => unreachable!(),
                             },
@@ -185,18 +191,22 @@ where
                     cache_entry => cache_entry.map_empty(),
                 }))
             },
-            UpgradeFuture::Extending(cache, meta, upgrade_mode) =>
+            UpgradeFutureState::Extending(cache, meta, upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
                     UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
                     UpgradeMode::UpgradeMissing(..) => unreachable!(),
                 },
-            UpgradeFuture::Exhausted => unreachable!(),
+            UpgradeFutureState::Exhausted => unreachable!(),
         }
     }
 
     fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
-        Ok(Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request)?))
+        Ok(UpgradeFuture {
+            state: UpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
+            gdcf,
+            forced_refresh: request.forces_refresh(),
+        })
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
@@ -204,32 +214,39 @@ where
             return self
         }
 
-        match self {
-            UpgradeFuture::WaitingOnInner {
-                gdcf,
-                forced_refresh,
+        let UpgradeFuture {
+            state,
+            gdcf,
+            forced_refresh,
+        } = self;
+
+        let state = match state {
+            UpgradeFutureState::WaitingOnInner {
                 has_result_cached,
                 inner_future,
             } =>
-                UpgradeFuture::WaitingOnInner {
-                    forced_refresh,
+                UpgradeFutureState::WaitingOnInner {
                     has_result_cached,
-                    inner_future: Self::peek_inner(&gdcf.cache(), inner_future, f),
-                    gdcf,
+                    inner_future: UpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
-            UpgradeFuture::Extending(cache, meta, upgrade_mode) =>
+            UpgradeFutureState::Extending(cache, meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeCached(f(cached))),
+                    UpgradeMode::UpgradeCached(cached) => UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeCached(f(cached))),
                     UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, future) => {
                         let (upgraded, downgrade) = to_upgrade.upgrade(upgrade);
                         let (downgraded, upgrade) = U::downgrade(f(upgraded), downgrade);
 
-                        UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeOutdated(downgraded, upgrade, future))
+                        UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeOutdated(downgraded, upgrade, future))
                     },
                     UpgradeMode::UpgradeMissing(to_upgrade, future) =>
-                        UpgradeFuture::Extending(cache, meta, UpgradeMode::UpgradeMissing(to_upgrade, future)),
+                        UpgradeFutureState::Extending(cache, meta, UpgradeMode::UpgradeMissing(to_upgrade, future)),
                 },
-            UpgradeFuture::Exhausted => UpgradeFuture::Exhausted,
+            UpgradeFutureState::Exhausted => UpgradeFutureState::Exhausted,
+        };
+        UpgradeFuture {
+            state,
+            gdcf,
+            forced_refresh,
         }
     }
 }
