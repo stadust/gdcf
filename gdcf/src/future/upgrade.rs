@@ -261,7 +261,7 @@ where
 }
 
 #[allow(missing_debug_implementations)]
-pub enum MultiUpgradeFutureState<From, A, C, Into, U>
+enum MultiUpgradeFutureState<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
