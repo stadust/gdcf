@@ -6,19 +6,15 @@ impl<C: Cache> Upgrade<C, User> for SearchedUser {
     type Request = UserRequest;
     type Upgrade = User;
 
-    fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        Some(from.account_id.into())
-    }
-
-    fn current(&self) -> &Self::From {
-        self
+    fn upgrade_request(&self) -> Option<Self::Request> {
+        Some(self.account_id.into())
     }
 
     fn default_upgrade() -> Option<Self::Upgrade> {
         None
     }
 
-    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(request_result)
     }
 

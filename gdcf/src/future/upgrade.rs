@@ -264,8 +264,7 @@ where
                                     CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
                                         U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
                                     CacheEntry::Cached(request_result, _) =>
-                                        U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
-                                            .map_err(GdcfError::Cache)?,
+                                        U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
                                     _ => unreachable!(),
                                 };
                                 let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -721,8 +720,7 @@ where
                                         CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
                                             U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
                                         CacheEntry::Cached(request_result, _) =>
-                                            U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
-                                                .map_err(GdcfError::Cache)?,
+                                            U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
                                         _ => unreachable!(),
                                     };
                                     let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -766,11 +764,11 @@ where
 }
 
 fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(cache: &C, to_upgrade: U) -> Result<(Into, U::From), U> {
-    let upgrade = match U::upgrade_request(to_upgrade.current()) {
+    let upgrade = match U::upgrade_request(&to_upgrade) {
         Some(request) =>
             match cache.lookup_request(&request) {
                 Ok(CacheEntry::Cached(cached_result, _)) =>
-                    match U::lookup_upgrade(to_upgrade.current(), cache, cached_result) {
+                    match U::lookup_upgrade(&to_upgrade, cache, cached_result) {
                         Ok(upgrade) => upgrade,
                         _ => return Err(to_upgrade), // cache error on upgrade lookup
                     },

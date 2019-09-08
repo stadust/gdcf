@@ -19,9 +19,9 @@ pub trait Upgrade<C: Cache, Into>: Sized {
     ///
     /// Returning [`None`] indicates that an upgrade of this object is not possible and will cause a
     /// call to [`Upgrade::default_upgrade`]
-    fn upgrade_request(from: &Self::From) -> Option<Self::Request>;
+    fn upgrade_request(&self) -> Option<Self::Request>;
 
-    fn current(&self) -> &Self::From;
+    //fn current(&self) -> &Self::From;
 
     /// Gets the default [`Upgrade::Upgrade`] object to be used if an upgrade wasn't possible (see
     /// above) or if the request didn't return the required data.
@@ -30,7 +30,7 @@ pub trait Upgrade<C: Cache, Into>: Sized {
     /// that the upgrade process has failed completely
     fn default_upgrade() -> Option<Self::Upgrade>;
 
-    fn lookup_upgrade(from: &Self::From, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
+    fn lookup_upgrade(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
 
     fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
     fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
@@ -104,7 +104,7 @@ where
     pub(crate) fn new(to_upgrade: E, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
         let cache = gdcf.cache();
 
-        let mut request = match E::upgrade_request(to_upgrade.current()) {
+        let mut request = match E::upgrade_request(&to_upgrade) {
             Some(request) => request,
             None => return Self::default_upgrade(to_upgrade),
         };
@@ -125,7 +125,7 @@ where
                 match E::default_upgrade() {
                     Some(default_upgrade) => Self::cached(to_upgrade, default_upgrade),
                     None =>
-                        match E::upgrade_request(to_upgrade.current()) {
+                        match E::upgrade_request(&to_upgrade) {
                             None => Self::default_upgrade(to_upgrade)?,
                             Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(&request)),
                         },
@@ -133,7 +133,7 @@ where
 
             ProcessRequestFutureState::UpToDate(CacheEntry::Cached(request_result, _)) => {
                 // Up-to-date extension request result
-                let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
+                let upgrade = E::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(GdcfError::Cache)?;
                 UpgradeMode::cached(to_upgrade, upgrade)
             },
 
@@ -146,7 +146,7 @@ where
                 match E::default_upgrade() {
                     Some(default_extension) => UpgradeMode::UpgradeOutdated(to_upgrade, default_extension, refresh_future),
                     None =>
-                        match E::upgrade_request(to_upgrade.current()) {
+                        match E::upgrade_request(&to_upgrade) {
                             None => UpgradeMode::default_upgrade(to_upgrade)?,
                             Some(request) => UpgradeMode::UpgradeMissing(to_upgrade, gdcf.refresh(&request)),
                         },
@@ -154,7 +154,7 @@ where
 
             // Outdated entry
             ProcessRequestFutureState::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
-                let upgrade = E::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?;
+                let upgrade = E::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(GdcfError::Cache)?;
 
                 UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, refresh_future)
             },
