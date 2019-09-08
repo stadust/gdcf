@@ -233,8 +233,7 @@ pub enum Password {
 /// `41`, `44`
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct PartialLevel<Song, User>
-{
+pub struct PartialLevel<Song, User> {
     /// The [`Level`]'s unique level id
     ///
     /// ## GD Internals:
@@ -442,8 +441,7 @@ impl<Song, User> PartialLevel<Song, User> {
 /// `41`, `44`
 #[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "serde_support", derive(Serialize))]
-pub struct Level<Song, User>
-{
+pub struct Level<Song, User> {
     /// The [`PartialLevel`] this [`Level`] instance supplements
     pub base: PartialLevel<Song, User>,
 
@@ -487,15 +485,13 @@ pub struct Level<Song, User>
     pub index_36: String,
 }
 
-impl<Song, User> Display for PartialLevel<Song, User>
-{
+impl<Song, User> Display for PartialLevel<Song, User> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "PartialLevel({}, {})", self.level_id, self.name)
     }
 }
 
-impl<Song, User> Display for Level<Song, User>
-{
+impl<Song, User> Display for Level<Song, User> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "Level({}, {})", self.base.level_id, self.base.name)
     }

@@ -46,8 +46,7 @@ pub struct Stats {
     pub object_count: u64,
 }
 
-impl<S, U> Level<S, U>
-{
+impl<S, U> Level<S, U> {
     pub fn decompress_data(&self) -> std::io::Result<String> {
         let mut s = String::new();
         let mut d = GzDecoder::new(&self.level_data[..]);

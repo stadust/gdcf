@@ -424,10 +424,7 @@ fn change_partial_level_user<OldUser, NewUser, Song>(
     )
 }
 
-fn change_level_user<OldUser, NewUser, Song>(
-    level: Level<Song, OldUser>,
-    new_user: NewUser,
-) -> (Level<Song, NewUser>, OldUser) {
+fn change_level_user<OldUser, NewUser, Song>(level: Level<Song, OldUser>, new_user: NewUser) -> (Level<Song, NewUser>, OldUser) {
     let Level {
         base,
         level_data,
@@ -452,10 +449,7 @@ fn change_level_user<OldUser, NewUser, Song>(
     )
 }
 
-fn change_level_song<OldSong, NewSong, User>(
-    level: Level<OldSong, User>,
-    new_song: NewSong,
-) -> (Level<NewSong, User>, OldSong) {
+fn change_level_song<OldSong, NewSong, User>(level: Level<OldSong, User>, new_song: NewSong) -> (Level<NewSong, User>, OldSong) {
     let Level {
         base,
         level_data,
