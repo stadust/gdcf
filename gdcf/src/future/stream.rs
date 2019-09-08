@@ -12,7 +12,7 @@ use crate::{
 };
 use futures::{task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use log::{info, trace, debug};
+use log::{debug, info, trace};
 
 #[derive(Debug)]
 pub struct GdcfStream<F: GdcfFuture>

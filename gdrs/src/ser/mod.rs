@@ -128,8 +128,8 @@ where
     match filters.song {
         Some(SongFilter::Main(id)) => map.serialize_entry("song", &id)?,
         Some(SongFilter::Custom(id)) => {
-            map.serialize_entry("customSong", &1)?;
             map.serialize_entry("song", &id)?;
+            map.serialize_entry("customSong", &1)?;
         },
         _ => (),
     }

@@ -68,7 +68,7 @@ where
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
         match from {
-            Some(song_id) => Some(LevelsRequest::default().filter(SearchFilters::default().custom_song(*song_id))),
+            Some(song_id) => Some(LevelsRequest::default().filter(SearchFilters::default().custom_song(*song_id)).request_type(LevelRequestType::MostLiked)),
             None => None,
         }
     }
@@ -103,7 +103,7 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     type Upgrade = Option<NewgroundsSong>;
 
     fn upgrade_request(from: &Self::From) -> Option<Self::Request> {
-        from.map(|song_id| LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)))
+        from.map(|song_id| LevelsRequest::default().filter(SearchFilters::default().custom_song(song_id)).request_type(LevelRequestType::MostLiked))
     }
 
     fn current(&self) -> &Self::From {
