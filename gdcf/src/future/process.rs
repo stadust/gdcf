@@ -60,11 +60,12 @@ where
     }
 }
 
-impl<Req, A, C, T: Send + Sync + 'static> ProcessRequestFuture<Req, A, C>
+impl<Req, A, C, T> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request<Result = Vec<T>>,
+    T: Send + Sync + 'static,
 {
     pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, Into, T>
     where

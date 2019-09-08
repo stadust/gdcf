@@ -4,8 +4,10 @@ use crate::{
     error::{ApiError, GdcfError},
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
+        upgrade::{MultiUpgradeFuture, UpgradeFuture},
         GdcfFuture,
     },
+    upgrade::Upgrade,
     Gdcf,
 };
 use futures::{task, Async, Future, Stream};
@@ -19,6 +21,42 @@ where
 {
     request: F::BaseRequest,
     current_future: F,
+}
+
+impl<F, T> GdcfStream<F>
+where
+    F::BaseRequest: PaginatableRequest,
+    F: GdcfFuture<GdcfItem = Vec<T>>,
+    T: Send + Sync + 'static,
+{
+    pub fn upgrade_all<Into>(self) -> GdcfStream<MultiUpgradeFuture<F, Into, T>>
+    where
+        T: Upgrade<F::Cache, Into>,
+        F::ApiClient: MakeRequest<<T as Upgrade<F::Cache, Into>>::Request>,
+        F::Cache: CanCache<<T as Upgrade<F::Cache, Into>>::Request>,
+    {
+        GdcfStream {
+            current_future: MultiUpgradeFuture::upgrade_from(self.current_future),
+            request: self.request,
+        }
+    }
+}
+
+impl<F: GdcfFuture> GdcfStream<F>
+where
+    F::BaseRequest: PaginatableRequest,
+{
+    pub fn upgrade<Into>(self) -> GdcfStream<UpgradeFuture<F, Into, F::GdcfItem>>
+    where
+        F::GdcfItem: Upgrade<F::Cache, Into>,
+        F::ApiClient: MakeRequest<<F::GdcfItem as Upgrade<F::Cache, Into>>::Request>,
+        F::Cache: CanCache<<F::GdcfItem as Upgrade<F::Cache, Into>>::Request>,
+    {
+        GdcfStream {
+            current_future: UpgradeFuture::upgrade_from(self.current_future),
+            request: self.request,
+        }
+    }
 }
 
 impl<A, C, Req> GdcfStream<ProcessRequestFuture<Req, A, C>>
