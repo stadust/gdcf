@@ -250,43 +250,48 @@ where
         }
     }
 }
-
 #[allow(missing_debug_implementations)]
-pub enum MultiUpgradeFuture<From, A, C, Into, U>
+pub struct MultiUpgradeFuture<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
     From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
     U: Upgrade<C, Into>,
 {
-    WaitingOnInner {
-        gdcf: Gdcf<A, C>,
-        forced_refresh: bool,
-        has_result_cached: bool,
-        inner_future: From,
-    },
+    gdcf: Gdcf<A, C>,
+    forced_refresh: bool,
+    state: MultiUpgradeFutureState<From, A, C, Into, U>,
+}
+
+#[allow(missing_debug_implementations)]
+pub enum MultiUpgradeFutureState<From, A, C, Into, U>
+where
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
+    U: Upgrade<C, Into>,
+{
+    WaitingOnInner { has_result_cached: bool, inner_future: From },
     Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
     Exhausted,
 }
 
-impl<From, A, C, Into, U> MultiUpgradeFuture<From, A, C, Into, U>
+impl<From, A, C, Into, U> MultiUpgradeFutureState<From, A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
     From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = Vec<U>>,
     U: Upgrade<C, Into>,
 {
-    pub fn new(gdcf: Gdcf<A, C>, forced_refresh: bool, inner_future: From) -> Self {
+    pub fn new(cache: &C, inner_future: From) -> Self {
         let mut has_result_cached = false;
 
-        MultiUpgradeFuture::WaitingOnInner {
-            inner_future: Self::peek_inner(&gdcf.cache(), inner_future, |cached| {
+        MultiUpgradeFutureState::WaitingOnInner {
+            inner_future: Self::peek_inner(cache, inner_future, |cached| {
                 has_result_cached = true;
                 cached
             }),
-            gdcf,
             has_result_cached,
-            forced_refresh,
         }
     }
 
@@ -316,10 +321,8 @@ where
     type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        let (ready, new_self) = match std::mem::replace(self, MultiUpgradeFuture::Exhausted) {
-            MultiUpgradeFuture::WaitingOnInner {
-                gdcf,
-                forced_refresh,
+        let (ready, new_state) = match std::mem::replace(&mut self.state, MultiUpgradeFutureState::Exhausted) {
+            MultiUpgradeFutureState::WaitingOnInner {
                 has_result_cached,
                 mut inner_future,
             } => {
@@ -327,10 +330,8 @@ where
                     Async::NotReady =>
                         (
                             Async::NotReady,
-                            MultiUpgradeFuture::WaitingOnInner {
-                                gdcf,
+                            MultiUpgradeFutureState::WaitingOnInner {
                                 has_result_cached,
-                                forced_refresh,
                                 inner_future,
                             },
                         ),
@@ -340,21 +341,21 @@ where
 
                         (
                             Async::NotReady,
-                            MultiUpgradeFuture::Extending(
-                                gdcf.cache(),
+                            MultiUpgradeFutureState::Extending(
+                                self.gdcf.cache(),
                                 meta,
                                 cached_objects
                                     .into_iter()
-                                    .map(|object| UpgradeMode::new(object, &gdcf, forced_refresh))
+                                    .map(|object| UpgradeMode::new(object, &self.gdcf, self.forced_refresh))
                                     .collect::<Result<Vec<_>, _>>()?,
                             ),
                         )
                     },
-                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), MultiUpgradeFuture::Exhausted),
+                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), MultiUpgradeFutureState::Exhausted),
                 }
             },
 
-            MultiUpgradeFuture::Extending(cache, meta, mut entry_upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(cache, meta, mut entry_upgrade_modes) => {
                 let mut done = Vec::new();
                 let mut not_done = Vec::new();
 
@@ -382,17 +383,17 @@ where
                 }
 
                 if not_done.is_empty() {
-                    (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFuture::Exhausted)
+                    (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFutureState::Exhausted)
                 } else {
                     not_done.extend(done.into_iter().map(UpgradeMode::UpgradeCached));
-                    (Async::NotReady, MultiUpgradeFuture::Extending(cache, meta, not_done))
+                    (Async::NotReady, MultiUpgradeFutureState::Extending(cache, meta, not_done))
                 }
             },
 
-            MultiUpgradeFuture::Exhausted => panic!("Future already polled to completion"),
+            MultiUpgradeFutureState::Exhausted => panic!("Future already polled to completion"),
         };
 
-        *self = new_self;
+        self.state = new_state;
 
         Ok(ready)
     }
@@ -417,16 +418,16 @@ where
     type ToPeek = Vec<Into>;
 
     fn has_result_cached(&self) -> bool {
-        match self {
-            MultiUpgradeFuture::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            MultiUpgradeFuture::Extending(_, _, upgrade_modes) =>
+        match &self.state {
+            MultiUpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
+            MultiUpgradeFutureState::Extending(_, _, upgrade_modes) =>
                 upgrade_modes.iter().all(|mode| {
                     match mode {
                         UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
                         UpgradeMode::UpgradeMissing(..) => false,
                     }
                 }),
-            MultiUpgradeFuture::Exhausted => false,
+            MultiUpgradeFutureState::Exhausted => false,
         }
     }
 
@@ -438,8 +439,8 @@ where
             return Ok(Err(self))
         }
 
-        match self {
-            MultiUpgradeFuture::WaitingOnInner { gdcf, inner_future, .. } => {
+        match self.state {
+            MultiUpgradeFutureState::WaitingOnInner { inner_future, .. } => {
                 let base = match inner_future.into_cached()? {
                     Ok(base) => base,
                     _ => unreachable!(),
@@ -448,7 +449,7 @@ where
                 Ok(Ok(match base {
                     CacheEntry::Cached(to_upgrade, meta) =>
                         CacheEntry::Cached(
-                            match temporary_upgrade_all(&gdcf.cache(), to_upgrade) {
+                            match temporary_upgrade_all(&self.gdcf.cache(), to_upgrade) {
                                 Ok((upgraded, _)) => upgraded,
                                 _ => unreachable!(),
                             },
@@ -457,7 +458,7 @@ where
                     cache_entry => cache_entry.map_empty(),
                 }))
             },
-            MultiUpgradeFuture::Extending(cache, meta, upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes) => {
                 let mut result = Vec::new();
 
                 for upgrade_mode in upgrade_modes {
@@ -470,12 +471,16 @@ where
 
                 Ok(Ok(CacheEntry::Cached(result, meta)))
             },
-            MultiUpgradeFuture::Exhausted => unreachable!(),
+            MultiUpgradeFutureState::Exhausted => unreachable!(),
         }
     }
 
     fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
-        Ok(Self::new(gdcf.clone(), request.forces_refresh(), From::new(gdcf, request)?))
+        Ok(MultiUpgradeFuture {
+            forced_refresh: request.forces_refresh(),
+            state: MultiUpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
+            gdcf,
+        })
     }
 
     fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
@@ -483,20 +488,22 @@ where
             return self
         }
 
-        match self {
-            MultiUpgradeFuture::WaitingOnInner {
-                gdcf,
-                forced_refresh,
+        let MultiUpgradeFuture {
+            state,
+            gdcf,
+            forced_refresh,
+        } = self;
+
+        let state = match state {
+            MultiUpgradeFutureState::WaitingOnInner {
                 has_result_cached,
                 inner_future,
             } =>
-                MultiUpgradeFuture::WaitingOnInner {
-                    forced_refresh,
+                MultiUpgradeFutureState::WaitingOnInner {
                     has_result_cached,
-                    inner_future: Self::peek_inner(&gdcf.cache(), inner_future, f),
-                    gdcf,
+                    inner_future: MultiUpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
-            MultiUpgradeFuture::Extending(cache, meta, upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes) => {
                 let mut upgraded = Vec::new();
                 let mut downgrades = Vec::new();
                 let mut futures = Vec::new();
@@ -563,9 +570,15 @@ where
                     failed
                 };
 
-                MultiUpgradeFuture::Extending(cache, meta, upgrade_modes)
+                MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes)
             },
-            MultiUpgradeFuture::Exhausted => MultiUpgradeFuture::Exhausted,
+            MultiUpgradeFutureState::Exhausted => MultiUpgradeFutureState::Exhausted,
+        };
+
+        MultiUpgradeFuture {
+            state,
+            gdcf,
+            forced_refresh,
         }
     }
 }

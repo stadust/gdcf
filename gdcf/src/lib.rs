@@ -129,7 +129,7 @@ use crate::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
         stream::GdcfStream,
-        upgrade::MultiUpgradeFuture,
+        upgrade::MultiUpgradeFutureState,
         GdcfFuture,
     },
     upgrade::Upgrade,
