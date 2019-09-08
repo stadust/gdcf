@@ -36,7 +36,6 @@ pub trait Upgrade<C: Cache, Into>: Sized {
     fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
 }
 
-#[allow(missing_debug_implementations)]
 pub(crate) enum UpgradeMode<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
@@ -46,6 +45,28 @@ where
     UpgradeCached(Into),
     UpgradeOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
     UpgradeMissing(E, RefreshCacheFuture<E::Request, A, C>),
+}
+
+impl<A, C, Into, E> std::fmt::Debug for UpgradeMode<A, C, Into, E>
+where
+    A: ApiClient + MakeRequest<E::Request>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
+    E: Upgrade<C, Into> + std::fmt::Debug,
+    E::Upgrade: std::fmt::Debug,
+    Into: std::fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            UpgradeMode::UpgradeCached(cached) => fmt.debug_tuple("UpgradeCached").field(cached).finish(),
+            UpgradeMode::UpgradeOutdated(to_extend, cached_extension, future) =>
+                fmt.debug_tuple("UpgradeOutdated")
+                    .field(to_extend)
+                    .field(cached_extension)
+                    .field(future)
+                    .finish(),
+            UpgradeMode::UpgradeMissing(to_extend, future) => fmt.debug_tuple("UpgradeMissing").field(to_extend).field(future).finish(),
+        }
+    }
 }
 
 impl<A, C, Into, E> UpgradeMode<A, C, Into, E>

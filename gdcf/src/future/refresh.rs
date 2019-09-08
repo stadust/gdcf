@@ -13,7 +13,6 @@ use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::warn;
 
-#[allow(missing_debug_implementations)]
 pub(crate) struct RefreshCacheFuture<Req, A, C>
 where
     Req: Request,
@@ -23,6 +22,17 @@ where
     inner: <A as MakeRequest<Req>>::Future,
     gdcf: Gdcf<A, C>,
     cache_key: u64,
+}
+
+impl<Req, A, C> std::fmt::Debug for RefreshCacheFuture<Req, A, C>
+where
+    Req: Request,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fmt.debug_struct("RefreshCacheFuture").field("cache_key", &self.cache_key).finish()
+    }
 }
 
 impl<Req, A, C> RefreshCacheFuture<Req, A, C>

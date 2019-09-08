@@ -12,9 +12,9 @@ use crate::{
 };
 use futures::{task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use log::info;
+use log::{info, trace, debug};
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct GdcfStream<F: GdcfFuture>
 where
     F::BaseRequest: PaginatableRequest,
@@ -75,7 +75,7 @@ where
 
 impl<F> Stream for GdcfStream<F>
 where
-    F: GdcfFuture,
+    F: GdcfFuture + std::fmt::Debug,
     F::BaseRequest: PaginatableRequest,
 {
     type Error = GdcfError<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>;
@@ -83,13 +83,22 @@ where
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
         match self.current_future.poll() {
-            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::NotReady) => {
+                trace!("Future {:?} not ready", self.current_future);
+
+                Ok(Async::NotReady)
+            },
 
             Ok(Async::Ready(page)) => {
                 task::current().notify();
 
+                info!("Advancing GdcfStream over {} by one page!", self.request);
+
                 self.request.next();
                 self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(GdcfError::Cache)?;
+
+                debug!("Request is now {}", self.request);
+                trace!("New future is {:?}", self.current_future);
 
                 Ok(Async::Ready(Some(page)))
             },

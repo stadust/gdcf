@@ -19,7 +19,6 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 use std::mem;
 
-#[allow(missing_debug_implementations)]
 pub struct ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
@@ -31,7 +30,20 @@ where
     state: ProcessRequestFutureState<Req, A, C>,
 }
 
-#[allow(missing_debug_implementations)]
+impl<Req, A, C> std::fmt::Debug for ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request + std::fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fmt.debug_struct("ProcessRequestFuture")
+            .field("forces_refresh", &self.forces_refresh)
+            .field("state", &self.state)
+            .finish()
+    }
+}
+
 pub(crate) enum ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
@@ -42,6 +54,22 @@ where
     Uncached(RefreshCacheFuture<Req, A, C>),
     Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
     UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
+}
+
+impl<Req, A, C> std::fmt::Debug for ProcessRequestFutureState<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ProcessRequestFutureState::Empty => fmt.debug_tuple("Empty").finish(),
+            ProcessRequestFutureState::Uncached(fut) => fmt.debug_tuple("Uncached").field(fut).finish(),
+            ProcessRequestFutureState::Outdated(cached, fut) => fmt.debug_tuple("Outdated").field(cached).field(fut).finish(),
+            ProcessRequestFutureState::UpToDate(cached) => fmt.debug_tuple("UpToDate").field(cached).finish(),
+        }
+    }
 }
 
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
@@ -65,7 +93,7 @@ where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request<Result = Vec<T>>,
-    T: Send + Sync + 'static,
+    T: std::fmt::Debug + Send + Sync + 'static,
 {
     pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, Into, T>
     where

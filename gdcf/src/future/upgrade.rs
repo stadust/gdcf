@@ -24,6 +24,23 @@ where
     state: UpgradeFutureState<From, Into, U>,
 }
 
+impl<From, Into, U> std::fmt::Debug for UpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U> + std::fmt::Debug,
+    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U::Upgrade: std::fmt::Debug,
+    Into: std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("UpgradeFuture")
+            .field("forced_refresh", &self.forced_refresh)
+            .field("state", &self.state)
+            .finish()
+    }
+}
+
 impl<From, Into, U> UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
@@ -51,7 +68,6 @@ where
     }
 }
 
-#[allow(missing_debug_implementations)]
 enum UpgradeFutureState<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
@@ -68,6 +84,31 @@ where
         UpgradeMode<From::ApiClient, From::Cache, Into, U>,
     ),
     Exhausted,
+}
+
+impl<From, Into, U> std::fmt::Debug for UpgradeFutureState<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U> + std::fmt::Debug,
+    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U::Upgrade: std::fmt::Debug,
+    Into: std::fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            UpgradeFutureState::WaitingOnInner {
+                has_result_cached,
+                inner_future,
+            } =>
+                fmt.debug_struct("WaitingOnInner")
+                    .field("has_result_cached", has_result_cached)
+                    .field("inner_future", inner_future)
+                    .finish(),
+            UpgradeFutureState::Extending(meta, upgrade_mode) => fmt.debug_tuple("Extending").field(meta).field(upgrade_mode).finish(),
+            UpgradeFutureState::Exhausted => fmt.debug_tuple("Exhausted").finish(),
+        }
+    }
 }
 
 impl<From, Into, U> UpgradeFutureState<From, Into, U>
@@ -315,6 +356,23 @@ where
     state: MultiUpgradeFutureState<From, Into, U>,
 }
 
+impl<From, Into, U> std::fmt::Debug for MultiUpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>> + std::fmt::Debug,
+    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U::Upgrade: std::fmt::Debug,
+    Into: std::fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fmt.debug_struct("MultiUpgradeFuture")
+            .field("forced_refresh", &self.forced_refresh)
+            .field("state", &self.state)
+            .finish()
+    }
+}
+
 impl<From, Into, U> MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
@@ -359,6 +417,31 @@ where
         Vec<UpgradeMode<From::ApiClient, From::Cache, Into, U>>,
     ),
     Exhausted,
+}
+
+impl<From, Into, U> std::fmt::Debug for MultiUpgradeFutureState<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>> + std::fmt::Debug,
+    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U::Upgrade: std::fmt::Debug,
+    Into: std::fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            MultiUpgradeFutureState::WaitingOnInner {
+                has_result_cached,
+                inner_future,
+            } =>
+                fmt.debug_struct("WaitingOnInner")
+                    .field("has_result_cached", has_result_cached)
+                    .field("inner_future", inner_future)
+                    .finish(),
+            MultiUpgradeFutureState::Extending(meta, upgrade_mode) => fmt.debug_tuple("Extending").field(meta).field(upgrade_mode).finish(),
+            MultiUpgradeFutureState::Exhausted => fmt.debug_tuple("Exhausted").finish(),
+        }
+    }
 }
 
 impl<From, Into, U> MultiUpgradeFutureState<From, Into, U>

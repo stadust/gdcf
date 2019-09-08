@@ -101,7 +101,7 @@ impl Default for BaseRequest {
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
 pub trait Request: Display + Hash + Clone + Send + Sync + 'static {
-    type Result: Send + Sync + 'static;
+    type Result: std::fmt::Debug + Send + Sync + 'static;
 
     fn key(&self) -> u64 {
         let mut hasher = DefaultHasher::new();

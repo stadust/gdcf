@@ -103,7 +103,7 @@ impl<T, Meta: CacheEntryMeta> Into<Option<T>> for CacheEntry<T, Meta> {
     }
 }
 
-pub trait CacheEntryMeta: Copy + Send + Sync + 'static {
+pub trait CacheEntryMeta: std::fmt::Debug + Copy + Send + Sync + 'static {
     fn is_expired(&self) -> bool;
     fn is_absent(&self) -> bool;
 }
