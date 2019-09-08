@@ -40,8 +40,7 @@ pub trait Upgrade<C: Cache, Into>: Sized {
 pub(crate) enum UpgradeMode<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    C: Cache,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     E: Upgrade<C, Into>,
 {
     UpgradeCached(Into),
@@ -52,8 +51,7 @@ where
 impl<A, C, Into, E> UpgradeMode<A, C, Into, E>
 where
     A: ApiClient + MakeRequest<E::Request>,
-    C: Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
-    C: Cache,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<E::Request>,
     E: Upgrade<C, Into>,
 {
     pub(crate) fn cached(to_upgrade: E, upgrade: E::Upgrade) -> Self {

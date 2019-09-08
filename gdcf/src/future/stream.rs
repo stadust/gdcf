@@ -1,6 +1,6 @@
 use crate::{
     api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
-    cache::{Cache, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache, Store},
     error::{ApiError, GdcfError},
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
@@ -8,17 +8,20 @@ use crate::{
     },
     Gdcf,
 };
-use futures::{task, Async, Stream};
+use futures::{task, Async, Future, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::info;
 
 #[allow(missing_debug_implementations)]
-pub struct GdcfStream<Req: PaginatableRequest, F: GdcfFuture> {
-    request: Req,
+pub struct GdcfStream<F: GdcfFuture>
+where
+    F::BaseRequest: PaginatableRequest,
+{
+    request: F::BaseRequest,
     current_future: F,
 }
 
-impl<A, C, Req> GdcfStream<Req, ProcessRequestFuture<Req, A, C>>
+impl<A, C, Req> GdcfStream<ProcessRequestFuture<Req, A, C>>
 where
     C: Store<NewgroundsSong> + Store<Creator> + Cache + CanCache<Req>,
     A: ApiClient + MakeRequest<Req>,
@@ -32,15 +35,13 @@ where
     }
 }
 
-impl<Req, F, A, C> Stream for GdcfStream<Req, F>
+impl<F> Stream for GdcfStream<F>
 where
-    Req: PaginatableRequest,
-    F: GdcfFuture<Request = Req, ApiClient = A, Cache = C, Error = GdcfError<A::Err, C::Err>>,
-    A: ApiClient,
-    C: Cache,
+    F: GdcfFuture,
+    F::BaseRequest: PaginatableRequest,
 {
-    type Error = F::Error;
-    type Item = F::Item;
+    type Error = GdcfError<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>;
+    type Item = CacheEntry<F::GdcfItem, <F::Cache as Cache>::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
         match self.current_future.poll() {

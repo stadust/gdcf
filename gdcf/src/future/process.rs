@@ -43,14 +43,14 @@ where
     Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
     UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
 }
-
+/*
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
-    pub fn upgrade<Into>(self) -> UpgradeFuture<Self, A, C, Into, Req::Result>
+    pub fn upgrade<Into>(self) -> UpgradeFuture<Self, Into, Req::Result>
     where
         Req::Result: Upgrade<C, Into>,
         A: MakeRequest<<Req::Result as Upgrade<C, Into>>::Request>,
@@ -74,7 +74,7 @@ where
     {
         unimplemented!()
     }
-}
+}*/
 
 impl<Req, A, C> Future for ProcessRequestFuture<Req, A, C>
 where
@@ -86,16 +86,7 @@ where
     type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        match &mut self.state {
-            ProcessRequestFutureState::Empty => panic!("Future already polled to completion"),
-            ProcessRequestFutureState::Uncached(future) => future.poll(),
-            ProcessRequestFutureState::Outdated(_, future) => future.poll(),
-            fut =>
-                match std::mem::replace(fut, ProcessRequestFutureState::Empty) {
-                    ProcessRequestFutureState::UpToDate(inner) => Ok(Async::Ready(inner)),
-                    _ => unreachable!(),
-                },
-        }
+        GdcfFuture::poll(self)
     }
 }
 
@@ -106,9 +97,9 @@ where
     Req: Request,
 {
     type ApiClient = A;
+    type BaseRequest = Req;
     type Cache = C;
-    type Request = Req;
-    type ToPeek = Req::Result;
+    type GdcfItem = Req::Result;
 
     fn has_result_cached(&self) -> bool {
         match self.state {
@@ -117,7 +108,9 @@ where
         }
     }
 
-    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
+    fn into_cached(
+        self,
+    ) -> Result<Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>, GdcfError<A::Err, C::Err>>
     where
         Self: Sized,
     {
@@ -127,7 +120,7 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<A, C>, request: &Self::Request) -> Result<Self, C::Err> {
+    fn new(gdcf: Gdcf<A, C>, request: &Self::BaseRequest) -> Result<Self, C::Err> {
         Ok(ProcessRequestFuture {
             forces_refresh: request.forces_refresh(),
             state: gdcf.process(request)?,
@@ -135,7 +128,7 @@ where
         })
     }
 
-    fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+    fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self {
         let ProcessRequestFuture {
             gdcf,
             forces_refresh,
@@ -163,5 +156,23 @@ where
 
     fn forcing_refreshs(&self) -> bool {
         self.forces_refresh
+    }
+
+    fn poll(
+        &mut self,
+    ) -> Result<
+        Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
+        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+    > {
+        match &mut self.state {
+            ProcessRequestFutureState::Empty => panic!("Future already polled to completion"),
+            ProcessRequestFutureState::Uncached(future) => future.poll(),
+            ProcessRequestFutureState::Outdated(_, future) => future.poll(),
+            fut =>
+                match std::mem::replace(fut, ProcessRequestFutureState::Empty) {
+                    ProcessRequestFutureState::UpToDate(inner) => Ok(Async::Ready(inner)),
+                    _ => unreachable!(),
+                },
+        }
     }
 }

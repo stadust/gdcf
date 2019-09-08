@@ -10,42 +10,47 @@ use crate::{
     upgrade::{Upgrade, UpgradeMode},
     Gdcf,
 };
-use failure::_core::hint::unreachable_unchecked;
 
 #[allow(missing_debug_implementations)]
-pub struct UpgradeFuture<From, A, C, Into, U>
+pub struct UpgradeFuture<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
 {
-    gdcf: Gdcf<A, C>,
+    gdcf: Gdcf<From::ApiClient, From::Cache>,
     forced_refresh: bool,
-    state: UpgradeFutureState<From, A, C, Into, U>,
+    state: UpgradeFutureState<From, Into, U>,
 }
 
 #[allow(missing_debug_implementations)]
-enum UpgradeFutureState<From, A, C, Into, U>
+enum UpgradeFutureState<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
 {
-    WaitingOnInner { has_result_cached: bool, inner_future: From },
-    Extending(C::CacheEntryMeta, UpgradeMode<A, C, Into, U>),
+    WaitingOnInner {
+        has_result_cached: bool,
+        inner_future: From,
+    },
+    Extending(
+        <From::Cache as Cache>::CacheEntryMeta,
+        UpgradeMode<From::ApiClient, From::Cache, Into, U>,
+    ),
     Exhausted,
 }
 
-impl<From, A, C, Into, U> UpgradeFutureState<From, A, C, Into, U>
+impl<From, Into, U> UpgradeFutureState<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
 {
-    pub fn new(cache: &C, inner_future: From) -> Self {
+    pub fn new(cache: &From::Cache, inner_future: From) -> Self {
         let mut has_result_cached = false;
 
         UpgradeFutureState::WaitingOnInner {
@@ -57,7 +62,7 @@ where
         }
     }
 
-    fn peek_inner(cache: &C, inner: From, f: impl FnOnce(Into) -> Into) -> From {
+    fn peek_inner(cache: &From::Cache, inner: From, f: impl FnOnce(Into) -> Into) -> From {
         inner.peek_cached(move |peeked| {
             match temporary_upgrade(cache, peeked) {
                 Ok((upgraded, downgrade)) => U::downgrade(f(upgraded), downgrade).0,
@@ -67,17 +72,94 @@ where
     }
 }
 
-impl<From, A, C, Into, U> Future for UpgradeFuture<From, A, C, Into, U>
+impl<From, Into, U> GdcfFuture for UpgradeFuture<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
 {
-    type Error = GdcfError<A::Err, C::Err>;
-    type Item = CacheEntry<Into, C::CacheEntryMeta>;
+    type ApiClient = From::ApiClient;
+    type BaseRequest = <From as GdcfFuture>::BaseRequest;
+    type Cache = From::Cache;
+    type GdcfItem = Into;
 
-    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+    fn has_result_cached(&self) -> bool {
+        match &self.state {
+            UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
+            UpgradeFutureState::Extending(_, upgrade_mode) =>
+                match upgrade_mode {
+                    UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
+                    UpgradeMode::UpgradeMissing(..) => false,
+                },
+            UpgradeFutureState::Exhausted => false,
+        }
+    }
+
+    fn into_cached(
+        self,
+    ) -> Result<
+        Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>,
+        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+    >
+    where
+        Self: Sized,
+    {
+        if !self.has_result_cached() {
+            return Ok(Err(self))
+        }
+
+        match self.state {
+            UpgradeFutureState::WaitingOnInner { inner_future, .. } => {
+                let base = match inner_future.into_cached()? {
+                    Ok(base) => base,
+                    _ => unreachable!(),
+                };
+
+                Ok(Ok(match base {
+                    CacheEntry::Cached(to_upgrade, meta) =>
+                        CacheEntry::Cached(
+                            match temporary_upgrade(&self.gdcf.cache(), to_upgrade) {
+                                Ok((upgraded, _)) => upgraded,
+                                _ => unreachable!(),
+                            },
+                            meta,
+                        ),
+                    cache_entry => cache_entry.map_empty(),
+                }))
+            },
+            UpgradeFutureState::Extending(meta, upgrade_mode) =>
+                match upgrade_mode {
+                    UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
+                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
+                    UpgradeMode::UpgradeMissing(..) => unreachable!(),
+                },
+            UpgradeFutureState::Exhausted => unreachable!(),
+        }
+    }
+
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
+        Ok(UpgradeFuture {
+            state: UpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
+            gdcf,
+            forced_refresh: request.forces_refresh(),
+        })
+    }
+
+    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
+        self.gdcf.clone()
+    }
+
+    fn forcing_refreshs(&self) -> bool {
+        self.forced_refresh
+    }
+
+    fn poll(
+        &mut self,
+    ) -> Result<
+        Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
+        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+    > {
         let (ready, new_state) = match std::mem::replace(&mut self.state, UpgradeFutureState::Exhausted) {
             UpgradeFutureState::WaitingOnInner {
                 has_result_cached,
@@ -135,78 +217,8 @@ where
 
         Ok(ready)
     }
-}
 
-impl<From, A, C, Into, U> GdcfFuture for UpgradeFuture<From, A, C, Into, U>
-where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = U, Cache = C, ApiClient = A>,
-    U: Upgrade<C, Into>,
-{
-    type ApiClient = A;
-    type Cache = C;
-    type Request = <From as GdcfFuture>::Request;
-    type ToPeek = Into;
-
-    fn has_result_cached(&self) -> bool {
-        match &self.state {
-            UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            UpgradeFutureState::Extending(_, upgrade_mode) =>
-                match upgrade_mode {
-                    UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
-                    UpgradeMode::UpgradeMissing(..) => false,
-                },
-            UpgradeFutureState::Exhausted => false,
-        }
-    }
-
-    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
-    where
-        Self: Sized,
-    {
-        if !self.has_result_cached() {
-            return Ok(Err(self))
-        }
-
-        match self.state {
-            UpgradeFutureState::WaitingOnInner { inner_future, .. } => {
-                let base = match inner_future.into_cached()? {
-                    Ok(base) => base,
-                    _ => unreachable!(),
-                };
-
-                Ok(Ok(match base {
-                    CacheEntry::Cached(to_upgrade, meta) =>
-                        CacheEntry::Cached(
-                            match temporary_upgrade(&self.gdcf.cache(), to_upgrade) {
-                                Ok((upgraded, _)) => upgraded,
-                                _ => unreachable!(),
-                            },
-                            meta,
-                        ),
-                    cache_entry => cache_entry.map_empty(),
-                }))
-            },
-            UpgradeFutureState::Extending(meta, upgrade_mode) =>
-                match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
-                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
-                    UpgradeMode::UpgradeMissing(..) => unreachable!(),
-                },
-            UpgradeFutureState::Exhausted => unreachable!(),
-        }
-    }
-
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
-        Ok(UpgradeFuture {
-            state: UpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
-            gdcf,
-            forced_refresh: request.forces_refresh(),
-        })
-    }
-
-    fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+    fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self {
         if !self.has_result_cached() {
             return self
         }
@@ -224,7 +236,7 @@ where
             } =>
                 UpgradeFutureState::WaitingOnInner {
                     has_result_cached,
-                    inner_future: UpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
+                    inner_future: UpgradeFutureState::<From, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
@@ -246,49 +258,63 @@ where
             forced_refresh,
         }
     }
+}
 
-    fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
-        self.gdcf.clone()
-    }
+impl<From, Into, U> Future for UpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
+{
+    type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
+    type Item = CacheEntry<Into, <From::Cache as Cache>::CacheEntryMeta>;
 
-    fn forcing_refreshs(&self) -> bool {
-        self.forced_refresh
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        GdcfFuture::poll(self)
     }
 }
+
 #[allow(missing_debug_implementations)]
-pub struct MultiUpgradeFuture<From, A, C, Into, U>
+pub struct MultiUpgradeFuture<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
 {
-    gdcf: Gdcf<A, C>,
+    gdcf: Gdcf<From::ApiClient, From::Cache>,
     forced_refresh: bool,
-    state: MultiUpgradeFutureState<From, A, C, Into, U>,
+    state: MultiUpgradeFutureState<From, Into, U>,
 }
 
 #[allow(missing_debug_implementations)]
-enum MultiUpgradeFutureState<From, A, C, Into, U>
+enum MultiUpgradeFutureState<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
 {
-    WaitingOnInner { has_result_cached: bool, inner_future: From },
-    Extending(C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
+    WaitingOnInner {
+        has_result_cached: bool,
+        inner_future: From,
+    },
+    Extending(
+        <From::Cache as Cache>::CacheEntryMeta,
+        Vec<UpgradeMode<From::ApiClient, From::Cache, Into, U>>,
+    ),
     Exhausted,
 }
 
-impl<From, A, C, Into, U> MultiUpgradeFutureState<From, A, C, Into, U>
+impl<From, Into, U> MultiUpgradeFutureState<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>, ToPeek = Vec<U>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
 {
-    pub fn new(cache: &C, inner_future: From) -> Self {
+    pub fn new(cache: &From::Cache, inner_future: From) -> Self {
         let mut has_result_cached = false;
 
         MultiUpgradeFutureState::WaitingOnInner {
@@ -300,7 +326,7 @@ where
         }
     }
 
-    fn peek_inner(cache: &C, inner: From, f: impl FnOnce(Vec<Into>) -> Vec<Into>) -> From {
+    fn peek_inner(cache: &From::Cache, inner: From, f: impl FnOnce(Vec<Into>) -> Vec<Into>) -> From {
         inner.peek_cached(move |e: Vec<U>| {
             match temporary_upgrade_all(cache, e) {
                 Ok((upgraded, downgrades)) =>
@@ -315,112 +341,17 @@ where
     }
 }
 
-impl<From, A, C, Into, U> Future for MultiUpgradeFuture<From, A, C, Into, U>
+impl<From, Into, U> GdcfFuture for MultiUpgradeFuture<From, Into, U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<Item = CacheEntry<Vec<U>, C::CacheEntryMeta>, Error = GdcfError<A::Err, C::Err>>,
-    U: Upgrade<C, Into>,
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
 {
-    type Error = GdcfError<A::Err, C::Err>;
-    type Item = CacheEntry<Vec<Into>, C::CacheEntryMeta>;
-
-    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
-        let (ready, new_state) = match std::mem::replace(&mut self.state, MultiUpgradeFutureState::Exhausted) {
-            MultiUpgradeFutureState::WaitingOnInner {
-                has_result_cached,
-                mut inner_future,
-            } => {
-                match inner_future.poll()? {
-                    Async::NotReady =>
-                        (
-                            Async::NotReady,
-                            MultiUpgradeFutureState::WaitingOnInner {
-                                has_result_cached,
-                                inner_future,
-                            },
-                        ),
-                    Async::Ready(CacheEntry::Cached(cached_objects, meta)) => {
-                        // TODO: figure out if this is really needed
-                        futures::task::current().notify();
-
-                        (
-                            Async::NotReady,
-                            MultiUpgradeFutureState::Extending(
-                                meta,
-                                cached_objects
-                                    .into_iter()
-                                    .map(|object| UpgradeMode::new(object, &self.gdcf, self.forced_refresh))
-                                    .collect::<Result<Vec<_>, _>>()?,
-                            ),
-                        )
-                    },
-                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), MultiUpgradeFutureState::Exhausted),
-                }
-            },
-
-            MultiUpgradeFutureState::Extending(meta, mut entry_upgrade_modes) => {
-                let mut done = Vec::new();
-                let mut not_done = Vec::new();
-
-                for mut upgrade_mode in entry_upgrade_modes {
-                    match upgrade_mode {
-                        UpgradeMode::UpgradeCached(cached) => done.push(cached),
-                        mut upgrade_mode =>
-                            match upgrade_mode.future().unwrap().poll()? {
-                                Async::NotReady => not_done.push(upgrade_mode),
-                                Async::Ready(cache_entry) => {
-                                    let to_upgrade = upgrade_mode.to_upgrade().unwrap();
-                                    let upgrade = match cache_entry {
-                                        CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
-                                            U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
-                                        CacheEntry::Cached(request_result, _) =>
-                                            U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
-                                                .map_err(GdcfError::Cache)?,
-                                        _ => unreachable!(),
-                                    };
-                                    let (upgraded, _) = to_upgrade.upgrade(upgrade);
-
-                                    done.push(upgraded);
-                                },
-                            },
-                    }
-                }
-
-                if not_done.is_empty() {
-                    (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFutureState::Exhausted)
-                } else {
-                    not_done.extend(done.into_iter().map(UpgradeMode::UpgradeCached));
-                    (Async::NotReady, MultiUpgradeFutureState::Extending(meta, not_done))
-                }
-            },
-
-            MultiUpgradeFutureState::Exhausted => panic!("Future already polled to completion"),
-        };
-
-        self.state = new_state;
-
-        Ok(ready)
-    }
-}
-
-impl<From, A, C, Into, U> GdcfFuture for MultiUpgradeFuture<From, A, C, Into, U>
-where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    From: GdcfFuture<
-        Item = CacheEntry<Vec<U>, C::CacheEntryMeta>,
-        Error = GdcfError<A::Err, C::Err>,
-        ToPeek = Vec<U>,
-        Cache = C,
-        ApiClient = A,
-    >,
-    U: Upgrade<C, Into>,
-{
-    type ApiClient = A;
-    type Cache = C;
-    type Request = <From as GdcfFuture>::Request;
-    type ToPeek = Vec<Into>;
+    type ApiClient = From::ApiClient;
+    type BaseRequest = <From as GdcfFuture>::BaseRequest;
+    type Cache = From::Cache;
+    type GdcfItem = Vec<Into>;
 
     fn has_result_cached(&self) -> bool {
         match &self.state {
@@ -436,7 +367,12 @@ where
         }
     }
 
-    fn into_cached(self) -> Result<Result<Self::Item, Self>, Self::Error>
+    fn into_cached(
+        self,
+    ) -> Result<
+        Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>,
+        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+    >
     where
         Self: Sized,
     {
@@ -480,7 +416,7 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::Request) -> Result<Self, C::Err> {
+    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
         Ok(MultiUpgradeFuture {
             forced_refresh: request.forces_refresh(),
             state: MultiUpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
@@ -488,7 +424,7 @@ where
         })
     }
 
-    fn peek_cached<F: FnOnce(Self::ToPeek) -> Self::ToPeek>(self, f: F) -> Self {
+    fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self {
         if !self.has_result_cached() {
             return self
         }
@@ -506,7 +442,7 @@ where
             } =>
                 MultiUpgradeFutureState::WaitingOnInner {
                     has_result_cached,
-                    inner_future: MultiUpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
+                    inner_future: MultiUpgradeFutureState::<From, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
             MultiUpgradeFutureState::Extending(meta, upgrade_modes) => {
                 let mut upgraded = Vec::new();
@@ -593,6 +529,104 @@ where
 
     fn forcing_refreshs(&self) -> bool {
         self.forced_refresh
+    }
+
+    fn poll(
+        &mut self,
+    ) -> Result<
+        Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
+        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+    > {
+        let (ready, new_state) = match std::mem::replace(&mut self.state, MultiUpgradeFutureState::Exhausted) {
+            MultiUpgradeFutureState::WaitingOnInner {
+                has_result_cached,
+                mut inner_future,
+            } => {
+                match inner_future.poll()? {
+                    Async::NotReady =>
+                        (
+                            Async::NotReady,
+                            MultiUpgradeFutureState::WaitingOnInner {
+                                has_result_cached,
+                                inner_future,
+                            },
+                        ),
+                    Async::Ready(CacheEntry::Cached(cached_objects, meta)) => {
+                        // TODO: figure out if this is really needed
+                        futures::task::current().notify();
+
+                        (
+                            Async::NotReady,
+                            MultiUpgradeFutureState::Extending(
+                                meta,
+                                cached_objects
+                                    .into_iter()
+                                    .map(|object| UpgradeMode::new(object, &self.gdcf, self.forced_refresh))
+                                    .collect::<Result<Vec<_>, _>>()?,
+                            ),
+                        )
+                    },
+                    Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), MultiUpgradeFutureState::Exhausted),
+                }
+            },
+
+            MultiUpgradeFutureState::Extending(meta, mut entry_upgrade_modes) => {
+                let mut done = Vec::new();
+                let mut not_done = Vec::new();
+
+                for mut upgrade_mode in entry_upgrade_modes {
+                    match upgrade_mode {
+                        UpgradeMode::UpgradeCached(cached) => done.push(cached),
+                        mut upgrade_mode =>
+                            match upgrade_mode.future().unwrap().poll()? {
+                                Async::NotReady => not_done.push(upgrade_mode),
+                                Async::Ready(cache_entry) => {
+                                    let to_upgrade = upgrade_mode.to_upgrade().unwrap();
+                                    let upgrade = match cache_entry {
+                                        CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
+                                            U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
+                                        CacheEntry::Cached(request_result, _) =>
+                                            U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
+                                                .map_err(GdcfError::Cache)?,
+                                        _ => unreachable!(),
+                                    };
+                                    let (upgraded, _) = to_upgrade.upgrade(upgrade);
+
+                                    done.push(upgraded);
+                                },
+                            },
+                    }
+                }
+
+                if not_done.is_empty() {
+                    (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFutureState::Exhausted)
+                } else {
+                    not_done.extend(done.into_iter().map(UpgradeMode::UpgradeCached));
+                    (Async::NotReady, MultiUpgradeFutureState::Extending(meta, not_done))
+                }
+            },
+
+            MultiUpgradeFutureState::Exhausted => panic!("Future already polled to completion"),
+        };
+
+        self.state = new_state;
+
+        Ok(ready)
+    }
+}
+
+impl<From, Into, U> Future for MultiUpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
+{
+    type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
+    type Item = CacheEntry<Vec<Into>, <From::Cache as Cache>::CacheEntryMeta>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        GdcfFuture::poll(self)
     }
 }
 
