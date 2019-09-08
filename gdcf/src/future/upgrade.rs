@@ -24,6 +24,33 @@ where
     state: UpgradeFutureState<From, Into, U>,
 }
 
+impl<From, Into, U> UpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U>,
+    U: Upgrade<From::Cache, Into>,
+{
+    pub fn upgrade_from(from: From) -> Self {
+        let gdcf = from.gdcf();
+
+        UpgradeFuture {
+            forced_refresh: from.forcing_refreshs(),
+            state: UpgradeFutureState::new(&gdcf.cache(), from),
+            gdcf,
+        }
+    }
+
+    pub fn upgrade<Into2>(self) -> UpgradeFuture<Self, Into2, Into>
+    where
+        Into: Upgrade<From::Cache, Into2>,
+        From::ApiClient: MakeRequest<Into::Request>,
+        From::Cache: CanCache<Into::Request>,
+    {
+        UpgradeFuture::upgrade_from(self)
+    }
+}
+
 #[allow(missing_debug_implementations)]
 enum UpgradeFutureState<From, Into, U>
 where
@@ -286,6 +313,33 @@ where
     gdcf: Gdcf<From::ApiClient, From::Cache>,
     forced_refresh: bool,
     state: MultiUpgradeFutureState<From, Into, U>,
+}
+
+impl<From, Into, U> MultiUpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>>,
+    U: Upgrade<From::Cache, Into>,
+{
+    pub fn upgrade_from(from: From) -> Self {
+        let gdcf = from.gdcf();
+
+        MultiUpgradeFuture {
+            forced_refresh: from.forcing_refreshs(),
+            state: MultiUpgradeFutureState::new(&gdcf.cache(), from),
+            gdcf,
+        }
+    }
+
+    pub fn upgrade_all<Into2>(self) -> MultiUpgradeFuture<Self, Into2, Into>
+    where
+        Into: Upgrade<From::Cache, Into2>,
+        From::ApiClient: MakeRequest<Into::Request>,
+        From::Cache: CanCache<Into::Request>,
+    {
+        MultiUpgradeFuture::upgrade_from(self)
+    }
 }
 
 #[allow(missing_debug_implementations)]

@@ -43,7 +43,7 @@ where
     Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
     UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
 }
-/*
+
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
@@ -56,7 +56,7 @@ where
         A: MakeRequest<<Req::Result as Upgrade<C, Into>>::Request>,
         C: CanCache<<Req::Result as Upgrade<C, Into>>::Request>,
     {
-        unimplemented!()
+        UpgradeFuture::upgrade_from(self)
     }
 }
 
@@ -66,15 +66,15 @@ where
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request<Result = Vec<T>>,
 {
-    pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, A, C, Into, T>
+    pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, Into, T>
     where
         T: Upgrade<C, Into>,
         A: MakeRequest<<T as Upgrade<C, Into>>::Request>,
         C: CanCache<<T as Upgrade<C, Into>>::Request>,
     {
-        unimplemented!()
+        MultiUpgradeFuture::upgrade_from(self)
     }
-}*/
+}
 
 impl<Req, A, C> Future for ProcessRequestFuture<Req, A, C>
 where
