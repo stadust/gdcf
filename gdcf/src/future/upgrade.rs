@@ -269,7 +269,7 @@ where
     U: Upgrade<C, Into>,
 {
     WaitingOnInner { has_result_cached: bool, inner_future: From },
-    Extending(C, C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
+    Extending(C::CacheEntryMeta, Vec<UpgradeMode<A, C, Into, U>>),
     Exhausted,
 }
 
@@ -339,7 +339,6 @@ where
                         (
                             Async::NotReady,
                             MultiUpgradeFutureState::Extending(
-                                self.gdcf.cache(),
                                 meta,
                                 cached_objects
                                     .into_iter()
@@ -352,7 +351,7 @@ where
                 }
             },
 
-            MultiUpgradeFutureState::Extending(cache, meta, mut entry_upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(meta, mut entry_upgrade_modes) => {
                 let mut done = Vec::new();
                 let mut not_done = Vec::new();
 
@@ -368,7 +367,8 @@ where
                                         CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
                                             U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
                                         CacheEntry::Cached(request_result, _) =>
-                                            U::lookup_upgrade(to_upgrade.current(), &cache, request_result).map_err(GdcfError::Cache)?,
+                                            U::lookup_upgrade(to_upgrade.current(), &self.gdcf.cache(), request_result)
+                                                .map_err(GdcfError::Cache)?,
                                         _ => unreachable!(),
                                     };
                                     let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -383,7 +383,7 @@ where
                     (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFutureState::Exhausted)
                 } else {
                     not_done.extend(done.into_iter().map(UpgradeMode::UpgradeCached));
-                    (Async::NotReady, MultiUpgradeFutureState::Extending(cache, meta, not_done))
+                    (Async::NotReady, MultiUpgradeFutureState::Extending(meta, not_done))
                 }
             },
 
@@ -417,7 +417,7 @@ where
     fn has_result_cached(&self) -> bool {
         match &self.state {
             MultiUpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            MultiUpgradeFutureState::Extending(_, _, upgrade_modes) =>
+            MultiUpgradeFutureState::Extending(_, upgrade_modes) =>
                 upgrade_modes.iter().all(|mode| {
                     match mode {
                         UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
@@ -455,7 +455,7 @@ where
                     cache_entry => cache_entry.map_empty(),
                 }))
             },
-            MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(meta, upgrade_modes) => {
                 let mut result = Vec::new();
 
                 for upgrade_mode in upgrade_modes {
@@ -500,7 +500,7 @@ where
                     has_result_cached,
                     inner_future: MultiUpgradeFutureState::<From, A, C, Into, U>::peek_inner(&gdcf.cache(), inner_future, f),
                 },
-            MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(meta, upgrade_modes) => {
                 let mut upgraded = Vec::new();
                 let mut downgrades = Vec::new();
                 let mut futures = Vec::new();
@@ -567,7 +567,7 @@ where
                     failed
                 };
 
-                MultiUpgradeFutureState::Extending(cache, meta, upgrade_modes)
+                MultiUpgradeFutureState::Extending(meta, upgrade_modes)
             },
             MultiUpgradeFutureState::Exhausted => MultiUpgradeFutureState::Exhausted,
         };
