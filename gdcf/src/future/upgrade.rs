@@ -151,9 +151,9 @@ where
     type GdcfItem = Into;
 
     fn has_result_cached(&self) -> bool {
-        match &self.state {
-            UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => *has_result_cached,
-            UpgradeFutureState::Extending(_, upgrade_mode) =>
+        match self.state {
+            UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => has_result_cached,
+            UpgradeFutureState::Extending(_, ref upgrade_mode) =>
                 match upgrade_mode {
                     UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
                     UpgradeMode::UpgradeMissing(..) => false,
@@ -735,11 +735,11 @@ where
                 }
             },
 
-            MultiUpgradeFutureState::Extending(meta, mut entry_upgrade_modes) => {
+            MultiUpgradeFutureState::Extending(meta, entry_upgrade_modes) => {
                 let mut done = Vec::new();
                 let mut not_done = Vec::new();
 
-                for mut upgrade_mode in entry_upgrade_modes {
+                for upgrade_mode in entry_upgrade_modes {
                     match upgrade_mode {
                         UpgradeMode::UpgradeCached(cached) => done.push(cached),
                         mut upgrade_mode =>

@@ -22,7 +22,7 @@ impl<C: Cache, Song, User> Upgrade<C, Level<Song, User>> for PartialLevel<Song, 
         None
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: Level<Option<u64>, u64>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, _: &C, request_result: Level<Option<u64>, u64>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(request_result)
     }
 
@@ -146,7 +146,7 @@ where
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(self.base.creator)?.into())
     }
 
@@ -179,7 +179,7 @@ where
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(self.creator)?.into())
     }
 
@@ -212,7 +212,7 @@ impl<C: Cache, Song> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLev
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 
@@ -244,7 +244,7 @@ impl<C: Cache, Song> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Optio
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 

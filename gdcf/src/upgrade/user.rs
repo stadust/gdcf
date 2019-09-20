@@ -14,7 +14,7 @@ impl<C: Cache> Upgrade<C, User> for SearchedUser {
         None
     }
 
-    fn lookup_upgrade(&self, cache: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(request_result)
     }
 

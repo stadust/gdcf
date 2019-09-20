@@ -40,21 +40,6 @@ where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
 {
-    fn gdcf(&self) -> Gdcf<A, C> {
-        self.gdcf.clone()
-    }
-
-    fn cache_key(&self) -> u64 {
-        self.cache_key
-    }
-}
-
-impl<Req, A, C> RefreshCacheFuture<Req, A, C>
-where
-    Req: Request,
-    A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
-{
     pub(crate) fn new(gdcf: Gdcf<A, C>, cache_key: u64, inner: <A as MakeRequest<Req>>::Future) -> Self {
         RefreshCacheFuture { inner, gdcf, cache_key }
     }
