@@ -1,11 +1,13 @@
+use futures::Async;
+
+use gdcf_model::{song::NewgroundsSong, user::Creator};
+
 use crate::{
     api::{request::Request, ApiClient},
     cache::{Cache, CacheEntry, Store},
     error::GdcfError,
     Gdcf,
 };
-use futures::Async;
-use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 pub mod process;
 pub mod refresh;
@@ -18,7 +20,7 @@ pub mod upgrade;
 /// cached data. In this case, it can be converted into the cached data directly without having to
 /// ever poll the future. If the result from the cache isn't desired, or the result wasn't cached,
 /// it can be spawned instead, potentially performing a request and updating the cache.
-pub trait GdcfFuture /* : Future */ {
+pub trait GdcfFuture {
     type GdcfItem;
 
     type BaseRequest: Request;
@@ -55,4 +57,10 @@ pub trait GdcfFuture /* : Future */ {
 
     #[doc(hidden)]
     fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self;
+}
+
+// FIXME: we probably do not want this to be its own trait. Right now it is so we can keep the Clone
+// bounds contained
+pub trait CloneCached: GdcfFuture {
+    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()>;
 }

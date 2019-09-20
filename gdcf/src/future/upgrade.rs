@@ -4,7 +4,7 @@ use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache},
     error::GdcfError,
-    future::GdcfFuture,
+    future::{CloneCached, GdcfFuture},
     upgrade::{Upgrade, UpgradeMode},
     Gdcf,
 };
@@ -325,6 +325,38 @@ where
     }
 }
 
+impl<From, Into, U> CloneCached for UpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = U> + CloneCached,
+    U: Upgrade<From::Cache, Into> + Clone,
+    Into: Clone,
+    U::Upgrade: Clone,
+{
+    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()> {
+        match &self.state {
+            UpgradeFutureState::WaitingOnInner { ref inner_future, .. } =>
+                match inner_future.clone_cached()? {
+                    CacheEntry::Cached(to_upgrade, meta) => {
+                        let upgraded = temporary_upgrade(&inner_future.gdcf().cache(), to_upgrade).map_err(|_| ())?.0;
+
+                        Ok(CacheEntry::Cached(upgraded, meta))
+                    },
+                    entry => Ok(entry.map_empty()),
+                },
+            UpgradeFutureState::Extending(meta, upgrade_mode) =>
+                match upgrade_mode {
+                    UpgradeMode::UpgradeCached(cached) => Ok(CacheEntry::Cached(cached.clone(), meta.clone())),
+                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) =>
+                        Ok(CacheEntry::Cached(to_upgrade.clone().upgrade(upgrade.clone()).0, meta.clone())),
+                    UpgradeMode::UpgradeMissing(..) => Ok(CacheEntry::Missing),
+                },
+            UpgradeFutureState::Exhausted => Err(()),
+        }
+    }
+}
+
 impl<From, Into, U> Future for UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
@@ -340,7 +372,6 @@ where
     }
 }
 
-#[allow(missing_debug_implementations)]
 pub struct MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
@@ -745,6 +776,48 @@ where
         self.state = new_state;
 
         Ok(ready)
+    }
+}
+
+impl<From, Into, U> CloneCached for MultiUpgradeFuture<From, Into, U>
+where
+    From::ApiClient: MakeRequest<U::Request>,
+    From::Cache: CanCache<U::Request>,
+    From: GdcfFuture<GdcfItem = Vec<U>> + CloneCached,
+    U: Upgrade<From::Cache, Into> + Clone,
+    Into: Clone,
+    U::Upgrade: Clone,
+{
+    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()> {
+        match &self.state {
+            MultiUpgradeFutureState::WaitingOnInner { ref inner_future, .. } =>
+                match inner_future.clone_cached()? {
+                    CacheEntry::Cached(to_upgrade, meta) => {
+                        let upgraded = temporary_upgrade_all(&inner_future.gdcf().cache(), to_upgrade).map_err(|_| ())?.0;
+
+                        Ok(CacheEntry::Cached(upgraded, meta))
+                    },
+                    entry => Ok(entry.map_empty()),
+                },
+            MultiUpgradeFutureState::Extending(ref meta, ref upgrade_modes) =>
+                if !self.has_result_cached() {
+                    Ok(CacheEntry::Missing)
+                } else {
+                    let mut clones = Vec::new();
+
+                    for mode in upgrade_modes {
+                        match mode {
+                            UpgradeMode::UpgradeCached(cached) => clones.push(cached.clone()),
+                            UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) =>
+                                clones.push(to_upgrade.clone().upgrade(upgrade.clone()).0),
+                            UpgradeMode::UpgradeMissing(..) => unreachable!(),
+                        }
+                    }
+
+                    Ok(CacheEntry::Cached(clones, meta.clone()))
+                },
+            MultiUpgradeFutureState::Exhausted => Err(()),
+        }
     }
 }
 

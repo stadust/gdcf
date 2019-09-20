@@ -1,3 +1,7 @@
+use futures::{Async, Future};
+
+use gdcf_model::{song::NewgroundsSong, user::Creator};
+
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
@@ -5,13 +9,11 @@ use crate::{
     future::{
         refresh::RefreshCacheFuture,
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
-        GdcfFuture,
+        CloneCached, GdcfFuture,
     },
     upgrade::Upgrade,
     Gdcf,
 };
-use futures::{Async, Future};
-use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 pub struct ProcessRequestFuture<Req, A, C>
 where
@@ -196,6 +198,22 @@ where
                     ProcessRequestFutureState::UpToDate(inner) => Ok(Async::Ready(inner)),
                     _ => unreachable!(),
                 },
+        }
+    }
+}
+
+impl<Req, A, C> CloneCached for ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    Req: Request,
+    Req::Result: Clone,
+{
+    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()> {
+        match &self.state {
+            ProcessRequestFutureState::Empty => Err(()),
+            ProcessRequestFutureState::Uncached(_) => Ok(CacheEntry::Missing),
+            ProcessRequestFutureState::Outdated(cached, _) | ProcessRequestFutureState::UpToDate(cached) => Ok(cached.clone()),
         }
     }
 }
