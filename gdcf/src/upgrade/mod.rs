@@ -44,6 +44,7 @@ where
 {
     UpgradeCached(Into),
     UpgradeOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
+    // FIXME: Missing != Absent
     UpgradeMissing(E, RefreshCacheFuture<E::Request, A, C>),
 }
 

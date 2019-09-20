@@ -9,8 +9,8 @@ use gdcf_model::{
     user::{Creator, User},
 };
 
-impl<C: Cache> Upgrade<C, Level<Option<u64>, u64>> for PartialLevel<Option<u64>, u64> {
-    type From = Self;
+impl<C: Cache, Song, User> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
+    type From = PartialLevel<Option<u64>, u64>;
     type Request = LevelRequest;
     type Upgrade = Level<Option<u64>, u64>;
 
@@ -26,31 +26,30 @@ impl<C: Cache> Upgrade<C, Level<Option<u64>, u64>> for PartialLevel<Option<u64>,
         Ok(request_result)
     }
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Option<u64>, u64>, Self::From) {
-        let Level {
-            level_data,
-            password,
-            time_since_update,
-            time_since_upload,
-            index_36,
-            base,
-        } = upgrade;
+    fn upgrade(self, upgrade: Self::Upgrade) -> (Level<Song, User>, Self::From) {
+        let (partial_level, song) = change_partial_level_song(self, ());
+        let (partial_level, user) = change_partial_level_user(partial_level, ());
 
-        (
-            Level {
-                base: self,
-                level_data,
-                password,
-                time_since_update,
-                time_since_upload,
-                index_36,
-            },
-            base,
-        )
+        let (level, song_id) = change_level_song(upgrade, song);
+        let (level, creator_id) = change_level_user(level, user);
+
+        let partial_level = change_partial_level_user(partial_level, creator_id).0;
+        let partial_level = change_partial_level_song(partial_level, song_id).0;
+
+        (level, partial_level)
     }
 
-    fn downgrade(upgraded: Level<Option<u64>, u64>, downgrade: Self::From) -> (Self, Self::Upgrade) {
-        (downgrade, upgraded)
+    fn downgrade(upgraded: Level<Song, User>, downgrade: Self::From) -> (Self, Self::Upgrade) {
+        let (level, song) = change_level_song(upgraded, ());
+        let (level, creator) = change_level_user(level, ());
+
+        let (partial_level, song_id) = change_partial_level_song(downgrade, song);
+        let (partial_level, creator_id) = change_partial_level_user(partial_level, creator);
+
+        let level = change_level_user(level, creator_id).0;
+        let level = change_level_song(level, song_id).0;
+
+        (partial_level, level)
     }
 }
 
