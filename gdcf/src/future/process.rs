@@ -11,7 +11,7 @@ use crate::{
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
         CloneCached, GdcfFuture,
     },
-    upgrade::Upgrade,
+    upgrade::Upgradable,
     Gdcf,
 };
 
@@ -76,9 +76,9 @@ where
 {
     pub fn upgrade<Into>(self) -> UpgradeFuture<Self, Into, Req::Result>
     where
-        Req::Result: Upgrade<C, Into>,
-        A: MakeRequest<<Req::Result as Upgrade<C, Into>>::Request>,
-        C: CanCache<<Req::Result as Upgrade<C, Into>>::Request>,
+        Req::Result: Upgradable<C, Into>,
+        A: MakeRequest<<Req::Result as Upgradable<C, Into>>::Request>,
+        C: CanCache<<Req::Result as Upgradable<C, Into>>::Request>,
     {
         UpgradeFuture::upgrade_from(self)
     }
@@ -93,9 +93,9 @@ where
 {
     pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, Into, T>
     where
-        T: Upgrade<C, Into>,
-        A: MakeRequest<<T as Upgrade<C, Into>>::Request>,
-        C: CanCache<<T as Upgrade<C, Into>>::Request>,
+        T: Upgradable<C, Into>,
+        A: MakeRequest<<T as Upgradable<C, Into>>::Request>,
+        C: CanCache<<T as Upgradable<C, Into>>::Request>,
     {
         MultiUpgradeFuture::upgrade_from(self)
     }

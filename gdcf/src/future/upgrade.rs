@@ -5,7 +5,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache},
     error::GdcfError,
     future::{CloneCached, GdcfFuture},
-    upgrade::{Upgrade, UpgradeMode},
+    upgrade::{PendingUpgrade, Upgradable},
     Gdcf,
 };
 
@@ -15,7 +15,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     gdcf: Gdcf<From::ApiClient, From::Cache>,
     forced_refresh: bool,
@@ -27,7 +27,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U> + std::fmt::Debug,
-    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U: Upgradable<From::Cache, Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
 {
@@ -44,7 +44,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     pub fn upgrade_from(from: From) -> Self {
         let gdcf = from.gdcf();
@@ -58,7 +58,7 @@ where
 
     pub fn upgrade<Into2>(self) -> UpgradeFuture<Self, Into2, Into>
     where
-        Into: Upgrade<From::Cache, Into2>,
+        Into: Upgradable<From::Cache, Into2>,
         From::ApiClient: MakeRequest<Into::Request>,
         From::Cache: CanCache<Into::Request>,
     {
@@ -71,7 +71,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     WaitingOnInner {
         has_result_cached: bool,
@@ -79,7 +79,7 @@ where
     },
     Extending(
         <From::Cache as Cache>::CacheEntryMeta,
-        UpgradeMode<From::ApiClient, From::Cache, Into, U>,
+        PendingUpgrade<From::ApiClient, From::Cache, Into, U>,
     ),
     Exhausted,
 }
@@ -89,7 +89,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U> + std::fmt::Debug,
-    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U: Upgradable<From::Cache, Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
 {
@@ -114,7 +114,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     pub fn new(cache: &From::Cache, inner_future: From) -> Self {
         let mut has_result_cached = false;
@@ -143,7 +143,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     type ApiClient = From::ApiClient;
     type BaseRequest = <From as GdcfFuture>::BaseRequest;
@@ -155,8 +155,8 @@ where
             UpgradeFutureState::WaitingOnInner { has_result_cached, .. } => has_result_cached,
             UpgradeFutureState::Extending(_, ref upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
-                    UpgradeMode::UpgradeMissing(..) => false,
+                    PendingUpgrade::Cached(_) | PendingUpgrade::Outdated(..) => true,
+                    PendingUpgrade::Missing(..) => false,
                 },
             UpgradeFutureState::Exhausted => false,
         }
@@ -196,9 +196,9 @@ where
             },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
-                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
-                    UpgradeMode::UpgradeMissing(..) => unreachable!(),
+                    PendingUpgrade::Cached(cached) => Ok(Ok(CacheEntry::Cached(cached, meta))),
+                    PendingUpgrade::Outdated(to_upgrade, upgrade, _) => Ok(Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade).0, meta))),
+                    PendingUpgrade::Missing(..) => unreachable!(),
                 },
             UpgradeFutureState::Exhausted => unreachable!(),
         }
@@ -245,13 +245,13 @@ where
                         futures::task::current().notify();
                         (
                             Async::NotReady,
-                            UpgradeFutureState::Extending(meta, UpgradeMode::new(inner_object, &self.gdcf, self.forced_refresh)?),
+                            UpgradeFutureState::Extending(meta, PendingUpgrade::new(inner_object, &self.gdcf, self.forced_refresh)?),
                         )
                     },
                     Async::Ready(cache_entry) => (Async::Ready(cache_entry.map_empty()), UpgradeFutureState::Exhausted),
                 },
 
-            UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeCached(object)) =>
+            UpgradeFutureState::Extending(meta, PendingUpgrade::Cached(object)) =>
                 (Async::Ready(CacheEntry::Cached(object, meta)), UpgradeFutureState::Exhausted),
 
             UpgradeFutureState::Extending(meta, mut upgrade_mode) =>
@@ -259,7 +259,7 @@ where
                     Async::NotReady => (Async::NotReady, UpgradeFutureState::Extending(meta, upgrade_mode)),
                     Async::Ready(cache_entry) =>
                         match upgrade_mode {
-                            UpgradeMode::UpgradeMissing(to_upgrade, _) | UpgradeMode::UpgradeOutdated(to_upgrade, ..) => {
+                            PendingUpgrade::Missing(to_upgrade, _) | PendingUpgrade::Outdated(to_upgrade, ..) => {
                                 let upgrade = match cache_entry {
                                     CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
                                         U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
@@ -305,15 +305,15 @@ where
                 },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeCached(f(cached))),
-                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, future) => {
+                    PendingUpgrade::Cached(cached) => UpgradeFutureState::Extending(meta, PendingUpgrade::Cached(f(cached))),
+                    PendingUpgrade::Outdated(to_upgrade, upgrade, future) => {
                         let (upgraded, downgrade) = to_upgrade.upgrade(upgrade);
                         let (downgraded, upgrade) = U::downgrade(f(upgraded), downgrade);
 
-                        UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeOutdated(downgraded, upgrade, future))
+                        UpgradeFutureState::Extending(meta, PendingUpgrade::Outdated(downgraded, upgrade, future))
                     },
-                    UpgradeMode::UpgradeMissing(to_upgrade, future) =>
-                        UpgradeFutureState::Extending(meta, UpgradeMode::UpgradeMissing(to_upgrade, future)),
+                    PendingUpgrade::Missing(to_upgrade, future) =>
+                        UpgradeFutureState::Extending(meta, PendingUpgrade::Missing(to_upgrade, future)),
                 },
             UpgradeFutureState::Exhausted => UpgradeFutureState::Exhausted,
         };
@@ -339,7 +339,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U> + CloneCached,
-    U: Upgrade<From::Cache, Into> + Clone,
+    U: Upgradable<From::Cache, Into> + Clone,
     Into: Clone,
     U::Upgrade: Clone,
 {
@@ -356,10 +356,10 @@ where
                 },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => Ok(CacheEntry::Cached(cached.clone(), *meta)),
-                    UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) =>
+                    PendingUpgrade::Cached(cached) => Ok(CacheEntry::Cached(cached.clone(), *meta)),
+                    PendingUpgrade::Outdated(to_upgrade, upgrade, _) =>
                         Ok(CacheEntry::Cached(to_upgrade.clone().upgrade(upgrade.clone()).0, *meta)),
-                    UpgradeMode::UpgradeMissing(..) => Ok(CacheEntry::Missing),
+                    PendingUpgrade::Missing(..) => Ok(CacheEntry::Missing),
                 },
             UpgradeFutureState::Exhausted => Err(()),
         }
@@ -371,7 +371,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = U>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
     type Item = CacheEntry<Into, <From::Cache as Cache>::CacheEntryMeta>;
@@ -386,7 +386,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     gdcf: Gdcf<From::ApiClient, From::Cache>,
     forced_refresh: bool,
@@ -398,7 +398,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>> + std::fmt::Debug,
-    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U: Upgradable<From::Cache, Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
 {
@@ -415,7 +415,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     pub fn upgrade_from(from: From) -> Self {
         let gdcf = from.gdcf();
@@ -429,7 +429,7 @@ where
 
     pub fn upgrade_all<Into2>(self) -> MultiUpgradeFuture<Self, Into2, Into>
     where
-        Into: Upgrade<From::Cache, Into2>,
+        Into: Upgradable<From::Cache, Into2>,
         From::ApiClient: MakeRequest<Into::Request>,
         From::Cache: CanCache<Into::Request>,
     {
@@ -443,7 +443,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     WaitingOnInner {
         has_result_cached: bool,
@@ -451,7 +451,7 @@ where
     },
     Extending(
         <From::Cache as Cache>::CacheEntryMeta,
-        Vec<UpgradeMode<From::ApiClient, From::Cache, Into, U>>,
+        Vec<PendingUpgrade<From::ApiClient, From::Cache, Into, U>>,
     ),
     Exhausted,
 }
@@ -461,7 +461,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>> + std::fmt::Debug,
-    U: Upgrade<From::Cache, Into> + std::fmt::Debug,
+    U: Upgradable<From::Cache, Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
 {
@@ -486,7 +486,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     pub fn new(cache: &From::Cache, inner_future: From) -> Self {
         let mut has_result_cached = false;
@@ -520,7 +520,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     type ApiClient = From::ApiClient;
     type BaseRequest = <From as GdcfFuture>::BaseRequest;
@@ -533,8 +533,8 @@ where
             MultiUpgradeFutureState::Extending(_, upgrade_modes) =>
                 upgrade_modes.iter().all(|mode| {
                     match mode {
-                        UpgradeMode::UpgradeCached(_) | UpgradeMode::UpgradeOutdated(..) => true,
-                        UpgradeMode::UpgradeMissing(..) => false,
+                        PendingUpgrade::Cached(_) | PendingUpgrade::Outdated(..) => true,
+                        PendingUpgrade::Missing(..) => false,
                     }
                 }),
             MultiUpgradeFutureState::Exhausted => false,
@@ -578,9 +578,9 @@ where
 
                 for upgrade_mode in upgrade_modes {
                     match upgrade_mode {
-                        UpgradeMode::UpgradeCached(cached) => result.push(cached),
-                        UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) => result.push(to_upgrade.upgrade(upgrade).0),
-                        UpgradeMode::UpgradeMissing(..) => unreachable!(),
+                        PendingUpgrade::Cached(cached) => result.push(cached),
+                        PendingUpgrade::Outdated(to_upgrade, upgrade, _) => result.push(to_upgrade.upgrade(upgrade).0),
+                        PendingUpgrade::Missing(..) => unreachable!(),
                     }
                 }
 
@@ -630,30 +630,30 @@ where
                         failed.push(upgrade_mode)
                     } else {
                         match upgrade_mode {
-                            UpgradeMode::UpgradeCached(cached) => {
+                            PendingUpgrade::Cached(cached) => {
                                 upgraded.push(cached);
                                 downgrades.push(None);
                                 futures.push(None);
                             },
-                            UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, future) => {
+                            PendingUpgrade::Outdated(to_upgrade, upgrade, future) => {
                                 let (is_upgraded, downgrade) = to_upgrade.upgrade(upgrade);
 
                                 upgraded.push(is_upgraded);
                                 downgrades.push(Some(downgrade));
                                 futures.push(Some(future));
                             },
-                            UpgradeMode::UpgradeMissing(..) => {
+                            PendingUpgrade::Missing(..) => {
                                 while !upgraded.is_empty() {
                                     let upgraded = upgraded.remove(0);
                                     let downgrade = downgrades.remove(0);
                                     let future = futures.remove(0);
 
                                     failed.push(match downgrade {
-                                        None => UpgradeMode::UpgradeCached(upgraded),
+                                        None => PendingUpgrade::Cached(upgraded),
                                         Some(downgrade) => {
                                             let (downgraded, upgrade) = U::downgrade(upgraded, downgrade);
 
-                                            UpgradeMode::UpgradeOutdated(downgraded, upgrade, future.unwrap())
+                                            PendingUpgrade::Outdated(downgraded, upgrade, future.unwrap())
                                         },
                                     });
                                 }
@@ -672,11 +672,11 @@ where
                         .zip(futures)
                         .map(|((upgraded, downgrade), future)| {
                             match downgrade {
-                                None => UpgradeMode::UpgradeCached(upgraded),
+                                None => PendingUpgrade::Cached(upgraded),
                                 Some(downgrade) => {
                                     let (downgraded, upgrade) = U::downgrade(upgraded, downgrade);
 
-                                    UpgradeMode::UpgradeOutdated(downgraded, upgrade, future.unwrap())
+                                    PendingUpgrade::Outdated(downgraded, upgrade, future.unwrap())
                                 },
                             }
                         })
@@ -735,7 +735,7 @@ where
                                 meta,
                                 cached_objects
                                     .into_iter()
-                                    .map(|object| UpgradeMode::new(object, &self.gdcf, self.forced_refresh))
+                                    .map(|object| PendingUpgrade::new(object, &self.gdcf, self.forced_refresh))
                                     .collect::<Result<Vec<_>, _>>()?,
                             ),
                         )
@@ -750,7 +750,7 @@ where
 
                 for upgrade_mode in entry_upgrade_modes {
                     match upgrade_mode {
-                        UpgradeMode::UpgradeCached(cached) => done.push(cached),
+                        PendingUpgrade::Cached(cached) => done.push(cached),
                         mut upgrade_mode =>
                             match upgrade_mode.future().unwrap().poll()? {
                                 Async::NotReady => not_done.push(upgrade_mode),
@@ -774,7 +774,7 @@ where
                 if not_done.is_empty() {
                     (Async::Ready(CacheEntry::Cached(done, meta)), MultiUpgradeFutureState::Exhausted)
                 } else {
-                    not_done.extend(done.into_iter().map(UpgradeMode::UpgradeCached));
+                    not_done.extend(done.into_iter().map(PendingUpgrade::Cached));
                     (Async::NotReady, MultiUpgradeFutureState::Extending(meta, not_done))
                 }
             },
@@ -802,7 +802,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>> + CloneCached,
-    U: Upgrade<From::Cache, Into> + Clone,
+    U: Upgradable<From::Cache, Into> + Clone,
     Into: Clone,
     U::Upgrade: Clone,
 {
@@ -825,10 +825,9 @@ where
 
                     for mode in upgrade_modes {
                         match mode {
-                            UpgradeMode::UpgradeCached(cached) => clones.push(cached.clone()),
-                            UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) =>
-                                clones.push(to_upgrade.clone().upgrade(upgrade.clone()).0),
-                            UpgradeMode::UpgradeMissing(..) => unreachable!(),
+                            PendingUpgrade::Cached(cached) => clones.push(cached.clone()),
+                            PendingUpgrade::Outdated(to_upgrade, upgrade, _) => clones.push(to_upgrade.clone().upgrade(upgrade.clone()).0),
+                            PendingUpgrade::Missing(..) => unreachable!(),
                         }
                     }
 
@@ -844,7 +843,7 @@ where
     From::ApiClient: MakeRequest<U::Request>,
     From::Cache: CanCache<U::Request>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
-    U: Upgrade<From::Cache, Into>,
+    U: Upgradable<From::Cache, Into>,
 {
     type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
     type Item = CacheEntry<Vec<Into>, <From::Cache as Cache>::CacheEntryMeta>;
@@ -854,7 +853,10 @@ where
     }
 }
 
-fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(cache: &C, to_upgrade: U) -> Result<(Into, U::From), U> {
+fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgradable<C, Into>>(
+    cache: &C,
+    to_upgrade: U,
+) -> Result<(Into, U::From), U> {
     let upgrade = match U::upgrade_request(&to_upgrade) {
         Some(request) =>
             match cache.lookup_request(&request) {
@@ -883,7 +885,7 @@ fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>
     Ok(to_upgrade.upgrade(upgrade))
 }
 
-fn temporary_upgrade_all<C: Cache + CanCache<U::Request>, Into, U: Upgrade<C, Into>>(
+fn temporary_upgrade_all<C: Cache + CanCache<U::Request>, Into, U: Upgradable<C, Into>>(
     cache: &C,
     to_upgrade: Vec<U>,
 ) -> Result<(Vec<Into>, Vec<U::From>), Vec<U>> {

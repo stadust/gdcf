@@ -134,31 +134,6 @@ impl PaginatableRequest for LevelCommentsRequest {
         self.page += 1;
     }
 }
-// FIXME: figure out these impls
-/*
-impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for PartialLevel<S, U> {
-    fn into(self) -> LevelCommentsRequest {
-        LevelCommentsRequest::new(self.level_id)
-    }
-}
-
-impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for Level<S, U> {
-    fn into(self) -> LevelCommentsRequest {
-        LevelCommentsRequest::new(self.level_id)
-    }
-}
-
-impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for &PartialLevel<S, U> {
-    fn into(self) -> LevelCommentsRequest {
-        LevelCommentsRequest::new(self.level_id)
-    }
-}
-
-impl<S: PartialEq, U: PartialEq> Into<LevelCommentsRequest> for &Level<S, U> {
-    fn into(self) -> LevelCommentsRequest {
-        LevelCommentsRequest::new(self.level_id)
-    }
-}*/
 
 impl Into<LevelCommentsRequest> for u64 {
     fn into(self) -> LevelCommentsRequest {

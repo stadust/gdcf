@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub mod process;
-pub mod refresh;
+pub(crate) mod refresh;
 pub mod stream;
 pub mod upgrade;
 

@@ -7,7 +7,7 @@ use crate::{
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
         GdcfFuture,
     },
-    upgrade::Upgrade,
+    upgrade::Upgradable,
     Gdcf,
 };
 use futures::{task, Async, Stream};
@@ -31,9 +31,9 @@ where
 {
     pub fn upgrade_all<Into>(self) -> GdcfStream<MultiUpgradeFuture<F, Into, T>>
     where
-        T: Upgrade<F::Cache, Into>,
-        F::ApiClient: MakeRequest<<T as Upgrade<F::Cache, Into>>::Request>,
-        F::Cache: CanCache<<T as Upgrade<F::Cache, Into>>::Request>,
+        T: Upgradable<F::Cache, Into>,
+        F::ApiClient: MakeRequest<<T as Upgradable<F::Cache, Into>>::Request>,
+        F::Cache: CanCache<<T as Upgradable<F::Cache, Into>>::Request>,
     {
         GdcfStream {
             current_future: MultiUpgradeFuture::upgrade_from(self.current_future),
@@ -48,9 +48,9 @@ where
 {
     pub fn upgrade<Into>(self) -> GdcfStream<UpgradeFuture<F, Into, F::GdcfItem>>
     where
-        F::GdcfItem: Upgrade<F::Cache, Into>,
-        F::ApiClient: MakeRequest<<F::GdcfItem as Upgrade<F::Cache, Into>>::Request>,
-        F::Cache: CanCache<<F::GdcfItem as Upgrade<F::Cache, Into>>::Request>,
+        F::GdcfItem: Upgradable<F::Cache, Into>,
+        F::ApiClient: MakeRequest<<F::GdcfItem as Upgradable<F::Cache, Into>>::Request>,
+        F::Cache: CanCache<<F::GdcfItem as Upgradable<F::Cache, Into>>::Request>,
     {
         GdcfStream {
             current_future: UpgradeFuture::upgrade_from(self.current_future),

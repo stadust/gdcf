@@ -1,7 +1,7 @@
 use crate::{
     api::request::{LevelRequest, LevelRequestType, LevelsRequest, Request, SearchFilters, UserRequest},
     cache::{Cache, Lookup},
-    upgrade::Upgrade,
+    upgrade::Upgradable,
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
@@ -9,7 +9,7 @@ use gdcf_model::{
     user::{Creator, User},
 };
 
-impl<C: Cache, Song, User> Upgrade<C, Level<Song, User>> for PartialLevel<Song, User> {
+impl<C: Cache, Song, User> Upgradable<C, Level<Song, User>> for PartialLevel<Song, User> {
     type From = PartialLevel<Option<u64>, u64>;
     type Request = LevelRequest;
     type Upgrade = Level<Option<u64>, u64>;
@@ -53,7 +53,7 @@ impl<C: Cache, Song, User> Upgrade<C, Level<Song, User>> for PartialLevel<Song, 
     }
 }
 
-impl<C: Cache> Upgrade<C, Level<Option<NewgroundsSong>, u64>> for Level<Option<u64>, u64>
+impl<C: Cache> Upgradable<C, Level<Option<NewgroundsSong>, u64>> for Level<Option<u64>, u64>
 where
     C: Lookup<NewgroundsSong>,
 {
@@ -93,7 +93,7 @@ where
     }
 }
 
-impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64> {
+impl<C: Cache + Lookup<NewgroundsSong>> Upgradable<C, PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64> {
     type From = Option<u64>;
     type Request = LevelsRequest;
     type Upgrade = Option<NewgroundsSong>;
@@ -126,7 +126,7 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgrade<C, PartialLevel<Option<Newground
     }
 }
 
-impl<C, Song> Upgrade<C, Level<Song, Option<Creator>>> for Level<Song, u64>
+impl<C, Song> Upgradable<C, Level<Song, Option<Creator>>> for Level<Song, u64>
 where
     C: Cache + Lookup<Creator>,
 {
@@ -159,7 +159,7 @@ where
     }
 }
 
-impl<C, Song> Upgrade<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
+impl<C, Song> Upgradable<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
 where
     C: Cache + Lookup<Creator>,
 {
@@ -192,7 +192,7 @@ where
     }
 }
 
-impl<C: Cache, Song> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
+impl<C: Cache, Song> Upgradable<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
@@ -224,7 +224,7 @@ impl<C: Cache, Song> Upgrade<C, PartialLevel<Song, Option<User>>> for PartialLev
         change_partial_level_user(upgraded, downgrade)
     }
 }
-impl<C: Cache, Song> Upgrade<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
+impl<C: Cache, Song> Upgradable<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
