@@ -3,7 +3,7 @@ use futures::{Async, Future};
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache},
-    error::GdcfError,
+    error::Error,
     future::{CloneCached, GdcfFuture},
     upgrade::{PendingUpgrade, Upgradable},
     Gdcf,
@@ -166,7 +166,7 @@ where
         self,
     ) -> Result<
         Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     >
     where
         Self: Sized,
@@ -224,7 +224,7 @@ where
         &mut self,
     ) -> Result<
         Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     > {
         let (ready, new_state) = match std::mem::replace(&mut self.state, UpgradeFutureState::Exhausted) {
             UpgradeFutureState::WaitingOnInner {
@@ -262,9 +262,9 @@ where
                             PendingUpgrade::Missing(to_upgrade, _) | PendingUpgrade::Outdated(to_upgrade, ..) => {
                                 let upgrade = match cache_entry {
                                     CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
-                                        U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?,
+                                        U::default_upgrade().ok_or(Error::UnexpectedlyAbsent)?,
                                     CacheEntry::Cached(request_result, _) =>
-                                        U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
+                                        U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(Error::Cache)?,
                                     _ => unreachable!(),
                                 };
                                 let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -373,7 +373,7 @@ where
     From: GdcfFuture<GdcfItem = U>,
     U: Upgradable<From::Cache, Into>,
 {
-    type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
+    type Error = Error<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
     type Item = CacheEntry<Into, <From::Cache as Cache>::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
@@ -545,7 +545,7 @@ where
         self,
     ) -> Result<
         Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     >
     where
         Self: Sized,
@@ -709,7 +709,7 @@ where
         &mut self,
     ) -> Result<
         Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     > {
         let (ready, new_state) = match std::mem::replace(&mut self.state, MultiUpgradeFutureState::Exhausted) {
             MultiUpgradeFutureState::WaitingOnInner {
@@ -758,9 +758,9 @@ where
                                     let to_upgrade = upgrade_mode.into_upgradable().unwrap();
                                     let upgrade = match cache_entry {
                                         CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
-                                            U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?,
+                                            U::default_upgrade().ok_or(Error::UnexpectedlyAbsent)?,
                                         CacheEntry::Cached(request_result, _) =>
-                                            U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
+                                            U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(Error::Cache)?,
                                         _ => unreachable!(),
                                     };
                                     let (upgraded, _) = to_upgrade.upgrade(upgrade);
@@ -845,7 +845,7 @@ where
     From: GdcfFuture<GdcfItem = Vec<U>>,
     U: Upgradable<From::Cache, Into>,
 {
-    type Error = GdcfError<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
+    type Error = Error<<From::ApiClient as ApiClient>::Err, <From::Cache as Cache>::Err>;
     type Item = CacheEntry<Vec<Into>, <From::Cache as Cache>::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {

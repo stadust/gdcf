@@ -5,7 +5,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
-    error::GdcfError,
+    error::Error,
     future::{
         refresh::RefreshCacheFuture,
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
@@ -107,7 +107,7 @@ where
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
-    type Error = GdcfError<A::Err, C::Err>;
+    type Error = Error<A::Err, C::Err>;
     type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
@@ -135,7 +135,7 @@ where
 
     fn into_cached(
         self,
-    ) -> Result<Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>, GdcfError<A::Err, C::Err>>
+    ) -> Result<Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>, Error<A::Err, C::Err>>
     where
         Self: Sized,
     {
@@ -187,7 +187,7 @@ where
         &mut self,
     ) -> Result<
         Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     > {
         match &mut self.state {
             ProcessRequestFutureState::Empty => panic!("Future already polled to completion"),

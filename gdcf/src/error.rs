@@ -9,7 +9,7 @@ pub trait ApiError: Fail {
 pub trait CacheError: Fail {}
 
 #[derive(Debug, Fail)]
-pub enum GdcfError<A: ApiError, C: CacheError> {
+pub enum Error<A: ApiError, C: CacheError> {
     #[fail(display = "{}", _0)]
     Cache(#[cause] C),
 

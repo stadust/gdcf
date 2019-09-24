@@ -1,7 +1,7 @@
 use crate::{
     api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
-    error::{ApiError, GdcfError},
+    error::{ApiError, Error},
     future::{
         process::ProcessRequestFuture,
         upgrade::{MultiUpgradeFuture, UpgradeFuture},
@@ -78,7 +78,7 @@ where
     F: GdcfFuture + std::fmt::Debug,
     F::BaseRequest: PaginatableRequest,
 {
-    type Error = GdcfError<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>;
+    type Error = Error<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>;
     type Item = CacheEntry<F::GdcfItem, <F::Cache as Cache>::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
@@ -95,7 +95,7 @@ where
                 info!("Advancing GdcfStream over {} by one page!", self.request);
 
                 self.request.next();
-                self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(GdcfError::Cache)?;
+                self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(Error::Cache)?;
 
                 debug!("Request is now {}", self.request);
                 trace!("New future is {:?}", self.current_future);
@@ -103,7 +103,7 @@ where
                 Ok(Async::Ready(Some(page)))
             },
 
-            Err(GdcfError::Api(ref err)) if err.is_no_result() => {
+            Err(Error::Api(ref err)) if err.is_no_result() => {
                 info!("Stream over request {} terminating due to exhaustion!", self.request);
 
                 Ok(Async::Ready(None))

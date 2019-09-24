@@ -5,7 +5,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 use crate::{
     api::{request::Request, ApiClient},
     cache::{Cache, CacheEntry, Store},
-    error::GdcfError,
+    error::Error,
     Gdcf,
 };
 
@@ -36,7 +36,7 @@ pub trait GdcfFuture {
         self,
     ) -> Result<
         Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     >
     where
         Self: Sized;
@@ -62,7 +62,7 @@ pub trait GdcfFuture {
         &mut self,
     ) -> Result<
         Async<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>>,
-        GdcfError<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
+        Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     >;
 
     #[doc(hidden)]

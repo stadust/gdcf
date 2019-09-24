@@ -5,7 +5,7 @@ use crate::{
         ApiClient,
     },
     cache::{Cache, CacheEntry, CanCache, Store},
-    error::{ApiError, GdcfError},
+    error::{ApiError, Error},
     Gdcf, Secondary,
 };
 use futures::{Async, Future};
@@ -51,7 +51,7 @@ where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
 {
-    type Error = GdcfError<A::Err, C::Err>;
+    type Error = Error<A::Err, C::Err>;
     type Item = CacheEntry<Req::Result, C::CacheEntryMeta>;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
@@ -66,16 +66,16 @@ where
 
                 Store::<Req::Result>::mark_absent(&mut cache, self.cache_key)
                     .map(|entry_info| Async::Ready(CacheEntry::MarkedAbsent(entry_info)))
-                    .map_err(GdcfError::Cache)
+                    .map_err(Error::Cache)
             },
-            Err(api_error) => Err(GdcfError::Api(api_error)),
+            Err(api_error) => Err(Error::Api(api_error)),
             Ok(Async::Ready(response)) =>
                 match response {
                     Response::Exact(what_we_want) =>
                         cache
                             .store(&what_we_want, self.cache_key)
                             .map(|entry_info| Async::Ready(CacheEntry::Cached(what_we_want, entry_info)))
-                            .map_err(GdcfError::Cache),
+                            .map_err(Error::Cache),
                     Response::More(what_we_want, excess) => {
                         for object in &excess {
                             match object {
@@ -84,13 +84,13 @@ where
                                 Secondary::MissingCreator(cid) => Store::<Creator>::mark_absent(&mut cache, *cid),
                                 Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSong>::mark_absent(&mut cache, *nid),
                             }
-                            .map_err(GdcfError::Cache)?;
+                            .map_err(Error::Cache)?;
                         }
 
                         cache
                             .store(&what_we_want, self.cache_key)
                             .map(|entry_info| Async::Ready(CacheEntry::Cached(what_we_want, entry_info)))
-                            .map_err(GdcfError::Cache)
+                            .map_err(Error::Cache)
                     },
                 },
         }

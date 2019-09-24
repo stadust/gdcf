@@ -124,6 +124,8 @@ use crate::{
     },
 };
 
+pub use error::Error;
+
 #[macro_use]
 mod macros;
 

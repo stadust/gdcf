@@ -1,7 +1,7 @@
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Store},
-    error::GdcfError,
+    error::Error,
     future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
     Gdcf,
 };
@@ -77,11 +77,9 @@ where
         PendingUpgrade::Cached(to_upgrade.upgrade(upgrade).0)
     }
 
-    pub(crate) fn default_upgrade(to_upgrade: U) -> Result<Self, GdcfError<A::Err, C::Err>> {
+    pub(crate) fn default_upgrade(to_upgrade: U) -> Result<Self, Error<A::Err, C::Err>> {
         Ok(PendingUpgrade::Cached(
-            to_upgrade
-                .upgrade(U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?)
-                .0,
+            to_upgrade.upgrade(U::default_upgrade().ok_or(Error::UnexpectedlyAbsent)?).0,
         ))
     }
 
@@ -99,7 +97,7 @@ where
         }
     }
 
-    pub(crate) fn new(to_upgrade: U, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, GdcfError<A::Err, C::Err>> {
+    pub(crate) fn new(to_upgrade: U, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, Error<A::Err, C::Err>> {
         let cache = gdcf.cache();
 
         let mut request = match U::upgrade_request(&to_upgrade) {
@@ -111,7 +109,7 @@ where
             request.set_force_refresh(true);
         }
 
-        let mode = match gdcf.process(&request).map_err(GdcfError::Cache)? {
+        let mode = match gdcf.process(&request).map_err(Error::Cache)? {
             // impossible variants
             ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) =>
                 unreachable!(),
@@ -132,7 +130,7 @@ where
 
             ProcessRequestFutureState::UpToDate(CacheEntry::Cached(request_result, _)) => {
                 // Up-to-date extension request result
-                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(GdcfError::Cache)?;
+                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(Error::Cache)?;
                 PendingUpgrade::cached(to_upgrade, upgrade)
             },
 
@@ -153,7 +151,7 @@ where
 
             // Outdated entry
             ProcessRequestFutureState::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
-                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(GdcfError::Cache)?;
+                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(Error::Cache)?;
 
                 PendingUpgrade::Outdated(to_upgrade, upgrade, refresh_future)
             },
