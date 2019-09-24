@@ -1,5 +1,5 @@
 use futures::{Async, Future};
-use log::{error, warn};
+use log::{debug, error, trace, warn};
 
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
@@ -489,6 +489,8 @@ where
     pub fn new(cache: &From::Cache, inner_future: From) -> Self {
         let mut has_result_cached = false;
 
+        debug!("Constructing new MultiUpgradeFuture");
+
         MultiUpgradeFutureState::WaitingOnInner {
             inner_future: Self::peek_inner(cache, inner_future, |cached| {
                 has_result_cached = true;
@@ -499,7 +501,11 @@ where
     }
 
     fn peek_inner(cache: &From::Cache, inner: From, f: impl FnOnce(Vec<Into>) -> Vec<Into>) -> From {
+        trace!("MultiUpgradeFutureState::peek_inner called!");
+
         inner.peek_cached(move |e: Vec<U>| {
+            trace!("inner.peek_cached closure called! We have {} elements", e.len());
+
             match temporary_upgrade_all(cache, e) {
                 Ok((upgraded, downgrades)) =>
                     f(upgraded)
@@ -906,6 +912,10 @@ fn temporary_upgrade_all<C: Cache + CanCache<U::Request>, Into, U: Upgradable<C,
 
     let mut failed = Vec::new();
 
+    let before = to_upgrade.len();
+
+    trace!("temporary_upgrade_all called. We have {} elements", before);
+
     for to_upgrade in to_upgrade {
         if !failed.is_empty() {
             failed.push(to_upgrade)
@@ -930,9 +940,18 @@ fn temporary_upgrade_all<C: Cache + CanCache<U::Request>, Into, U: Upgradable<C,
         }
     }
 
-    if !failed.is_empty() {
+    assert_eq!(before, failed.len() + temporarily_upgraded.len());
+    assert_eq!(before, failed.len() + downgrades.len());
+    assert_eq!(downgrades.len(), temporarily_upgraded.len());
+
+    if failed.is_empty() {
+        trace!(
+            "temporary_upgrade_all done. We have upgraded {} elements",
+            temporarily_upgraded.len()
+        );
         Ok((temporarily_upgraded, downgrades))
     } else {
+        trace!("temporary_upgrade_all failed. We have {} failed elements", failed.len());
         Err(failed)
     }
 }

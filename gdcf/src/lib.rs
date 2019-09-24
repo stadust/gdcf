@@ -105,7 +105,7 @@
 //! tokio::run(future);
 //! ```
 
-use log::info;
+use log::{info, trace};
 
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
@@ -227,14 +227,17 @@ where
             },
             entry =>
                 if entry.is_expired() {
+                    trace!("Cache entry is {:?}", entry);
                     info!("Cache entry for request {} is expired!", request);
 
                     Some(entry)
                 } else if request.forces_refresh() {
+                    trace!("Cache entry is {:?}", entry);
                     info!("Cache entry is up-to-date, but request forces refresh!");
 
                     Some(entry)
                 } else {
+                    trace!("Cache entry is {:?}", entry);
                     info!("Cached entry for request {} is up-to-date!", request);
 
                     return Ok(ProcessRequestFutureState::UpToDate(entry))

@@ -1,4 +1,5 @@
 use futures::{Async, Future};
+use log::trace;
 
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
@@ -40,7 +41,8 @@ where
     }
 }
 
-// FIXME: this enum is incredibly similar to upgrade::PendingUpgrade. We might be able to use just that
+// FIXME: this enum is incredibly similar to upgrade::PendingUpgrade. We might be able to use just
+// that
 pub(crate) enum ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
@@ -159,6 +161,8 @@ where
             state,
         } = self;
 
+        trace!("State before executing peek_cached closure: {:?}", state);
+
         let state = match state {
             ProcessRequestFutureState::Outdated(CacheEntry::Cached(object, meta), future) =>
                 ProcessRequestFutureState::Outdated(CacheEntry::Cached(f(object), meta), future),
@@ -166,6 +170,8 @@ where
                 ProcessRequestFutureState::UpToDate(CacheEntry::Cached(f(object), meta)),
             _ => state,
         };
+
+        trace!("State after executing peek_cached closure: {:?}", state);
 
         ProcessRequestFuture {
             state,
