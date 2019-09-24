@@ -40,13 +40,14 @@ where
     }
 }
 
+// FIXME: this enum is incredibly similar to upgrade::PendingUpgrade. We might be able to use just that
 pub(crate) enum ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
     Req: Request,
 {
-    Empty,
+    Exhausted,
     Uncached(RefreshCacheFuture<Req, A, C>),
     Outdated(CacheEntry<Req::Result, C::CacheEntryMeta>, RefreshCacheFuture<Req, A, C>),
     UpToDate(CacheEntry<Req::Result, C::CacheEntryMeta>),
@@ -60,7 +61,7 @@ where
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ProcessRequestFutureState::Empty => fmt.debug_tuple("Empty").finish(),
+            ProcessRequestFutureState::Exhausted => fmt.debug_tuple("Empty").finish(),
             ProcessRequestFutureState::Uncached(fut) => fmt.debug_tuple("Uncached").field(fut).finish(),
             ProcessRequestFutureState::Outdated(cached, fut) => fmt.debug_tuple("Outdated").field(cached).field(fut).finish(),
             ProcessRequestFutureState::UpToDate(cached) => fmt.debug_tuple("UpToDate").field(cached).finish(),
@@ -138,7 +139,7 @@ where
         Self: Sized,
     {
         match self.state {
-            ProcessRequestFutureState::Empty | ProcessRequestFutureState::Uncached(_) => Ok(Err(self)),
+            ProcessRequestFutureState::Exhausted | ProcessRequestFutureState::Uncached(_) => Ok(Err(self)),
             ProcessRequestFutureState::Outdated(cache_entry, _) | ProcessRequestFutureState::UpToDate(cache_entry) => Ok(Ok(cache_entry)),
         }
     }
@@ -188,11 +189,11 @@ where
         Error<<Self::ApiClient as ApiClient>::Err, <Self::Cache as Cache>::Err>,
     > {
         match &mut self.state {
-            ProcessRequestFutureState::Empty => panic!("Future already polled to completion"),
+            ProcessRequestFutureState::Exhausted => panic!("Future already polled to completion"),
             ProcessRequestFutureState::Uncached(future) => future.poll(),
             ProcessRequestFutureState::Outdated(_, future) => future.poll(),
             fut =>
-                match std::mem::replace(fut, ProcessRequestFutureState::Empty) {
+                match std::mem::replace(fut, ProcessRequestFutureState::Exhausted) {
                     ProcessRequestFutureState::UpToDate(inner) => Ok(Async::Ready(inner)),
                     _ => unreachable!(),
                 },
@@ -219,7 +220,7 @@ where
 {
     fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()> {
         match &self.state {
-            ProcessRequestFutureState::Empty => Err(()),
+            ProcessRequestFutureState::Exhausted => Err(()),
             ProcessRequestFutureState::Uncached(_) => Ok(CacheEntry::Missing),
             ProcessRequestFutureState::Outdated(cached, _) | ProcessRequestFutureState::UpToDate(cached) => Ok(cached.clone()),
         }

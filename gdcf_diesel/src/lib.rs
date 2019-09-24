@@ -176,7 +176,7 @@ impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
             return Ok(CacheEntry::MarkedAbsent(entry))
         }
 
-        let levels = handle_missing!(partial_level::table
+        let levels: Vec<_> = handle_missing!(partial_level::table
             .inner_join(level_request_results::table.on(partial_level::level_id.eq(level_request_results::level_id)))
             .filter(level_request_results::request_hash.eq(key as i64))
             .select(partial_level::all_columns)
@@ -185,7 +185,11 @@ impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
         .map(|row: Wrapped<_>| row.0)
         .collect();
 
-        Ok(CacheEntry::new(levels, entry))
+        if levels.is_empty() {
+            Ok(CacheEntry::DeducedAbsent)
+        } else {
+            Ok(CacheEntry::new(levels, entry))
+        }
     }
 }
 

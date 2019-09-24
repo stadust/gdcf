@@ -1,4 +1,5 @@
 use futures::{Async, Future};
+use log::{error, warn};
 
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
@@ -857,22 +858,39 @@ fn temporary_upgrade<C: Cache + CanCache<U::Request>, Into, U: Upgradable<C, Int
                 Ok(CacheEntry::Cached(cached_result, _)) =>
                     match U::lookup_upgrade(&to_upgrade, cache, cached_result) {
                         Ok(upgrade) => upgrade,
-                        _ => return Err(to_upgrade), // cache error on upgrade lookup
+                        _ => {
+                            error!("Error on internal cache lookup in termporary_upgrade");
+
+                            return Err(to_upgrade)
+                        },
                     },
                 Ok(CacheEntry::Missing) => return Err(to_upgrade), // no information about the upgrade was cached
                 Ok(_) =>
                     match U::default_upgrade() {
                         // upgrade was marked/deduced as absent
                         Some(upgrade) => upgrade,
-                        _ => return Err(to_upgrade),
+                        _ => {
+                            error!("Error on internal cache lookup in termporary_upgrade");
+
+                            return Err(to_upgrade)
+                        },
                     },
-                _ => return Err(to_upgrade), // error during request lookup
+                _ => {
+                    error!("Error on internal cache lookup in termporary_upgrade");
+
+                    return Err(to_upgrade)
+                }, // error during request lookup
             },
         None =>
             match U::default_upgrade() {
                 Some(upgrade) => upgrade,
-                _ => return Err(to_upgrade), /* no upgrade request and no default (incorrect Upgrade impl, but that's something we check
-                                              * later) */
+                _ => {
+                    /* no upgrade request and no default (incorrect Upgrade impl, but that's something we check
+                     * later) */
+                    warn!("Default upgraded unexpectedly not available for absent data.");
+
+                    return Err(to_upgrade)
+                },
             },
     };
 
