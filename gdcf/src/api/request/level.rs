@@ -584,7 +584,7 @@ impl Request for LevelsRequest {
 
 impl PaginatableRequest for LevelsRequest {
     fn next(&mut self) {
-        self.page = self.page + 1;
+        self.page += 1;
     }
 }
 

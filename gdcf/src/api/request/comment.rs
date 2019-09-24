@@ -22,7 +22,7 @@ pub enum SortMode {
     Recent,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct LevelCommentsRequest {
     /// Whether this [`LevelCommentsRequest`] request forces a cache refresh. This is not a HTTP
     /// request field!
@@ -131,7 +131,7 @@ impl Request for LevelCommentsRequest {
 
 impl PaginatableRequest for LevelCommentsRequest {
     fn next(&mut self) {
-        self.page = self.page + 1;
+        self.page += 1;
     }
 }
 // FIXME: figure out these impls
@@ -166,7 +166,7 @@ impl Into<LevelCommentsRequest> for u64 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct ProfileCommentsRequest {
     /// Whether this [`ProfileCommentsRequest`] request forces a cache refresh. This is not a HTTP
     /// request field!
@@ -247,6 +247,6 @@ impl Request for ProfileCommentsRequest {
 
 impl PaginatableRequest for ProfileCommentsRequest {
     fn next(&mut self) {
-        self.page = self.page + 1;
+        self.page += 1;
     }
 }

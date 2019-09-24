@@ -94,7 +94,7 @@ where
         }
     }
 
-    pub(crate) fn to_upgrade(self) -> Option<E> {
+    pub(crate) fn into_upgradable(self) -> Option<E> {
         match self {
             UpgradeMode::UpgradeOutdated(to_upgrade, ..) | UpgradeMode::UpgradeMissing(to_upgrade, _) => Some(to_upgrade),
             _ => None,

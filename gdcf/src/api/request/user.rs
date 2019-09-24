@@ -208,6 +208,6 @@ impl Request for UserSearchRequest {
 
 impl PaginatableRequest for UserSearchRequest {
     fn next(&mut self) {
-        self.page = self.page + 1;
+        self.page += 1;
     }
 }

@@ -356,9 +356,9 @@ where
                 },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
-                    UpgradeMode::UpgradeCached(cached) => Ok(CacheEntry::Cached(cached.clone(), meta.clone())),
+                    UpgradeMode::UpgradeCached(cached) => Ok(CacheEntry::Cached(cached.clone(), *meta)),
                     UpgradeMode::UpgradeOutdated(to_upgrade, upgrade, _) =>
-                        Ok(CacheEntry::Cached(to_upgrade.clone().upgrade(upgrade.clone()).0, meta.clone())),
+                        Ok(CacheEntry::Cached(to_upgrade.clone().upgrade(upgrade.clone()).0, *meta)),
                     UpgradeMode::UpgradeMissing(..) => Ok(CacheEntry::Missing),
                 },
             UpgradeFutureState::Exhausted => Err(()),
@@ -755,7 +755,7 @@ where
                             match upgrade_mode.future().unwrap().poll()? {
                                 Async::NotReady => not_done.push(upgrade_mode),
                                 Async::Ready(cache_entry) => {
-                                    let to_upgrade = upgrade_mode.to_upgrade().unwrap();
+                                    let to_upgrade = upgrade_mode.into_upgradable().unwrap();
                                     let upgrade = match cache_entry {
                                         CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
                                             U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
@@ -832,7 +832,7 @@ where
                         }
                     }
 
-                    Ok(CacheEntry::Cached(clones, meta.clone()))
+                    Ok(CacheEntry::Cached(clones, *meta))
                 },
             MultiUpgradeFutureState::Exhausted => Err(()),
         }
