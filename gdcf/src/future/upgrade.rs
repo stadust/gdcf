@@ -177,22 +177,19 @@ where
 
         match self.state {
             UpgradeFutureState::WaitingOnInner { inner_future, .. } => {
+                let cache = self.gdcf.cache();
                 let base = match inner_future.into_cached()? {
-                    Ok(base) => base,
+                    Ok(base) =>
+                        base.map(|to_upgrade| {
+                            match temporary_upgrade(&cache, to_upgrade) {
+                                Ok((upgraded, _)) => upgraded,
+                                _ => unreachable!(),
+                            }
+                        }),
                     _ => unreachable!(),
                 };
 
-                Ok(Ok(match base {
-                    CacheEntry::Cached(to_upgrade, meta) =>
-                        CacheEntry::Cached(
-                            match temporary_upgrade(&self.gdcf.cache(), to_upgrade) {
-                                Ok((upgraded, _)) => upgraded,
-                                _ => unreachable!(),
-                            },
-                            meta,
-                        ),
-                    cache_entry => cache_entry.map_empty(),
-                }))
+                Ok(Ok(base))
             },
             UpgradeFutureState::Extending(meta, upgrade_mode) =>
                 match upgrade_mode {
@@ -556,22 +553,19 @@ where
 
         match self.state {
             MultiUpgradeFutureState::WaitingOnInner { inner_future, .. } => {
+                let cache = self.gdcf.cache();
                 let base = match inner_future.into_cached()? {
-                    Ok(base) => base,
+                    Ok(base) =>
+                        base.map(|to_upgrade| {
+                            match temporary_upgrade_all(&cache, to_upgrade) {
+                                Ok((upgraded, _)) => upgraded,
+                                _ => unreachable!(),
+                            }
+                        }),
                     _ => unreachable!(),
                 };
 
-                Ok(Ok(match base {
-                    CacheEntry::Cached(to_upgrade, meta) =>
-                        CacheEntry::Cached(
-                            match temporary_upgrade_all(&self.gdcf.cache(), to_upgrade) {
-                                Ok((upgraded, _)) => upgraded,
-                                _ => unreachable!(),
-                            },
-                            meta,
-                        ),
-                    cache_entry => cache_entry.map_empty(),
-                }))
+                Ok(Ok(base))
             },
             MultiUpgradeFutureState::Extending(meta, upgrade_modes) => {
                 let mut result = Vec::new();

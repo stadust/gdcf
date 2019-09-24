@@ -78,13 +78,17 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
         }
     }
 
-    pub(crate) fn map_empty<U>(self) -> CacheEntry<U, Meta> {
+    pub fn map<U>(self, f: impl FnOnce(T) -> U) -> CacheEntry<U, Meta> {
         match self {
             CacheEntry::Missing => CacheEntry::Missing,
             CacheEntry::DeducedAbsent => CacheEntry::DeducedAbsent,
             CacheEntry::MarkedAbsent(absent_meta) => CacheEntry::MarkedAbsent(absent_meta),
-            CacheEntry::Cached(..) => panic!("CacheEntry::map_empty called on `Cached` variant"),
+            CacheEntry::Cached(object, meta) => CacheEntry::Cached(f(object), meta),
         }
+    }
+
+    pub(crate) fn map_empty<U>(self) -> CacheEntry<U, Meta> {
+        self.map(|_| panic!("CacheEntry::map_empty called on `Cached` variant"))
     }
 }
 
