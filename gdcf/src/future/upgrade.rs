@@ -262,7 +262,7 @@ where
                             PendingUpgrade::Missing(to_upgrade, _) | PendingUpgrade::Outdated(to_upgrade, ..) => {
                                 let upgrade = match cache_entry {
                                     CacheEntry::DeducedAbsent | CacheEntry::MarkedAbsent(_) =>
-                                        U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
+                                        U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?,
                                     CacheEntry::Cached(request_result, _) =>
                                         U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
                                     _ => unreachable!(),
@@ -758,7 +758,7 @@ where
                                     let to_upgrade = upgrade_mode.into_upgradable().unwrap();
                                     let upgrade = match cache_entry {
                                         CacheEntry::MarkedAbsent(_) | CacheEntry::DeducedAbsent =>
-                                            U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?,
+                                            U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?,
                                         CacheEntry::Cached(request_result, _) =>
                                             U::lookup_upgrade(&to_upgrade, &self.gdcf.cache(), request_result).map_err(GdcfError::Cache)?,
                                         _ => unreachable!(),

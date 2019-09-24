@@ -80,7 +80,7 @@ where
     pub(crate) fn default_upgrade(to_upgrade: U) -> Result<Self, GdcfError<A::Err, C::Err>> {
         Ok(PendingUpgrade::Cached(
             to_upgrade
-                .upgrade(U::default_upgrade().ok_or(GdcfError::ConsistencyAssumptionViolated)?)
+                .upgrade(U::default_upgrade().ok_or(GdcfError::UnexpectedlyAbsent)?)
                 .0,
         ))
     }
