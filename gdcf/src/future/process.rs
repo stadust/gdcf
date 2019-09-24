@@ -133,9 +133,7 @@ where
         }
     }
 
-    fn into_cached(
-        self,
-    ) -> Result<Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>, Error<A::Err, C::Err>>
+    fn into_cached(self) -> Result<Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, Self>, Error<A::Err, C::Err>>
     where
         Self: Sized,
     {
