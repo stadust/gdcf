@@ -179,7 +179,7 @@ where
         self.gdcf.clone()
     }
 
-    fn forcing_refreshs(&self) -> bool {
+    fn forcing_refreshes(&self) -> bool {
         self.forces_refresh
     }
 

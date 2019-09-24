@@ -50,7 +50,7 @@ where
         let gdcf = from.gdcf();
 
         UpgradeFuture {
-            forced_refresh: from.forcing_refreshs(),
+            forced_refresh: from.forcing_refreshes(),
             state: UpgradeFutureState::new(&gdcf.cache(), from),
             gdcf,
         }
@@ -216,7 +216,7 @@ where
         self.gdcf.clone()
     }
 
-    fn forcing_refreshs(&self) -> bool {
+    fn forcing_refreshes(&self) -> bool {
         self.forced_refresh
     }
 
@@ -421,7 +421,7 @@ where
         let gdcf = from.gdcf();
 
         MultiUpgradeFuture {
-            forced_refresh: from.forcing_refreshs(),
+            forced_refresh: from.forcing_refreshes(),
             state: MultiUpgradeFutureState::new(&gdcf.cache(), from),
             gdcf,
         }
@@ -701,7 +701,7 @@ where
         self.gdcf.clone()
     }
 
-    fn forcing_refreshs(&self) -> bool {
+    fn forcing_refreshes(&self) -> bool {
         self.forced_refresh
     }
 

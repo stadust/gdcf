@@ -46,7 +46,7 @@ pub trait GdcfFuture {
         Self: Sized;
 
     fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache>;
-    fn forcing_refreshs(&self) -> bool;
+    fn forcing_refreshes(&self) -> bool;
 
     /// Checks if the base object for this request is marked as absent in the cache or has been
     /// inferred to be absent
