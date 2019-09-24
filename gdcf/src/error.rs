@@ -18,7 +18,4 @@ pub enum GdcfError<A: ApiError, C: CacheError> {
 
     #[fail(display = "GDCF made an assumption about server sided data consistency, which was violated. Please open a bug report")]
     ConsistencyAssumptionViolated,
-
-    #[fail(display = "The response produced by the APi client implementation didn't contain the expected data")]
-    ResponseMismatch,
 }
