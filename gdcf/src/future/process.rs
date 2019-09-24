@@ -200,6 +200,16 @@ where
                 },
         }
     }
+
+    fn is_absent(&self) -> bool {
+        match self.state {
+            ProcessRequestFutureState::Outdated(CacheEntry::DeducedAbsent, _)
+            | ProcessRequestFutureState::Outdated(CacheEntry::MarkedAbsent(_), _)
+            | ProcessRequestFutureState::UpToDate(CacheEntry::DeducedAbsent)
+            | ProcessRequestFutureState::UpToDate(CacheEntry::MarkedAbsent(_)) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<Req, A, C> CloneCached for ProcessRequestFuture<Req, A, C>

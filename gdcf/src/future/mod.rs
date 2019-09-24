@@ -48,6 +48,16 @@ pub trait GdcfFuture {
     fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache>;
     fn forcing_refreshs(&self) -> bool;
 
+    /// Checks if the base object for this request is marked as absent in the cache or has been
+    /// inferred to be absent
+    ///
+    /// Since all [`GdcfFuture`] are constructed in a decorator like way, this checks if the leaf
+    /// future indicated that its result was absent.
+    ///
+    /// If the object is not cached, this method returns `false`! Absent means that the object was
+    /// missing server sided, is not implied by a client side cache miss
+    fn is_absent(&self) -> bool;
+
     fn poll(
         &mut self,
     ) -> Result<

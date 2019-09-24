@@ -44,7 +44,6 @@ where
 {
     UpgradeCached(Into),
     UpgradeOutdated(E, E::Upgrade, RefreshCacheFuture<E::Request, A, C>),
-    // FIXME: Missing != Absent
     UpgradeMissing(E, RefreshCacheFuture<E::Request, A, C>),
 }
 
@@ -116,7 +115,8 @@ where
 
         let mode = match gdcf.process(&request).map_err(GdcfError::Cache)? {
             // impossible variants
-            ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) => unreachable!(),
+            ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) =>
+                unreachable!(),
 
             // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
             // This violates snapshot consistency! TODO: document

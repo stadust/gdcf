@@ -323,6 +323,15 @@ where
             forced_refresh,
         }
     }
+
+    fn is_absent(&self) -> bool {
+        match self.state {
+            UpgradeFutureState::WaitingOnInner { ref inner_future, .. } => inner_future.is_absent(),
+            // if the inner future returns an absent variant the upgrade future resolves to that immediately and none of the other variants
+            // are ever constructed
+            _ => false,
+        }
+    }
 }
 
 impl<From, Into, U> CloneCached for UpgradeFuture<From, Into, U>
@@ -776,6 +785,15 @@ where
         self.state = new_state;
 
         Ok(ready)
+    }
+
+    fn is_absent(&self) -> bool {
+        match self.state {
+            MultiUpgradeFutureState::WaitingOnInner { ref inner_future, .. } => inner_future.is_absent(),
+            // if the inner future returns an absent variant the upgrade future resolves to that immediately and none of the other variants
+            // are ever constructed
+            _ => false,
+        }
     }
 }
 
