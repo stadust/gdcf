@@ -65,14 +65,14 @@ Here's an example of how to download pages 6 through 55 of featured demons level
 // First we need to configure the cache. Here we're using a sqlite in-memory database
     // whose cache entries expire after 30 minutes (this is hardcoded in GDCF right now,
     // but will be configurable again in the future!).
-    let mut cache = Cache::in_memory().unwrap();
+    let mut cache = Cache::in_memory()?;
 
     // Then we can create the actual cache and API wrapper
     let client = BoomlingsClient::new();
 
     // A database cache needs to go through initialization before it can be used, as it
     // needs to create all the required tables
-    cache.initialize().unwrap();
+    cache.initialize()?;
 
     // Then we can create an instance of the Gdcf struct, which we will use to
     // actually make all our requests
@@ -96,8 +96,7 @@ Here's an example of how to download pages 6 through 55 of featured demons level
     // Geometry Dash servers sometimes "forgot" about a levels creator and simply do not
     // return them (in the game, this is where you see those "-" as the creator name)
     let stream = gdcf
-        .paginate_levels(request)
-        .unwrap()
+        .paginate_levels(request)?
         .upgrade_all::<PartialLevel<Option<NewgroundsSong>, _>>()
         .upgrade_all::<PartialLevel<_, Option<Creator>>>()
         .upgrade_all::<Level<_, _>>()
