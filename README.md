@@ -63,74 +63,82 @@ Here's an example of how to download pages 6 through 55 of featured demons level
 
 ```rust
 // First we need to configure the cache. Here we're using a sqlite in-memory database
-// whose cache entries expire after 30 minutes (this is hardcoded in GDCF right now,
-// but will be configurable again in the future!).
-let mut cache = Cache::in_memory()?;
+    // whose cache entries expire after 30 minutes (this is hardcoded in GDCF right now,
+    // but will be configurable again in the future!).
+    let mut cache = Cache::in_memory().unwrap();
 
-// Then we can create the actual cache and API wrapper
-let client = BoomlingsClient::new();
+    // Then we can create the actual cache and API wrapper
+    let client = BoomlingsClient::new();
 
-// A database cache needs to go through initialization before it can be used, as it
-// needs to create all the required tables
-cache.initialize()?;
+    // A database cache needs to go through initialization before it can be used, as it
+    // needs to create all the required tables
+    cache.initialize().unwrap();
 
-// Then we can create an instance of the Gdcf struct, which we will use to
-// actually make all our requests
-let gdcf = Gdcf::new(client, cache);
+    // Then we can create an instance of the Gdcf struct, which we will use to
+    // actually make all our requests
+    let gdcf = Gdcf::new(client, cache);
 
-// And we're good to go! To make a request, we need to initialize one of the
-// request structs. Here, we're make a requests to retrieve the 6th page of
-// featured demon levels of any demon difficulty
-let request = LevelsRequest::default()
-   .request_type(LevelRequestType::Featured)
-   .with_rating(LevelRating::Demon(DemonRating::Hard))
-   .page(5);
+    // And we're good to go! To make a request, we need to initialize one of the
+    // request structs. Here, we're make a requests to retrieve the 6th page of
+    // featured demon levels of any demon difficulty
+    let request = LevelsRequest::default()
+        .request_type(LevelRequestType::Featured)
+        .with_rating(LevelRating::Demon(DemonRating::Hard))
+        .page(7);
 
-// To actually issue the request, we call the appropriate method on our Gdcf instance.
-// The type parameters on these methods determine how much associated information
-// should be retrieved for the request result. Here we're telling GDCF to also
-// get us information about the requested levels' custom songs and creators
-// instead of just their IDs. "paginate_levels" give us a stream over all pages
-// of results from our request instead of only the page we requested.
-// We have to use `Option<Creator>` instead of just `Creator` because the
-// Geometry Dash servers sometimes "forgot" about a levels creator and simply do not
-// return them (in the game, this is where you see those "-" as the creator name)
-let stream = gdcf.paginate_levels::<NewgroundsSong, Option<Creator>>(request)?;
+    // To actually issue the request, we call the appropriate method on our Gdcf instance.
+    // The type parameters on these methods determine how much associated information
+    // should be retrieved for the request result. Here we're telling GDCF to also
+    // get us information about the requested levels' custom songs and creators
+    // instead of just their IDs. "paginate_levels" give us a stream over all pages
+    // of results from our request instead of only the page we requested.
+    // We have to use `Option<Creator>` instead of just `Creator` because the
+    // Geometry Dash servers sometimes "forgot" about a levels creator and simply do not
+    // return them (in the game, this is where you see those "-" as the creator name)
+    let stream = gdcf
+        .paginate_levels(request)
+        .unwrap()
+        .upgrade_all::<PartialLevel<Option<NewgroundsSong>, _>>()
+        .upgrade_all::<PartialLevel<_, Option<Creator>>>()
+        .upgrade_all::<Level<_, _>>()
+        .upgrade_all::<Level<_, Option<User>>>();
 
-// Since we have a stream, we can use all our favorite Stream methods from the
-// futures crate. Here we limit the stream to 50 pages of levels a print
-// out each level's name, creator, song and song artist.
-let future = stream
-   .take(50)
-   .for_each(|levels| {
-       // GDCF communicates its responses as entries in the cache. If a request was succesful,
-       // its result gets stored in the cache, and we receive a `CacheEntry::Cached` variant,
-       // containing the result and some metadata.
-       if let CacheEntry::Cached(levels, _) = levels {
-           for level in levels {
-               match level.custom_song {
-                   Some(newgrounds_song) => println!(
-                       "Retrieved demon level {} by {:?} using custom song {} by {}",
-                       level.name,
-                       level.creator.map(|c| c.name),
-                       newgrounds_song.name,
-                       newgrounds_song.artist
-                   ),
-                   None => println!(
-                       "Retrieved demon level {} by {:?} using main song {} by {}",
-                       level.name,
-                       level.creator.map(|c| c.name),
-                       level.main_song.unwrap().name,
-                       level.main_song.unwrap().artist
-                   ),
-               }
-           }
-       }
+    // Since we have a stream, we can use all our favorite Stream methods from the
+    // futures crate. Here we limit the stream to 50 pages of levels a print
+    // out each level's name, creator, song and song artist.
+    let future = stream
+        .take(50)
+        .for_each(|levels| {
+            // GDCF communicates its responses as entries in the cache. If a request was succesful,
+            // its result gets stored in the cache, and we receive a `CacheEntry::Cached` variant,
+            // containing the result and some metadata.
+            if let CacheEntry::Cached(levels, _) = levels {
+                for level in levels {
+                    let level = level.base;
 
-       Ok(())
-   })
-   .map_err(|error| eprintln!("Something went wrong! {:?}", error));
+                    match level.custom_song {
+                        Some(newgrounds_song) => println!(
+                            "Retrieved demon level {} by {:?} using custom song {} by {}",
+                            level.name,
+                            level.creator.map(|c| c.name),
+                            newgrounds_song.name,
+                            newgrounds_song.artist
+                        ),
+                        None => println!(
+                            "Retrieved demon level {} by {:?} using main song {} by {}",
+                            level.name,
+                            level.creator.map(|c| c.name),
+                            level.main_song.unwrap().name,
+                            level.main_song.unwrap().artist
+                        ),
+                    }
+                }
+            }
 
-// Lastly, we can run our future on the tokio executor!
-tokio::run(future);
+            Ok(())
+        })
+        .map_err(|error| eprintln!("Something went wrong! {:?}", error));
+
+    // Lastly, we can run our future on the tokio executor!
+    tokio::run(future);
 ```
