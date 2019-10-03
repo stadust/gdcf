@@ -1,0 +1,1 @@
+ALTER TABLE newgrounds_song ALTER COLUMN index_3 TYPE BIGINT;
