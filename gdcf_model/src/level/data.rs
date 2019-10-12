@@ -17,6 +17,12 @@ use std::{io::Read, time::Duration};
 #[derive(Debug, PartialEq, Clone, Default, Copy)]
 pub struct LevelMetadata {
     pub starting_speed: Speed,
+    pub song_offset: f64,
+    pub fade_in: bool,
+    pub fade_out: bool,
+    pub dual_start: bool,
+    pub two_player_controls: bool,
+    pub start_gravity_inverted: bool,
     // ... other fields in the metadata section ...
 }
 

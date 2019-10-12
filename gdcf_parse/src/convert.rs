@@ -143,7 +143,7 @@ macro_rules! delegate_to_from_str {
 
             impl RobtopFrom<$t, &str> for $t {
                 fn robtop_from(s: &str ) -> Result<$t, String> {
-                    s.parse().map_err(|e: <Self as FromStr>::Err| e.to_string())
+                    Ok(s.parse().map_err(|e: <Self as FromStr>::Err| error!("{}. Assuming default value of 0", e.to_string())).unwrap_or_default())
                 }
             }
         )*

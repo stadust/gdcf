@@ -159,6 +159,21 @@ parser! {
 parser! {
     LevelMetadata => {
         starting_speed(index = kA4),
+        song_offset(index = kA13),
+        fade_in(index = kA15),
+        fade_out(index = kA16),
+        // song guidelines: kA16
+        // background texture index: kA6
+        // ground texture index: kA7
+        // ground line index: kA17
+        // font: kA18
+        // color page (???): kS39
+        // starting game mode: kA2
+        // starting size: kA3
+        dual_start(index = kA8),
+        // level/start pos (???): kA9
+        two_player_controls(index = kA10),
+        start_gravity_inverted(index = kA11, optional),
         // ... all the other fields ...
     }
 }
