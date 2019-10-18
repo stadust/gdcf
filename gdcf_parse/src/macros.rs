@@ -216,9 +216,9 @@ macro_rules! parser {
         [$(, $custom_field: ident(custom = $func: path[$($field: expr),*]))*]
         [] []
     ) => {
-        impl Parse for $struct_name {
+        impl<'a> Parse<'a> for $struct_name {
             #[inline]
-            fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
+            fn parse<I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
                 I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
@@ -269,7 +269,7 @@ macro_rules! parser {
                 })
             }
 
-            fn unparse(self) -> std::collections::HashMap<&'static str, String> {
+            fn unparse(self) -> std::collections::HashMap<&'a str, String> {
                 use crate::convert::RobtopInto;
 
                 let Self {
@@ -314,9 +314,9 @@ macro_rules! parser {
         [$(, $custom_field: ident(custom = $func: path, depends_on = [$($field: expr),*]))*]
         [] []
     ) => {
-        impl Parse for $struct_name {
+        impl<'a> Parse<'a> for $struct_name {
             #[inline]
-            fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
+            fn parse<I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
             where
                 I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
@@ -372,7 +372,7 @@ macro_rules! parser {
                 })
             }
 
-            fn unparse(self) -> std::collections::HashMap<&'static str, String> {
+            fn unparse(self) -> std::collections::HashMap<&'a str, String> {
                 use crate::convert::RobtopInto;
 
                 let Self {

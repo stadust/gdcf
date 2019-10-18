@@ -8,8 +8,8 @@ use gdcf_model::level::data::{
 };
 use std::collections::HashMap;
 
-impl Parse for ObjectData {
-    fn parse<'a, I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
+impl<'a> Parse<'a> for ObjectData {
+    fn parse<I, F>(iter: I, mut f: F) -> Result<Self, ValueError<'a>>
     where
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>,
@@ -35,7 +35,7 @@ impl Parse for ObjectData {
         }
     }
 
-    fn unparse(self) -> HashMap<&'static str, String> {
+    fn unparse(self) -> HashMap<&'a str, String> {
         match self {
             ObjectData::None => HashMap::default(),
             ObjectData::Portal(portal_data) => portal_data.unparse(),
