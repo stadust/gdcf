@@ -223,8 +223,11 @@ macro_rules! parser {
                 I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
+                #[allow(unused_imports)]
                 use $crate::util::parse;
+                #[allow(unused_imports)]
                 use $crate::convert::RobtopFromInfallible;
+                #[allow(unused_imports)]
                 use $crate::convert::RobtopFrom;
 
                 trace!("Parsing {}", stringify!($struct_name));
@@ -270,6 +273,7 @@ macro_rules! parser {
             }
 
             fn unparse(self) -> std::collections::HashMap<&'a str, String> {
+                #[allow(unused_imports)]
                 use crate::convert::RobtopInto;
 
                 let Self {
@@ -321,8 +325,11 @@ macro_rules! parser {
                 I: Iterator<Item = (&'a str, &'a str)> + Clone,
                 F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>
             {
+                #[allow(unused_imports)]
                 use $crate::util::parse;
+                #[allow(unused_imports)]
                 use $crate::convert::RobtopFromInfallible;
+                #[allow(unused_imports)]
                 use $crate::convert::RobtopFrom;
 
                 trace!("Parsing {}", stringify!($struct_name));
@@ -373,6 +380,7 @@ macro_rules! parser {
             }
 
             fn unparse(self) -> std::collections::HashMap<&'a str, String> {
+                #[allow(unused_imports)]
                 use crate::convert::RobtopInto;
 
                 let Self {

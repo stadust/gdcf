@@ -6,7 +6,7 @@
 //trace_macros!(true);
 
 use crate::{error::ValueError, util::SelfZipExt};
-use std::collections::{hash_map::RandomState, HashMap};
+use std::collections::{HashMap};
 
 #[macro_use]
 extern crate log;
@@ -76,7 +76,7 @@ pub struct UnparseSafe<'a, P: Parse<'a>> {
 }
 
 impl<'a, P: Parse<'a>> Parse<'a> for UnparseSafe<'a, P> {
-    fn parse<I, F>(iter: I, f: F) -> Result<Self, ValueError<'a>>
+    fn parse<I, F>(iter: I, _: F) -> Result<Self, ValueError<'a>>
     where
         I: Iterator<Item = (&'a str, &'a str)> + Clone,
         F: FnMut(&'a str, &'a str) -> Result<(), ValueError<'a>>,
