@@ -23,6 +23,18 @@ where
     current_future: F,
 }
 
+impl<F: GdcfFuture> GdcfStream<F>
+where
+    F::BaseRequest: PaginatableRequest,
+{
+    pub fn reset(&mut self) -> Result<(), Error<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>> {
+        self.request.page(0);
+        self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(Error::Cache)?;
+
+        Ok(())
+    }
+}
+
 impl<F, T> GdcfStream<F>
 where
     F::BaseRequest: PaginatableRequest,

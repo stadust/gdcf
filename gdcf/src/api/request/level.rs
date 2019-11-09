@@ -485,8 +485,6 @@ impl LevelsRequest {
     // idk why this one can't be const
     setter!(filter, search_filters, SearchFilters);
 
-    const_setter!(page, u32);
-
     const_setter!(total, i32);
 
     const_setter!(request_type, LevelRequestType);
@@ -585,6 +583,10 @@ impl Request for LevelsRequest {
 impl PaginatableRequest for LevelsRequest {
     fn next(&mut self) {
         self.page += 1;
+    }
+
+    fn page(&mut self, page: u32) {
+        self.page = page;
     }
 }
 

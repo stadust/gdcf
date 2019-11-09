@@ -71,8 +71,6 @@ impl LevelCommentsRequest {
 
     const_setter!(limit: u32);
 
-    const_setter!(page: u32);
-
     pub const fn force_refresh(mut self) -> Self {
         self.force_refresh = true;
         self
@@ -133,6 +131,10 @@ impl PaginatableRequest for LevelCommentsRequest {
     fn next(&mut self) {
         self.page += 1;
     }
+
+    fn page(&mut self, page: u32) {
+        self.page = page;
+    }
 }
 
 impl Into<LevelCommentsRequest> for u64 {
@@ -173,8 +175,6 @@ impl ProfileCommentsRequest {
     const_setter!(with_base, base, BaseRequest);
 
     const_setter!(total: u32);
-
-    const_setter!(page: u32);
 
     const_setter!(account_id: u64);
 
@@ -223,5 +223,9 @@ impl Request for ProfileCommentsRequest {
 impl PaginatableRequest for ProfileCommentsRequest {
     fn next(&mut self) {
         self.page += 1;
+    }
+
+    fn page(&mut self, page: u32) {
+        self.page = page;
     }
 }

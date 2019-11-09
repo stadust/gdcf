@@ -128,8 +128,6 @@ impl UserSearchRequest {
 
     const_setter!(total: u32);
 
-    const_setter!(page: u32);
-
     pub const fn force_refresh(mut self) -> Self {
         self.force_refresh = true;
         self
@@ -209,5 +207,9 @@ impl Request for UserSearchRequest {
 impl PaginatableRequest for UserSearchRequest {
     fn next(&mut self) {
         self.page += 1;
+    }
+
+    fn page(&mut self, page: u32) {
+        self.page = page;
     }
 }

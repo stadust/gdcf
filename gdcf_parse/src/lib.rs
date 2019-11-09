@@ -6,7 +6,7 @@
 //trace_macros!(true);
 
 use crate::{error::ValueError, util::SelfZipExt};
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 #[macro_use]
 extern crate log;
