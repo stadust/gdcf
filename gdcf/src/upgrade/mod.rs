@@ -1,37 +1,47 @@
 use crate::{
-    api::{client::MakeRequest, request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Store},
+    api::{
+        client::MakeRequest,
+        request::{MultiRequest, Request},
+        ApiClient,
+    },
+    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::Error,
     future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
     Gdcf,
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use crate::cache::Lookup;
+use crate::cache::{CreatorKey, NewgroundsSongKey, Key};
 
 pub mod level;
 pub mod user;
 
 /// Trait for upgrading objects
 ///
-/// Upgrading can either be realised by upgrading some component of an object (for instance when upgrading the id of a song into their [`NewgroundsSong`] objects in a [`PartialLevel`]), or by replacing the whole object alltogether (for instance when upgrading a [`SearchedUser`] into a profile.
+/// Upgrading can either be realised by upgrading some component of an object (for instance when
+/// upgrading the id of a song into their [`NewgroundsSong`] objects in a [`PartialLevel`]), or by
+/// replacing the whole object alltogether (for instance when upgrading a [`SearchedUser`] into a
+/// profile.
 ///
 /// Upgrading does not perform any cloning.
 ///
-/// Implementing this trait for some type means that instances of that type can be upgraded into instances of type `Into`.
+/// Implementing this trait for some type means that instances of that type can be upgraded into
+/// instances of type `Into`.
 pub trait Upgradable<Into>: Sized {
-    /// The part of the object that's being upgraded. If the whole object is upgraded, this should be [`Self`]
+    /// The part of the object that's being upgraded. If the whole object is upgraded, this should
+    /// be [`Self`]
     type From;
 
     /// The request that has to be made for the upgrade to work
     type Request: Request;
 
-    /// The object [`Self::From`] is being replaced by. If the whole object is upgraded, this should be `Into`
+    /// The object [`Self::From`] is being replaced by. If the whole object is upgraded, this should
+    /// be `Into`
     type Upgrade;
 
     /// If applicable, the object that has to be looked up in the cache to perform an upgrade.
     ///
     /// If no upgrade is required, set this to [`!`](the never type).
-    type Lookup;
+    type LookupKey: Key;
 
     /// Gets the request that needs to be made to retrieve the data for this upgrade
     ///
@@ -39,14 +49,20 @@ pub trait Upgradable<Into>: Sized {
     /// call to [`Upgradable::default_upgrade`]
     fn upgrade_request(&self) -> Option<Self::Request>;
 
-    /// Gets the default [`Upgradable::Upgrade`] object to be used if an upgrade wasn't possible (see
-    /// above) or if the request didn't return the required data.
+    /// Gets the default [`Upgradable::Upgrade`] object to be used if an upgrade wasn't possible
+    /// (see above) or if the request didn't return the required data.
     ///
     /// Returning [`None`] here indicates that no default option is available. That generally means
     /// that the upgrade process has failed completely
     fn default_upgrade() -> Option<Self::Upgrade>;
 
-    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
+    fn lookup_upgrade<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        request_result: <Self::Request as Request>::Result,
+    ) -> Result<Self::Upgrade, C::Err>;
+
+    //fn upgrade_cached<C: Cache + Lookup<Self::Lookup>>(&self) -> self;
 
     fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
     fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
@@ -55,7 +71,7 @@ pub trait Upgradable<Into>: Sized {
 pub(crate) enum PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request>,
     U: Upgradable<Into>,
 {
     Cached(Into),
@@ -66,7 +82,7 @@ where
 impl<A, C, Into, U> std::fmt::Debug for PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request>,
     U: Upgradable<Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
@@ -88,7 +104,7 @@ where
 impl<A, C, Into, U> PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request> + Lookup<U::Lookup>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request> + Lookup<U::LookupKey>,
     U: Upgradable<Into>,
 {
     pub(crate) fn cached(to_upgrade: U, upgrade: U::Upgrade) -> Self {
@@ -127,12 +143,12 @@ where
             request.set_force_refresh(true);
         }
 
-        let mode = match gdcf.process(&request).map_err(Error::Cache)? {
+        let mode = match gdcf.process(request).map_err(Error::Cache)? {
             // impossible variants
             ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) =>
                 unreachable!(),
 
-            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this!
+            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this! (But why??? What was I thinking when I wrote this???)
             // This violates snapshot consistency! TODO: document
             ProcessRequestFutureState::UpToDate(CacheEntry::DeducedAbsent)
             | ProcessRequestFutureState::UpToDate(CacheEntry::MarkedAbsent(_)) =>
@@ -142,7 +158,7 @@ where
                     None =>
                         match U::upgrade_request(&to_upgrade) {
                             None => Self::default_upgrade(to_upgrade)?,
-                            Some(request) => PendingUpgrade::Missing(to_upgrade, gdcf.refresh(&request)),
+                            Some(request) => PendingUpgrade::Missing(to_upgrade, gdcf.refresh(request)),
                         },
                 },
 
@@ -163,7 +179,7 @@ where
                     None =>
                         match U::upgrade_request(&to_upgrade) {
                             None => PendingUpgrade::default_upgrade(to_upgrade)?,
-                            Some(request) => PendingUpgrade::Missing(to_upgrade, gdcf.refresh(&request)),
+                            Some(request) => PendingUpgrade::Missing(to_upgrade, refresh_future),
                         },
                 },
 

@@ -1,6 +1,6 @@
 use crate::{
     api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::{ApiError, Error},
     future::{
         process::ProcessRequestFuture,
@@ -13,7 +13,6 @@ use crate::{
 use futures::{task, Async, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::{debug, info, trace};
-use crate::cache::Lookup;
 
 #[derive(Debug)]
 pub struct GdcfStream<F: GdcfFuture>
@@ -74,7 +73,7 @@ where
 
 impl<A, C, Req> GdcfStream<ProcessRequestFuture<Req, A, C>>
 where
-    C: Store<NewgroundsSong> + Store<Creator> + Cache + CanCache<Req>,
+    C: Store<NewgroundsSongKey> + Store<CreatorKey> + Cache + CanCache<Req>,
     A: ApiClient + MakeRequest<Req>,
     Req: PaginatableRequest,
 {

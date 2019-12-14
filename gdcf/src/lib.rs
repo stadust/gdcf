@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    unused_imports,
+    //unused_imports,
     unused_parens
 )]
 
@@ -119,12 +119,13 @@ use crate::{
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
-        stream::GdcfStream,
+        //stream::GdcfStream,
         GdcfFuture,
     },
 };
 
 pub use error::Error;
+use crate::cache::{CreatorKey, NewgroundsSongKey};
 
 #[macro_use]
 mod macros;
@@ -198,9 +199,9 @@ where
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
-    C: Cache + Store<Creator> + Store<NewgroundsSong>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey>,
 {
-    fn refresh<R>(&self, request: &R) -> RefreshCacheFuture<R, A, C>
+    fn refresh<R>(&self, request: R) -> RefreshCacheFuture<R, A, C>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -208,10 +209,12 @@ where
     {
         info!("Performing refresh on request {}", request);
 
-        RefreshCacheFuture::new(self.clone(), request.key(), self.client().make(&request))
+        let future =self.client().make(&request);
+
+        RefreshCacheFuture::new(self.clone(), request, future)
     }
 
-    fn process<R>(&self, request: &R) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
+    fn process<R>(&self, request: R) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -252,11 +255,11 @@ where
         })
     }
 }
-
+/*
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
-    C: Cache + Store<NewgroundsSong> + Store<Creator>,
+    C: Cache + Store<NewgroundsSongKey> + Store<CreatorKey>,
 {
     /// Processes the given [`LevelRequest`]
     ///
@@ -363,4 +366,4 @@ where
     {
         GdcfStream::new(self.clone(), request.into())
     }
-}
+}*/

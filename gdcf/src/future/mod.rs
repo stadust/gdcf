@@ -8,10 +8,11 @@ use crate::{
     error::Error,
     Gdcf,
 };
+use crate::cache::{CreatorKey, NewgroundsSongKey};
 
 pub mod process;
 pub(crate) mod refresh;
-pub mod stream;
+//pub mod stream;
 pub mod upgrade;
 
 /// Trait implemented by all futures from gdcf.
@@ -24,7 +25,7 @@ pub trait GdcfFuture {
     type GdcfItem;
 
     type BaseRequest: Request;
-    type Cache: Cache + Store<Creator> + Store<NewgroundsSong>;
+    type Cache: Cache + Store<CreatorKey> + Store<NewgroundsSongKey>;
     type ApiClient: ApiClient;
 
     /// Returns whether the result of this future can be satisfied from cache
@@ -41,9 +42,9 @@ pub trait GdcfFuture {
     where
         Self: Sized;
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err>
+    /*fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err>
     where
-        Self: Sized;
+        Self: Sized;*/
 
     fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache>;
     fn forcing_refreshes(&self) -> bool;

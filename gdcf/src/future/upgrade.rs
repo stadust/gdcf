@@ -3,13 +3,12 @@ use log::{debug, error, trace, warn};
 
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CanCache},
+    cache::{Cache, CacheEntry, CanCache, Lookup},
     error::Error,
     future::{CloneCached, GdcfFuture},
     upgrade::{PendingUpgrade, Upgradable},
     Gdcf,
 };
-use crate::cache::Lookup;
 
 #[allow(missing_debug_implementations)]
 pub struct UpgradeFuture<From, Into, U>
@@ -44,7 +43,7 @@ where
 impl<From, Into, U> UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = U>,
     U: Upgradable<Into>,
 {
@@ -62,7 +61,7 @@ where
     where
         Into: Upgradable<Into2>,
         From::ApiClient: MakeRequest<Into::Request>,
-        From::Cache: CanCache<Into::Request> + Lookup<Into::Lookup>,
+        From::Cache: CanCache<Into::Request> + Lookup<Into::LookupKey>,
     {
         UpgradeFuture::upgrade_from(self)
     }
@@ -114,7 +113,7 @@ where
 impl<From, Into, U> UpgradeFutureState<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = U>,
     U: Upgradable<Into>,
 {
@@ -143,7 +142,7 @@ where
 impl<From, Into, U> GdcfFuture for UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = U>,
     U: Upgradable<Into>,
 {
@@ -203,13 +202,13 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
+    /*fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
         Ok(UpgradeFuture {
             state: UpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
             gdcf,
             forced_refresh: request.forces_refresh(),
         })
-    }
+    }*/
 
     fn gdcf(&self) -> Gdcf<Self::ApiClient, Self::Cache> {
         self.gdcf.clone()
@@ -336,7 +335,7 @@ where
 impl<From, Into, U> CloneCached for UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = U> + CloneCached,
     U: Upgradable<Into> + Clone,
     Into: Clone,
@@ -368,7 +367,7 @@ where
 impl<From, Into, U> Future for UpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = U>,
     U: Upgradable<Into>,
 {
@@ -412,7 +411,7 @@ where
 impl<From, Into, U> MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
     U: Upgradable<Into>,
 {
@@ -430,7 +429,7 @@ where
     where
         Into: Upgradable<Into2>,
         From::ApiClient: MakeRequest<Into::Request>,
-        From::Cache: CanCache<Into::Request> + Lookup<Into::Lookup>,
+        From::Cache: CanCache<Into::Request> + Lookup<Into::LookupKey>,
     {
         MultiUpgradeFuture::upgrade_from(self)
     }
@@ -483,7 +482,7 @@ where
 impl<From, Into, U> MultiUpgradeFutureState<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
     U: Upgradable<Into>,
 {
@@ -523,7 +522,7 @@ where
 impl<From, Into, U> GdcfFuture for MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
     U: Upgradable<Into>,
 {
@@ -592,13 +591,13 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
+    /*fn new(gdcf: Gdcf<Self::ApiClient, Self::Cache>, request: &Self::BaseRequest) -> Result<Self, <Self::Cache as Cache>::Err> {
         Ok(MultiUpgradeFuture {
             forced_refresh: request.forces_refresh(),
             state: MultiUpgradeFutureState::new(&gdcf.cache(), From::new(gdcf.clone(), request)?),
             gdcf,
         })
-    }
+    }*/
 
     fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self {
         if !self.has_result_cached() {
@@ -802,7 +801,7 @@ where
 impl<From, Into, U> CloneCached for MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = Vec<U>> + CloneCached,
     U: Upgradable<Into> + Clone,
     Into: Clone,
@@ -843,7 +842,7 @@ where
 impl<From, Into, U> Future for MultiUpgradeFuture<From, Into, U>
 where
     From::ApiClient: MakeRequest<U::Request>,
-    From::Cache: CanCache<U::Request> + Lookup<U::Lookup>,
+    From::Cache: CanCache<U::Request> + Lookup<U::LookupKey>,
     From: GdcfFuture<GdcfItem = Vec<U>>,
     U: Upgradable<Into>,
 {
@@ -855,7 +854,7 @@ where
     }
 }
 
-fn temporary_upgrade<C: Cache + CanCache<U::Request> + Lookup<U::Lookup>, Into, U: Upgradable<Into>>(
+fn temporary_upgrade<C: Cache + CanCache<U::Request> + Lookup<U::LookupKey>, Into, U: Upgradable<Into>>(
     cache: &C,
     to_upgrade: U,
 ) -> Result<(Into, U::From), U> {
@@ -904,7 +903,7 @@ fn temporary_upgrade<C: Cache + CanCache<U::Request> + Lookup<U::Lookup>, Into, 
     Ok(to_upgrade.upgrade(upgrade))
 }
 
-fn temporary_upgrade_all<C: Cache + CanCache<U::Request> + Lookup<U::Lookup>, Into, U: Upgradable<Into>>(
+fn temporary_upgrade_all<C: Cache + CanCache<U::Request> + Lookup<U::LookupKey>, Into, U: Upgradable<Into>>(
     cache: &C,
     to_upgrade: Vec<U>,
 ) -> Result<(Vec<Into>, Vec<U::From>), Vec<U>> {

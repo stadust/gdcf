@@ -1,28 +1,56 @@
 use crate::{api::request::Request, error::CacheError};
 use std::fmt::{Display, Formatter};
+use gdcf_model::user::Creator;
+use gdcf_model::song::NewgroundsSong;
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type CacheEntryMeta: CacheEntryMeta;
     type Err: CacheError;
 }
 
-pub trait Lookup<Obj>: Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Obj, Self::CacheEntryMeta>, Self::Err>;
+#[derive(Debug)]
+pub struct NewgroundsSongKey(pub u64);
+
+#[derive(Debug)]
+pub struct CreatorKey(pub u64);
+
+pub trait Key {
+    type Result;
 }
 
-pub trait Store<Obj>: Cache {
-    fn store(&mut self, obj: &Obj, key: u64) -> Result<Self::CacheEntryMeta, Self::Err>;
-    fn mark_absent(&mut self, key: u64) -> Result<Self::CacheEntryMeta, Self::Err>;
+impl Key for ! {
+    type Result = !;
 }
 
-// TODO: make this private
-pub trait CanCache<R: Request>: Cache + Lookup<R::Result> + Store<R::Result> {
-    fn lookup_request(&self, request: &R) -> Result<CacheEntry<R::Result, Self::CacheEntryMeta>, Self::Err> {
-        self.lookup(request.key())
+impl<R: Request> Key for R {
+    type Result = <R as Request>::Result;
+}
+
+impl Key for NewgroundsSongKey {
+    type Result = NewgroundsSong;
+}
+
+impl Key for CreatorKey {
+    type Result = Creator;
+}
+
+pub trait Lookup<K: Key>: Cache {
+    fn lookup(&self, key: &K) -> Result<CacheEntry<K::Result, Self::CacheEntryMeta>, Self::Err>;
+}
+
+pub trait Store<K: Key>: Cache {
+    fn store(&mut self, obj: &K::Result, key: &K) -> Result<Self::CacheEntryMeta, Self::Err>;
+    fn mark_absent(&mut self, key: &K) -> Result<Self::CacheEntryMeta, Self::Err>;
+}
+
+// TODO: we can get rid of this now
+pub trait CanCache<K: Key>: Cache + Lookup<K> + Store<K>  {
+    fn lookup_request(&self, key: &K) -> Result<CacheEntry<K::Result, Self::CacheEntryMeta>, Self::Err> {
+        self.lookup(key)
     }
 }
 
-impl<R: Request, C: Cache> CanCache<R> for C where C: Lookup<R::Result> + Store<R::Result> {}
+impl<K: Key, C: Cache> CanCache<K> for C where C: Lookup<K> + Store<K> {}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CacheEntry<T, Meta: CacheEntryMeta> {

@@ -19,6 +19,7 @@ pub use self::{
     level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
     user::UserRequest,
 };
+use failure::_core::fmt::{Error, Formatter};
 use gdcf_model::GameVersion;
 use std::{
     collections::hash_map::DefaultHasher,
@@ -100,7 +101,7 @@ impl Default for BaseRequest {
 /// they're built upon. If new fields are added in later version of GDCF, they
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
-pub trait Request: Display + Hash + Clone + Send + Sync + 'static {
+pub trait Request: std::fmt::Debug + Display + Hash + Clone + Send + Sync + 'static {
     type Result: std::fmt::Debug + Send + Sync + 'static;
 
     fn key(&self) -> u64 {

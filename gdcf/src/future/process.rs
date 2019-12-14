@@ -5,7 +5,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
     error::Error,
     future::{
         refresh::RefreshCacheFuture,
@@ -15,12 +15,12 @@ use crate::{
     upgrade::Upgradable,
     Gdcf,
 };
-use crate::cache::Lookup;
+use crate::cache::{CreatorKey, NewgroundsSongKey};
 
 pub struct ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     gdcf: Gdcf<A, C>,
@@ -31,7 +31,7 @@ where
 impl<Req, A, C> std::fmt::Debug for ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request + std::fmt::Debug,
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -47,7 +47,7 @@ where
 pub(crate) enum ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     Exhausted,
@@ -59,8 +59,8 @@ where
 impl<Req, A, C> std::fmt::Debug for ProcessRequestFutureState<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
-    Req: Request,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
+    Req: Request + std::fmt::Debug,
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -75,14 +75,14 @@ where
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req> ,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     pub fn upgrade<Into>(self) -> UpgradeFuture<Self, Into, Req::Result>
     where
         Req::Result: Upgradable<Into>,
         A: MakeRequest<<Req::Result as Upgradable<Into>>::Request>,
-        C: CanCache<<Req::Result as Upgradable<Into>>::Request> +Lookup<<Req::Result as Upgradable<Into>>::Lookup>,
+        C: CanCache<<Req::Result as Upgradable<Into>>::Request> + Lookup<<Req::Result as Upgradable<Into>>::LookupKey>,
     {
         UpgradeFuture::upgrade_from(self)
     }
@@ -91,7 +91,7 @@ where
 impl<Req, A, C, T> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request<Result = Vec<T>>,
     T: std::fmt::Debug + Send + Sync + 'static,
 {
@@ -99,7 +99,7 @@ where
     where
         T: Upgradable<Into>,
         A: MakeRequest<<T as Upgradable<Into>>::Request>,
-        C: CanCache<<T as Upgradable<Into>>::Request> +Lookup<<T as Upgradable<Into>>::Lookup>,
+        C: CanCache<<T as Upgradable<Into>>::Request> + Lookup<<T as Upgradable<Into>>::LookupKey>,
     {
         MultiUpgradeFuture::upgrade_from(self)
     }
@@ -108,7 +108,7 @@ where
 impl<Req, A, C> Future for ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     type Error = Error<A::Err, C::Err>;
@@ -122,7 +122,7 @@ where
 impl<Req, A, C> GdcfFuture for ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     type ApiClient = A;
@@ -147,13 +147,13 @@ where
         }
     }
 
-    fn new(gdcf: Gdcf<A, C>, request: &Self::BaseRequest) -> Result<Self, C::Err> {
+    /*fn new(gdcf: Gdcf<A, C>, request: &Self::BaseRequest) -> Result<Self, C::Err> {
         Ok(ProcessRequestFuture {
             forces_refresh: request.forces_refresh(),
             state: gdcf.process(request)?,
             gdcf,
         })
-    }
+    }*/
 
     fn peek_cached<F: FnOnce(Self::GdcfItem) -> Self::GdcfItem>(self, f: F) -> Self {
         let ProcessRequestFuture {
@@ -221,7 +221,7 @@ where
 impl<Req, A, C> CloneCached for ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
     Req::Result: Clone,
 {
