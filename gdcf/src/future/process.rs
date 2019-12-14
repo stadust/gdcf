@@ -15,6 +15,7 @@ use crate::{
     upgrade::Upgradable,
     Gdcf,
 };
+use crate::cache::Lookup;
 
 pub struct ProcessRequestFuture<Req, A, C>
 where
@@ -74,14 +75,14 @@ where
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<Req> ,
     Req: Request,
 {
     pub fn upgrade<Into>(self) -> UpgradeFuture<Self, Into, Req::Result>
     where
-        Req::Result: Upgradable<C, Into>,
-        A: MakeRequest<<Req::Result as Upgradable<C, Into>>::Request>,
-        C: CanCache<<Req::Result as Upgradable<C, Into>>::Request>,
+        Req::Result: Upgradable<Into>,
+        A: MakeRequest<<Req::Result as Upgradable<Into>>::Request>,
+        C: CanCache<<Req::Result as Upgradable<Into>>::Request> +Lookup<<Req::Result as Upgradable<Into>>::Lookup>,
     {
         UpgradeFuture::upgrade_from(self)
     }
@@ -96,9 +97,9 @@ where
 {
     pub fn upgrade_all<Into>(self) -> MultiUpgradeFuture<Self, Into, T>
     where
-        T: Upgradable<C, Into>,
-        A: MakeRequest<<T as Upgradable<C, Into>>::Request>,
-        C: CanCache<<T as Upgradable<C, Into>>::Request>,
+        T: Upgradable<Into>,
+        A: MakeRequest<<T as Upgradable<Into>>::Request>,
+        C: CanCache<<T as Upgradable<Into>>::Request> +Lookup<<T as Upgradable<Into>>::Lookup>,
     {
         MultiUpgradeFuture::upgrade_from(self)
     }

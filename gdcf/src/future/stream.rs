@@ -13,6 +13,7 @@ use crate::{
 use futures::{task, Async, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::{debug, info, trace};
+use crate::cache::Lookup;
 
 #[derive(Debug)]
 pub struct GdcfStream<F: GdcfFuture>
@@ -43,9 +44,9 @@ where
 {
     pub fn upgrade_all<Into>(self) -> GdcfStream<MultiUpgradeFuture<F, Into, T>>
     where
-        T: Upgradable<F::Cache, Into>,
-        F::ApiClient: MakeRequest<<T as Upgradable<F::Cache, Into>>::Request>,
-        F::Cache: CanCache<<T as Upgradable<F::Cache, Into>>::Request>,
+        T: Upgradable<Into>,
+        F::ApiClient: MakeRequest<<T as Upgradable<Into>>::Request>,
+        F::Cache: CanCache<<T as Upgradable<Into>>::Request> + Lookup<<T as Upgradable<Into>>::Lookup>,
     {
         GdcfStream {
             current_future: MultiUpgradeFuture::upgrade_from(self.current_future),
@@ -60,9 +61,9 @@ where
 {
     pub fn upgrade<Into>(self) -> GdcfStream<UpgradeFuture<F, Into, F::GdcfItem>>
     where
-        F::GdcfItem: Upgradable<F::Cache, Into>,
-        F::ApiClient: MakeRequest<<F::GdcfItem as Upgradable<F::Cache, Into>>::Request>,
-        F::Cache: CanCache<<F::GdcfItem as Upgradable<F::Cache, Into>>::Request>,
+        F::GdcfItem: Upgradable<Into>,
+        F::ApiClient: MakeRequest<<F::GdcfItem as Upgradable<Into>>::Request>,
+        F::Cache: CanCache<<F::GdcfItem as Upgradable<Into>>::Request> + Lookup<<F::GdcfItem as Upgradable<Into>>::Lookup>,
     {
         GdcfStream {
             current_future: UpgradeFuture::upgrade_from(self.current_future),

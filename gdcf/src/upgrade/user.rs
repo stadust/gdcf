@@ -1,10 +1,12 @@
 use crate::{api::request::UserRequest, cache::Cache, upgrade::Upgradable};
 use gdcf_model::user::{SearchedUser, User};
+use crate::cache::Lookup;
 
-impl<C: Cache> Upgradable<C, User> for SearchedUser {
+impl Upgradable<User> for SearchedUser {
     type From = SearchedUser;
     type Request = UserRequest;
     type Upgrade = User;
+    type Lookup = !;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         Some(self.account_id.into())
@@ -14,7 +16,7 @@ impl<C: Cache> Upgradable<C, User> for SearchedUser {
         None
     }
 
-    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(request_result)
     }
 

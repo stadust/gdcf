@@ -6,29 +6,47 @@ use crate::{
     Gdcf,
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
+use crate::cache::Lookup;
 
 pub mod level;
 pub mod user;
 
-pub trait Upgradable<C: Cache, Into>: Sized {
+/// Trait for upgrading objects
+///
+/// Upgrading can either be realised by upgrading some component of an object (for instance when upgrading the id of a song into their [`NewgroundsSong`] objects in a [`PartialLevel`]), or by replacing the whole object alltogether (for instance when upgrading a [`SearchedUser`] into a profile.
+///
+/// Upgrading does not perform any cloning.
+///
+/// Implementing this trait for some type means that instances of that type can be upgraded into instances of type `Into`.
+pub trait Upgradable<Into>: Sized {
+    /// The part of the object that's being upgraded. If the whole object is upgraded, this should be [`Self`]
     type From;
+
+    /// The request that has to be made for the upgrade to work
     type Request: Request;
+
+    /// The object [`Self::From`] is being replaced by. If the whole object is upgraded, this should be `Into`
     type Upgrade;
+
+    /// If applicable, the object that has to be looked up in the cache to perform an upgrade.
+    ///
+    /// If no upgrade is required, set this to [`!`](the never type).
+    type Lookup;
 
     /// Gets the request that needs to be made to retrieve the data for this upgrade
     ///
     /// Returning [`None`] indicates that an upgrade of this object is not possible and will cause a
-    /// call to [`Upgrade::default_upgrade`]
+    /// call to [`Upgradable::default_upgrade`]
     fn upgrade_request(&self) -> Option<Self::Request>;
 
-    /// Gets the default [`Upgrade::Upgrade`] object to be used if an upgrade wasn't possible (see
+    /// Gets the default [`Upgradable::Upgrade`] object to be used if an upgrade wasn't possible (see
     /// above) or if the request didn't return the required data.
     ///
     /// Returning [`None`] here indicates that no default option is available. That generally means
     /// that the upgrade process has failed completely
     fn default_upgrade() -> Option<Self::Upgrade>;
 
-    fn lookup_upgrade(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, request_result: <Self::Request as Request>::Result) -> Result<Self::Upgrade, C::Err>;
 
     fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
     fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
@@ -38,7 +56,7 @@ pub(crate) enum PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    U: Upgradable<C, Into>,
+    U: Upgradable<Into>,
 {
     Cached(Into),
     Outdated(U, U::Upgrade, RefreshCacheFuture<U::Request, A, C>),
@@ -49,7 +67,7 @@ impl<A, C, Into, U> std::fmt::Debug for PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    U: Upgradable<C, Into> + std::fmt::Debug,
+    U: Upgradable<Into> + std::fmt::Debug,
     U::Upgrade: std::fmt::Debug,
     Into: std::fmt::Debug,
 {
@@ -70,8 +88,8 @@ where
 impl<A, C, Into, U> PendingUpgrade<A, C, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request>,
-    U: Upgradable<C, Into>,
+    C: Cache + Store<Creator> + Store<NewgroundsSong> + CanCache<U::Request> + Lookup<U::Lookup>,
+    U: Upgradable<Into>,
 {
     pub(crate) fn cached(to_upgrade: U, upgrade: U::Upgrade) -> Self {
         PendingUpgrade::Cached(to_upgrade.upgrade(upgrade).0)

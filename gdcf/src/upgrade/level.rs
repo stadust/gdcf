@@ -9,10 +9,11 @@ use gdcf_model::{
     user::{Creator, User},
 };
 
-impl<C: Cache, Song, User> Upgradable<C, Level<Song, User>> for PartialLevel<Song, User> {
+impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
     type From = PartialLevel<Option<u64>, u64>;
     type Request = LevelRequest;
     type Upgrade = Level<Option<u64>, u64>;
+    type Lookup = !;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         Some(self.level_id.into())
@@ -22,7 +23,7 @@ impl<C: Cache, Song, User> Upgradable<C, Level<Song, User>> for PartialLevel<Son
         None
     }
 
-    fn lookup_upgrade(&self, _: &C, request_result: Level<Option<u64>, u64>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, _: &C, request_result: Level<Option<u64>, u64>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(request_result)
     }
 
@@ -53,13 +54,12 @@ impl<C: Cache, Song, User> Upgradable<C, Level<Song, User>> for PartialLevel<Son
     }
 }
 
-impl<C: Cache> Upgradable<C, Level<Option<NewgroundsSong>, u64>> for Level<Option<u64>, u64>
-where
-    C: Lookup<NewgroundsSong>,
+impl Upgradable<Level<Option<NewgroundsSong>, u64>> for Level<Option<u64>, u64>
 {
     type From = Option<u64>;
     type Request = LevelsRequest;
     type Upgrade = Option<NewgroundsSong>;
+    type Lookup = NewgroundsSong;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         match self.base.custom_song {
@@ -77,7 +77,7 @@ where
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, _: <LevelsRequest as Request>::Result) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, _: <LevelsRequest as Request>::Result) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(match self.base.custom_song {
             Some(song_id) => cache.lookup(song_id)?.into(),
             None => None,
@@ -93,10 +93,11 @@ where
     }
 }
 
-impl<C: Cache + Lookup<NewgroundsSong>> Upgradable<C, PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64> {
+impl Upgradable<PartialLevel<Option<NewgroundsSong>, u64>> for PartialLevel<Option<u64>, u64> {
     type From = Option<u64>;
     type Request = LevelsRequest;
     type Upgrade = Option<NewgroundsSong>;
+    type Lookup = NewgroundsSong;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         self.custom_song.map(|song_id| {
@@ -110,7 +111,7 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgradable<C, PartialLevel<Option<Newgro
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, _: <LevelsRequest as Request>::Result) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, _: <LevelsRequest as Request>::Result) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(match self.custom_song {
             Some(song_id) => cache.lookup(song_id)?.into(),
             None => None,
@@ -126,13 +127,11 @@ impl<C: Cache + Lookup<NewgroundsSong>> Upgradable<C, PartialLevel<Option<Newgro
     }
 }
 
-impl<C, Song> Upgradable<C, Level<Song, Option<Creator>>> for Level<Song, u64>
-where
-    C: Cache + Lookup<Creator>,
-{
+impl<Song> Upgradable<Level<Song, Option<Creator>>> for Level<Song, u64> {
     type From = u64;
     type Request = LevelsRequest;
     type Upgrade = Option<Creator>;
+    type Lookup = Creator;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         Some(
@@ -146,7 +145,7 @@ where
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(self.base.creator)?.into())
     }
 
@@ -159,13 +158,12 @@ where
     }
 }
 
-impl<C, Song> Upgradable<C, PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
-where
-    C: Cache + Lookup<Creator>,
+impl<Song> Upgradable<PartialLevel<Song, Option<Creator>>> for PartialLevel<Song, u64>
 {
     type From = u64;
     type Request = LevelsRequest;
     type Upgrade = Option<Creator>;
+    type Lookup = Creator;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         Some(
@@ -179,7 +177,7 @@ where
         Some(None)
     }
 
-    fn lookup_upgrade(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, cache: &C, _: Vec<PartialLevel<Option<u64>, u64>>) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(cache.lookup(self.creator)?.into())
     }
 
@@ -192,10 +190,11 @@ where
     }
 }
 
-impl<C: Cache, Song> Upgradable<C, PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
+impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
+    type Lookup = !;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         match &self.creator {
@@ -212,7 +211,7 @@ impl<C: Cache, Song> Upgradable<C, PartialLevel<Song, Option<User>>> for Partial
         Some(None)
     }
 
-    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 
@@ -224,10 +223,11 @@ impl<C: Cache, Song> Upgradable<C, PartialLevel<Song, Option<User>>> for Partial
         change_partial_level_user(upgraded, downgrade)
     }
 }
-impl<C: Cache, Song> Upgradable<C, Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
+impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>> {
     type From = Option<Creator>;
     type Request = UserRequest;
     type Upgrade = Option<User>;
+    type Lookup = !;
 
     fn upgrade_request(&self) -> Option<Self::Request> {
         match &self.base.creator {
@@ -244,7 +244,7 @@ impl<C: Cache, Song> Upgradable<C, Level<Song, Option<User>>> for Level<Song, Op
         Some(None)
     }
 
-    fn lookup_upgrade(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
+    fn lookup_upgrade<C: Cache + Lookup<Self::Lookup>>(&self, _: &C, request_result: User) -> Result<Self::Upgrade, <C as Cache>::Err> {
         Ok(Some(request_result))
     }
 
