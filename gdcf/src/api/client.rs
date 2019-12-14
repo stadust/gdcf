@@ -1,6 +1,10 @@
-use futures::Future;
+use futures::{Async, Future};
 
-use crate::{api::request::Request, error::ApiError, Secondary};
+use crate::{
+    api::request::{MultiRequest, Request},
+    error::ApiError,
+    Secondary,
+};
 
 pub trait ApiClient: Clone + Sized + Sync + Send + 'static {
     type Err: ApiError;

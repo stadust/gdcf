@@ -1,7 +1,6 @@
 use crate::{api::request::Request, error::CacheError};
+use gdcf_model::{song::NewgroundsSong, user::Creator};
 use std::fmt::{Display, Formatter};
-use gdcf_model::user::Creator;
-use gdcf_model::song::NewgroundsSong;
 
 pub trait Cache: Clone + Send + Sync + 'static {
     type CacheEntryMeta: CacheEntryMeta;
@@ -44,7 +43,7 @@ pub trait Store<K: Key>: Cache {
 }
 
 // TODO: we can get rid of this now
-pub trait CanCache<K: Key>: Cache + Lookup<K> + Store<K>  {
+pub trait CanCache<K: Key>: Cache + Lookup<K> + Store<K> {
     fn lookup_request(&self, key: &K) -> Result<CacheEntry<K::Result, Self::CacheEntryMeta>, Self::Err> {
         self.lookup(key)
     }

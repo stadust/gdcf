@@ -119,13 +119,12 @@ use crate::{
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
-        //stream::GdcfStream,
         GdcfFuture,
     },
 };
 
-pub use error::Error;
 use crate::cache::{CreatorKey, NewgroundsSongKey};
+pub use error::Error;
 
 #[macro_use]
 mod macros;
@@ -207,9 +206,9 @@ where
         A: MakeRequest<R>,
         C: CanCache<R>,
     {
-        info!("Performing refresh on request {}", request);
+        info!("Performing refresh on request {:?}", request);
 
-        let future =self.client().make(&request);
+        let future = self.client().make(&request);
 
         RefreshCacheFuture::new(self.clone(), request, future)
     }
@@ -220,18 +219,18 @@ where
         A: MakeRequest<R>,
         C: CanCache<R>,
     {
-        info!("Processing request {}", request);
+        info!("Processing request {:?}", request);
 
         let cached = match self.cache.lookup_request(&request)? {
             CacheEntry::Missing => {
-                info!("No cache entry for request {}", request);
+                info!("No cache entry for request {:?}", request);
 
                 None
             },
             entry =>
                 if entry.is_expired() {
                     trace!("Cache entry is {:?}", entry);
-                    info!("Cache entry for request {} is expired!", request);
+                    info!("Cache entry for request {:?} is expired!", request);
 
                     Some(entry)
                 } else if request.forces_refresh() {
@@ -241,7 +240,7 @@ where
                     Some(entry)
                 } else {
                     trace!("Cache entry is {:?}", entry);
-                    info!("Cached entry for request {} is up-to-date!", request);
+                    info!("Cached entry for request {:?} is up-to-date!", request);
 
                     return Ok(ProcessRequestFutureState::UpToDate(entry))
                 },

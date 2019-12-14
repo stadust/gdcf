@@ -4,11 +4,10 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
     api::{request::Request, ApiClient},
-    cache::{Cache, CacheEntry, Store},
+    cache::{Cache, CacheEntry, CreatorKey, NewgroundsSongKey, Store},
     error::Error,
     Gdcf,
 };
-use crate::cache::{CreatorKey, NewgroundsSongKey};
 
 pub mod process;
 pub(crate) mod refresh;

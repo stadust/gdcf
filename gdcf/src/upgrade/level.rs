@@ -1,6 +1,6 @@
 use crate::{
     api::request::{LevelRequest, LevelRequestType, LevelsRequest, Request, SearchFilters, UserRequest},
-    cache::{Cache, Lookup},
+    cache::{Cache, CreatorKey, Lookup, NewgroundsSongKey},
     upgrade::Upgradable,
 };
 use gdcf_model::{
@@ -8,7 +8,6 @@ use gdcf_model::{
     song::NewgroundsSong,
     user::{Creator, User},
 };
-use crate::cache::{NewgroundsSongKey, CreatorKey};
 
 impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
     type From = PartialLevel<Option<u64>, u64>;

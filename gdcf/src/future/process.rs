@@ -5,7 +5,7 @@ use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
     api::{client::MakeRequest, request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
+    cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
     future::{
         refresh::RefreshCacheFuture,
@@ -15,7 +15,6 @@ use crate::{
     upgrade::Upgradable,
     Gdcf,
 };
-use crate::cache::{CreatorKey, NewgroundsSongKey};
 
 pub struct ProcessRequestFuture<Req, A, C>
 where

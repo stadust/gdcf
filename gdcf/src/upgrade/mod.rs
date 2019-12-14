@@ -4,13 +4,12 @@ use crate::{
         request::{MultiRequest, Request},
         ApiClient,
     },
-    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
+    cache::{Cache, CacheEntry, CanCache, CreatorKey, Key, Lookup, NewgroundsSongKey, Store},
     error::Error,
     future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
     Gdcf,
 };
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use crate::cache::{CreatorKey, NewgroundsSongKey, Key};
 
 pub mod level;
 pub mod user;
@@ -61,8 +60,6 @@ pub trait Upgradable<Into>: Sized {
         cache: &C,
         request_result: <Self::Request as Request>::Result,
     ) -> Result<Self::Upgrade, C::Err>;
-
-    //fn upgrade_cached<C: Cache + Lookup<Self::Lookup>>(&self) -> self;
 
     fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
     fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
@@ -148,8 +145,8 @@ where
             ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) =>
                 unreachable!(),
 
-            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this! (But why??? What was I thinking when I wrote this???)
-            // This violates snapshot consistency! TODO: document
+            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this! (But why??? What was I
+            // thinking when I wrote this???) This violates snapshot consistency! TODO: document
             ProcessRequestFutureState::UpToDate(CacheEntry::DeducedAbsent)
             | ProcessRequestFutureState::UpToDate(CacheEntry::MarkedAbsent(_)) =>
             // TODO: investigate what the fuck I have done here

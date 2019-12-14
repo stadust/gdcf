@@ -77,9 +77,9 @@ impl Display for UserRequest {
 impl Request for UserRequest {
     type Result = User;
 
-    fn key(&self) -> u64 {
+    /*fn key(&self) -> u64 {
         self.user
-    }
+    }*/
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh

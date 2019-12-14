@@ -4,14 +4,13 @@ use crate::{
         request::Request,
         ApiClient,
     },
-    cache::{Cache, CacheEntry, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache, CreatorKey, NewgroundsSongKey, Store},
     error::{ApiError, Error},
     Gdcf, Secondary,
 };
 use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::warn;
-use crate::cache::{NewgroundsSongKey, CreatorKey};
 
 pub(crate) struct RefreshCacheFuture<Req, A, C>
 where
@@ -21,7 +20,7 @@ where
 {
     inner: <A as MakeRequest<Req>>::Future,
     cache: C,
-    request: Req
+    request: Req,
 }
 
 impl<Req, A, C> std::fmt::Debug for RefreshCacheFuture<Req, A, C>
@@ -85,7 +84,8 @@ where
                                 Secondary::NewgroundsSong(song) => self.cache.store(song, &NewgroundsSongKey(song.song_id)),
                                 Secondary::Creator(creator) => self.cache.store(creator, &CreatorKey(creator.user_id)),
                                 Secondary::MissingCreator(cid) => Store::<CreatorKey>::mark_absent(&mut self.cache, &CreatorKey(*cid)),
-                                Secondary::MissingNewgroundsSong(nid) => Store::<NewgroundsSongKey>::mark_absent(&mut self.cache, &NewgroundsSongKey(*nid)),
+                                Secondary::MissingNewgroundsSong(nid) =>
+                                    Store::<NewgroundsSongKey>::mark_absent(&mut self.cache, &NewgroundsSongKey(*nid)),
                             }
                             .map_err(Error::Cache)?;
                         }

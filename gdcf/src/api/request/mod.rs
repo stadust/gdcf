@@ -26,6 +26,7 @@ use std::{
     fmt::Display,
     hash::{Hash, Hasher},
 };
+use std::fmt::Debug;
 
 pub mod comment;
 pub mod level;
@@ -101,14 +102,14 @@ impl Default for BaseRequest {
 /// they're built upon. If new fields are added in later version of GDCF, they
 /// may only be hashed if they are explicitly set to a value, to ensure the
 /// above-mentioned compatibility
-pub trait Request: std::fmt::Debug + Display + Hash + Clone + Send + Sync + 'static {
-    type Result: std::fmt::Debug + Send + Sync + 'static;
+pub trait Request: Debug + Send + Sync + 'static {
+    type Result: Debug + Send + Sync + 'static;
 
-    fn key(&self) -> u64 {
+    /*fn key(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
-    }
+    }*/
 
     fn forces_refresh(&self) -> bool;
     fn set_force_refresh(&mut self, force_refresh: bool);
