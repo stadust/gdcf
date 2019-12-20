@@ -1,18 +1,240 @@
 use crate::{
-    api::{
-        client::MakeRequest,
-        request::{MultiRequest, Request},
-        ApiClient,
-    },
+    api::{client::MakeRequest, request::Request, ApiClient},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Key, Lookup, NewgroundsSongKey, Store},
-    error::Error,
+    error::{ApiError, CacheError, Error},
     future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
     Gdcf,
 };
+use failure::_core::fmt::Formatter;
+use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
+use std::panic::resume_unwind;
 
 pub mod level;
 pub mod user;
+
+#[derive(Debug)]
+pub enum UpgradeQuery<R, S> {
+    One(Option<R>, Option<S>),
+    Many(Vec<UpgradeQuery<R, S>>),
+}
+
+impl<R, S> UpgradeQuery<R, S> {
+    fn one(self) -> (Option<R>, Option<S>) {
+        match self {
+            UpgradeQuery::One(r, s) => (r, s),
+            UpgradeQuery::Many(_) => panic!("Expected UpgradeQuery::One"),
+        }
+    }
+
+    fn requests_necessary(&self) -> bool {
+        match self {
+            UpgradeQuery::One(request_option, _) => request_option.is_some(),
+            UpgradeQuery::Many(inner_queries) => inner_queries.iter().any(|query| query.requests_necessary()),
+        }
+    }
+
+    pub fn upgrade_cached(&self) -> bool {
+        match self {
+            UpgradeQuery::One(_, upgrade) => upgrade.is_some(),
+            UpgradeQuery::Many(inner_queries) => inner_queries.iter().all(|query| query.upgrade_cached()),
+        }
+    }
+
+    fn mitosis(self) -> (UpgradeQuery<R, !>, UpgradeQuery<!, S>) {
+        match self {
+            UpgradeQuery::One(left, right) => (UpgradeQuery::One(left, None), UpgradeQuery::One(None, right)),
+            UpgradeQuery::Many(inner_queries) => {
+                let mut lefts = Vec::new();
+                let mut rights = Vec::new();
+
+                for inner_query in inner_queries {
+                    let (left, right) = inner_query.mitosis();
+
+                    lefts.push(left);
+                    rights.push(right);
+                }
+
+                (UpgradeQuery::Many(lefts), UpgradeQuery::Many(rights))
+            },
+        }
+    }
+}
+
+impl<R> UpgradeQuery<R, !> {
+    fn recombination<S>(self, other: UpgradeQuery<!, S>) -> UpgradeQuery<R, S> {
+        match (self, other) {
+            (UpgradeQuery::One(left, _), UpgradeQuery::One(_, right)) => UpgradeQuery::One(left, right),
+            (UpgradeQuery::Many(lefts), UpgradeQuery::Many(rights)) =>
+                UpgradeQuery::Many(
+                    lefts
+                        .into_iter()
+                        .zip(rights)
+                        .map(|(left, right)| left.recombination(right))
+                        .collect(),
+                ),
+            _ => panic!("Invalid recombination paramers. Can only combine when both upgrade query objects have the same structure"),
+        }
+    }
+}
+
+impl<R: Request, S> UpgradeQuery<R, S> {
+    pub(crate) fn futurize<A, C>(self, gdcf: &Gdcf<A, C>) -> UpgradeQueryFuture<RefreshCacheFuture<R, A, C>, S>
+    where
+        A: MakeRequest<R>,
+        C: Cache + CanCache<R> + Store<CreatorKey> + Store<NewgroundsSongKey>,
+    {
+        match self {
+            UpgradeQuery::One(request, data) =>
+                UpgradeQueryFuture::One(request.map(|req| FutureState::Pending(RefreshCacheFuture::new(gdcf, req))), data),
+            UpgradeQuery::Many(inner) =>
+                UpgradeQueryFuture::Many(
+                    inner
+                        .into_iter()
+                        .map(|inner_query| FutureState::Pending(inner_query.futurize(gdcf)))
+                        .collect(),
+                ),
+        }
+    }
+}
+
+pub(crate) enum FutureState<F: Future> {
+    Pending(F),
+    Done(F::Item),
+}
+
+pub(crate) enum UpgradeQueryFuture<F: Future, S> {
+    One(Option<FutureState<F>>, Option<S>),
+    Many(Vec<FutureState<UpgradeQueryFuture<F, S>>>),
+}
+
+impl<F: Future, S> std::fmt::Debug for UpgradeQueryFuture<F, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unimplemented!()
+    }
+}
+
+impl<F: Future> UpgradeQueryFuture<F, !> {
+    pub(crate) fn recombination<S>(self, other: UpgradeQuery<!, S>) -> UpgradeQueryFuture<F, S> {
+        match (self, other) {
+            (UpgradeQueryFuture::One(left, _), UpgradeQuery::One(_, right)) => UpgradeQueryFuture::One(left, right),
+            (UpgradeQueryFuture::Many(lefts), UpgradeQuery::Many(rights)) =>
+                UpgradeQueryFuture::Many(
+                    lefts
+                        .into_iter()
+                        .zip(rights)
+                        .map(|(left, right)| {
+                            match left {
+                                FutureState::Pending(future) => FutureState::Pending(future.recombination(right)),
+                                FutureState::Done(upgrade_query) => FutureState::Done(upgrade_query.recombination(right)),
+                            }
+                        })
+                        .collect(),
+                ),
+            _ => panic!("Invalid recombination paramers. Can only combine when both upgrade query objects have the same structure"),
+        }
+    }
+}
+
+impl<F: Future, S> UpgradeQueryFuture<F, S> {
+    pub(crate) fn mitosis(self) -> (UpgradeQueryFuture<F, !>, UpgradeQuery<!, S>) {
+        match self {
+            UpgradeQueryFuture::One(future, data) => (UpgradeQueryFuture::One(future, None), UpgradeQuery::One(None, data)),
+            UpgradeQueryFuture::Many(inner_futures) => {
+                let mut futures = Vec::new();
+                let mut upgrades = Vec::new();
+
+                for future_state in inner_futures {
+                    let (future, upgrade) = match future_state {
+                        FutureState::Pending(upgrade_future) => {
+                            let (future, upgrade) = upgrade_future.mitosis();
+
+                            (FutureState::Pending(future), upgrade)
+                        },
+                        FutureState::Done(upgrade_query) => {
+                            let (lefts, rights) = upgrade_query.mitosis();
+
+                            (FutureState::Done(lefts), rights)
+                        },
+                    };
+                }
+
+                (UpgradeQueryFuture::Many(futures), UpgradeQuery::Many(upgrades))
+            },
+        }
+    }
+}
+
+impl<F: Future, S> Future for UpgradeQueryFuture<F, S> {
+    type Error = F::Error;
+    type Item = UpgradeQuery<F::Item, S>;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        match self {
+            UpgradeQueryFuture::One(Some(FutureState::Pending(future)), data) =>
+                match future.poll()? {
+                    Async::Ready(future_result) => Ok(Async::Ready(UpgradeQuery::One(Some(future_result), data.take()))),
+                    Async::NotReady => Ok(Async::NotReady),
+                },
+            UpgradeQueryFuture::One(Some(FutureState::Done(_)), _) => unreachable!(), /* can be constructed, but we don't poll this */
+            // anymore! (see below)
+            UpgradeQueryFuture::One(None, data) => Ok(Async::Ready(UpgradeQuery::One(None, data.take()))),
+            UpgradeQueryFuture::Many(inner) => {
+                let mut all_done = true;
+
+                for i in 0..inner.len() - 1 {
+                    match &mut inner[i] {
+                        FutureState::Pending(future) =>
+                            match future.poll()? {
+                                Async::NotReady => {
+                                    all_done = false;
+                                },
+                                Async::Ready(done) => inner[i] = FutureState::Done(done),
+                            },
+                        FutureState::Done(_) => (), // no polling here
+                    }
+                }
+
+                if all_done {
+                    Ok(Async::Ready(UpgradeQuery::Many(
+                        std::mem::replace(inner, Vec::new())
+                            .into_iter()
+                            .map(|future_state| {
+                                match future_state {
+                                    FutureState::Pending(_) => unreachable!(),
+                                    FutureState::Done(yes) => yes,
+                                }
+                            })
+                            .collect(),
+                    )))
+                } else {
+                    Ok(Async::NotReady)
+                }
+            },
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum UpgradeError<E: CacheError> {
+    UpgradeFailed,
+    Cache(E),
+}
+
+impl<A: ApiError, C: CacheError> From<UpgradeError<C>> for Error<A, C> {
+    fn from(err: UpgradeError<C>) -> Self {
+        match err {
+            UpgradeError::UpgradeFailed => Error::UnexpectedlyAbsent,
+            UpgradeError::Cache(cache_error) => Error::Cache(cache_error),
+        }
+    }
+}
+
+impl<C: CacheError> From<C> for UpgradeError<C> {
+    fn from(cache_error: C) -> Self {
+        UpgradeError::Cache(cache_error)
+    }
+}
 
 /// Trait for upgrading objects
 ///
@@ -26,7 +248,7 @@ pub mod user;
 /// Implementing this trait for some type means that instances of that type can be upgraded into
 /// instances of type `Into`.
 pub trait Upgradable<Into>: Sized {
-    /// The part of the object that's being upgraded. If the whole object is upgraded, this should
+    /// T-he part of the object that's being upgraded. If the whole object is upgraded, this should
     /// be [`Self`]
     type From;
 
@@ -37,159 +259,128 @@ pub trait Upgradable<Into>: Sized {
     /// be `Into`
     type Upgrade;
 
-    /// If applicable, the object that has to be looked up in the cache to perform an upgrade.
+    /// If applicable, the key of the object that has to be looked up in the cache to perform an
+    /// upgrade.
     ///
     /// If no upgrade is required, set this to [`!`](the never type).
     type LookupKey: Key;
 
-    /// Gets the request that needs to be made to retrieve the data for this upgrade
+    /// Determines how this upgrade has to be done by either producing the request that needs to be
+    /// made to retrieve the data needed, or returning the [`Upgradable::Upgrade`] object.
     ///
-    /// Returning [`None`] indicates that an upgrade of this object is not possible and will cause a
-    /// call to [`Upgradable::default_upgrade`]
-    fn upgrade_request(&self) -> Option<Self::Request>;
-
-    /// Gets the default [`Upgradable::Upgrade`] object to be used if an upgrade wasn't possible
-    /// (see above) or if the request didn't return the required data.
+    /// Note that it is not enough to just return the request here and have GDCF check if the result
+    /// of that request has already been cached, as certain objects can be retrieved by different
+    /// requests. For instance, the song for a level could already be cached because another level
+    /// in cache uses the same song, yet the request to retrieve the song (a [`LevelsRequest`]) has
+    /// never been made.
     ///
-    /// Returning [`None`] here indicates that no default option is available. That generally means
-    /// that the upgrade process has failed completely
-    fn default_upgrade() -> Option<Self::Upgrade>;
-
-    fn lookup_upgrade<C: Cache + Lookup<Self::LookupKey>>(
+    /// ## Parameters:
+    /// + `cache`: The cache to look in
+    /// + `ignore_cached`: Whether cached data should be ignored, meaning that requests should be
+    /// produced for all upgrade data, no matter whether its cached or not
+    ///
+    /// ## A note on the return value
+    /// Implementations of this method have to handle the cache appropriately themselves. This means
+    /// in particular, that they have to handle outdated cache entries by returning both an upgrade
+    /// and a request!
+    ///
+    /// Furthermore, a [`UpgradeQuery`] with both fields set to [`None`] must never be constructed!
+    fn query_upgrade<C: Cache + Lookup<Self::LookupKey>>(
         &self,
         cache: &C,
-        request_result: <Self::Request as Request>::Result,
-    ) -> Result<Self::Upgrade, C::Err>;
+        ignored_cached: bool,
+    ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>>;
 
-    fn upgrade(self, upgrade: Self::Upgrade) -> (Into, Self::From);
-    fn downgrade(upgraded: Into, downgrade: Self::From) -> (Self, Self::Upgrade);
+    fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
+    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>>;
+
+    fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (Into, UpgradeQuery<State, Self::From>);
+    fn downgrade<State>(upgraded: Into, downgrade: UpgradeQuery<State, Self::From>) -> (Self, UpgradeQuery<State, Self::Upgrade>);
 }
 
-pub(crate) enum PendingUpgrade<A, C, Into, U>
+impl<Into, U> Upgradable<Vec<Into>> for Vec<U>
 where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request>,
     U: Upgradable<Into>,
 {
-    Cached(Into),
-    Outdated(U, U::Upgrade, RefreshCacheFuture<U::Request, A, C>),
-    Missing(U, RefreshCacheFuture<U::Request, A, C>),
-}
+    type From = U::From;
+    type LookupKey = U::LookupKey;
+    type Request = U::Request;
+    type Upgrade = U::Upgrade;
 
-impl<A, C, Into, U> std::fmt::Debug for PendingUpgrade<A, C, Into, U>
-where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request>,
-    U: Upgradable<Into> + std::fmt::Debug,
-    U::Upgrade: std::fmt::Debug,
-    Into: std::fmt::Debug,
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            PendingUpgrade::Cached(cached) => fmt.debug_tuple("UpgradeCached").field(cached).finish(),
-            PendingUpgrade::Outdated(to_extend, cached_extension, future) =>
-                fmt.debug_tuple("UpgradeOutdated")
-                    .field(to_extend)
-                    .field(cached_extension)
-                    .field(future)
-                    .finish(),
-            PendingUpgrade::Missing(to_extend, future) => fmt.debug_tuple("UpgradeMissing").field(to_extend).field(future).finish(),
+    fn query_upgrade<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        ignore_cached: bool,
+    ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
+        // Alright, so we have to jump through some hoops to get this work sadly. ApiClients can process
+        // lists of requests, however we still need to keep track of which request corresponds to which
+        // element to upgrade. We store this information in the upgrade list, which will contain a [`None`]
+        // entry whenever an upgrade needed a request and we rely on the invariant that neither the upgrades
+        // vector, nor the request vector, gets reordered.
+        let mut queries = Vec::new();
+
+        for to_query in self.iter() {
+            let query = to_query.query_upgrade(cache, ignore_cached)?;
+
+            queries.push(query);
         }
-    }
-}
 
-impl<A, C, Into, U> PendingUpgrade<A, C, Into, U>
-where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request> + Lookup<U::LookupKey>,
-    U: Upgradable<Into>,
-{
-    pub(crate) fn cached(to_upgrade: U, upgrade: U::Upgrade) -> Self {
-        PendingUpgrade::Cached(to_upgrade.upgrade(upgrade).0)
+        Ok(UpgradeQuery::Many(queries))
     }
 
-    pub(crate) fn default_upgrade(to_upgrade: U) -> Result<Self, Error<A::Err, C::Err>> {
-        Ok(PendingUpgrade::Cached(
-            to_upgrade.upgrade(U::default_upgrade().ok_or(Error::UnexpectedlyAbsent)?).0,
-        ))
-    }
-
-    pub(crate) fn future(&mut self) -> Option<&mut RefreshCacheFuture<U::Request, A, C>> {
-        match self {
-            PendingUpgrade::Outdated(_, _, ref mut future) | PendingUpgrade::Missing(_, ref mut future) => Some(future),
-            _ => None,
+    fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
+    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+        match resolved_query {
+            UpgradeQuery::One(..) => panic!(),
+            UpgradeQuery::Many(inner_queries) =>
+                Ok(UpgradeQuery::Many(
+                    self.iter()
+                        .zip(inner_queries)
+                        .map(|(result, query)| result.process_query_result(cache, query))
+                        .collect::<Result<_, _>>()?,
+                )),
         }
     }
 
-    pub(crate) fn into_upgradable(self) -> Option<U> {
-        match self {
-            PendingUpgrade::Outdated(to_upgrade, ..) | PendingUpgrade::Missing(to_upgrade, _) => Some(to_upgrade),
-            _ => None,
+    fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (Vec<Into>, UpgradeQuery<State, Self::From>) {
+        if let UpgradeQuery::Many(upgrades) = upgrade {
+            let mut upgraded = Vec::new();
+            let mut downgrades = Vec::new();
+
+            for (to_upgrade, upgrade) in self.into_iter().zip(upgrades) {
+                let (to_downgrade, downgrade) = to_upgrade.upgrade(upgrade);
+
+                upgraded.push(to_downgrade);
+                downgrades.push(downgrade);
+            }
+
+            (upgraded, UpgradeQuery::Many(downgrades))
+        } else {
+            panic!("Attempt to upgrade list of upgradables with a single upgrade")
         }
     }
 
-    pub(crate) fn new(to_upgrade: U, gdcf: &Gdcf<A, C>, force_refresh: bool) -> Result<Self, Error<A::Err, C::Err>> {
-        let cache = gdcf.cache();
+    fn downgrade<State>(upgraded: Vec<Into>, downgrade: UpgradeQuery<State, Self::From>) -> (Self, UpgradeQuery<State, Self::Upgrade>) {
+        if let UpgradeQuery::Many(downgrades) = downgrade {
+            let mut downgraded = Vec::new();
+            let mut upgrades = Vec::new();
 
-        let mut request = match U::upgrade_request(&to_upgrade) {
-            Some(request) => request,
-            None => return Self::default_upgrade(to_upgrade),
-        };
+            for (to_downgrade, downgrade) in upgraded.into_iter().zip(downgrades) {
+                let (to_upgrade, upgrade) = U::downgrade(to_downgrade, downgrade);
 
-        if force_refresh {
-            request.set_force_refresh(true);
+                downgraded.push(to_upgrade);
+                upgrades.push(upgrade);
+            }
+
+            (downgraded, UpgradeQuery::Many(upgrades))
+        } else {
+            panic!("Attempt to downgrade list of upgradables with a single downgrade")
         }
-
-        let mode = match gdcf.process(request).map_err(Error::Cache)? {
-            // impossible variants
-            ProcessRequestFutureState::Outdated(CacheEntry::Missing, _) | ProcessRequestFutureState::UpToDate(CacheEntry::Missing) =>
-                unreachable!(),
-
-            // Up-to-date absent marker for extension request result. However, we cannot rely on this for this! (But why??? What was I
-            // thinking when I wrote this???) This violates snapshot consistency! TODO: document
-            ProcessRequestFutureState::UpToDate(CacheEntry::DeducedAbsent)
-            | ProcessRequestFutureState::UpToDate(CacheEntry::MarkedAbsent(_)) =>
-            // TODO: investigate what the fuck I have done here
-                match U::default_upgrade() {
-                    Some(default_upgrade) => Self::cached(to_upgrade, default_upgrade),
-                    None =>
-                        match U::upgrade_request(&to_upgrade) {
-                            None => Self::default_upgrade(to_upgrade)?,
-                            Some(request) => PendingUpgrade::Missing(to_upgrade, gdcf.refresh(request)),
-                        },
-                },
-
-            ProcessRequestFutureState::UpToDate(CacheEntry::Cached(request_result, _)) => {
-                // Up-to-date extension request result
-                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(Error::Cache)?;
-                PendingUpgrade::cached(to_upgrade, upgrade)
-            },
-
-            // Missing extension request result cache entry
-            ProcessRequestFutureState::Uncached(refresh_future) => PendingUpgrade::Missing(to_upgrade, refresh_future),
-
-            // Outdated absent marker
-            ProcessRequestFutureState::Outdated(CacheEntry::MarkedAbsent(_), refresh_future)
-            | ProcessRequestFutureState::Outdated(CacheEntry::DeducedAbsent, refresh_future) =>
-                match U::default_upgrade() {
-                    Some(default_extension) => PendingUpgrade::Outdated(to_upgrade, default_extension, refresh_future),
-                    None =>
-                        match U::upgrade_request(&to_upgrade) {
-                            None => PendingUpgrade::default_upgrade(to_upgrade)?,
-                            Some(request) => PendingUpgrade::Missing(to_upgrade, refresh_future),
-                        },
-                },
-
-            // Outdated entry
-            ProcessRequestFutureState::Outdated(CacheEntry::Cached(request_result, _), refresh_future) => {
-                let upgrade = U::lookup_upgrade(&to_upgrade, &cache, request_result).map_err(Error::Cache)?;
-
-                PendingUpgrade::Outdated(to_upgrade, upgrade, refresh_future)
-            },
-
-            _ => unimplemented!(),
-        };
-
-        Ok(mode)
     }
 }

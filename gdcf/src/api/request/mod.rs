@@ -23,10 +23,9 @@ use failure::_core::fmt::{Error, Formatter};
 use gdcf_model::GameVersion;
 use std::{
     collections::hash_map::DefaultHasher,
-    fmt::Display,
+    fmt::{Debug, Display},
     hash::{Hash, Hasher},
 };
-use std::fmt::Debug;
 
 pub mod comment;
 pub mod level;
@@ -105,12 +104,6 @@ impl Default for BaseRequest {
 pub trait Request: Debug + Send + Sync + 'static {
     type Result: Debug + Send + Sync + 'static;
 
-    /*fn key(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish()
-    }*/
-
     fn forces_refresh(&self) -> bool;
     fn set_force_refresh(&mut self, force_refresh: bool);
 }
@@ -118,4 +111,16 @@ pub trait Request: Debug + Send + Sync + 'static {
 pub trait PaginatableRequest: Request {
     fn next(&mut self);
     fn page(&mut self, page: u32);
+}
+
+impl<R: Request> Request for Option<R> {
+    type Result = Option<R::Result>;
+
+    fn forces_refresh(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn set_force_refresh(&mut self, force_refresh: bool) {
+        unimplemented!()
+    }
 }

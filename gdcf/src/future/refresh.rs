@@ -1,16 +1,17 @@
 use crate::{
     api::{
         client::{MakeRequest, Response},
-        request::Request,
+        request::{PaginatableRequest, Request},
         ApiClient,
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, NewgroundsSongKey, Store},
     error::{ApiError, Error},
+    future::StreamableFuture,
     Gdcf, Secondary,
 };
 use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
-use log::warn;
+use log::{info, warn};
 
 pub(crate) struct RefreshCacheFuture<Req, A, C>
 where
@@ -20,7 +21,20 @@ where
 {
     inner: <A as MakeRequest<Req>>::Future,
     cache: C,
-    request: Req,
+    pub(super) request: Req,
+}
+
+impl<Req, A, C> StreamableFuture<A, C> for RefreshCacheFuture<Req, A, C>
+where
+    Req: PaginatableRequest,
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
+{
+    fn next(mut self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error> {
+        self.request.next();
+
+        Ok(RefreshCacheFuture::new(gdcf, self.request))
+    }
 }
 
 impl<Req, A, C> std::fmt::Debug for RefreshCacheFuture<Req, A, C>
@@ -40,9 +54,11 @@ where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
 {
-    pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req, inner: <A as MakeRequest<Req>>::Future) -> Self {
+    pub(crate) fn new(gdcf: &Gdcf<A, C>, request: Req) -> Self {
+        info!("Performing refresh on request {:?}", request);
+
         RefreshCacheFuture {
-            inner,
+            inner: gdcf.client().make(&request),
             cache: gdcf.cache(),
             request,
         }

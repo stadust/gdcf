@@ -107,6 +107,7 @@
 
 use log::{info, trace};
 
+use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{
@@ -119,7 +120,6 @@ use crate::{
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
-        GdcfFuture,
     },
 };
 
@@ -200,19 +200,6 @@ where
     A: ApiClient,
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey>,
 {
-    fn refresh<R>(&self, request: R) -> RefreshCacheFuture<R, A, C>
-    where
-        R: Request,
-        A: MakeRequest<R>,
-        C: CanCache<R>,
-    {
-        info!("Performing refresh on request {:?}", request);
-
-        let future = self.client().make(&request);
-
-        RefreshCacheFuture::new(self.clone(), request, future)
-    }
-
     fn process<R>(&self, request: R) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
     where
         R: Request,
@@ -242,11 +229,11 @@ where
                     trace!("Cache entry is {:?}", entry);
                     info!("Cached entry for request {:?} is up-to-date!", request);
 
-                    return Ok(ProcessRequestFutureState::UpToDate(entry))
+                    return Ok(ProcessRequestFutureState::UpToDate(Some(entry), request))
                 },
         };
 
-        let future = self.refresh(request);
+        let future = RefreshCacheFuture::new(self, request);
 
         Ok(match cached {
             Some(value) => ProcessRequestFutureState::Outdated(value, future),
@@ -254,7 +241,7 @@ where
         })
     }
 }
-/*
+
 impl<A, C> Gdcf<A, C>
 where
     A: ApiClient,
@@ -288,7 +275,7 @@ where
         A: MakeRequest<LevelRequest>,
         C: CanCache<LevelRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), &request.into())
+        ProcessRequestFuture::new(self.clone(), request.into())
     }
 
     /// Processes the given [`LevelsRequest`]
@@ -311,20 +298,7 @@ where
         A: MakeRequest<LevelsRequest>,
         C: CanCache<LevelsRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), &request.into())
-    }
-
-    /// Generates a stream of pages of levels by incrementing the [`LevelsRequest`]'s `page`
-    /// parameter until it hits the first empty page.
-    pub fn paginate_levels(
-        &self,
-        request: impl Into<LevelsRequest>,
-    ) -> Result<GdcfStream<ProcessRequestFuture<LevelsRequest, A, C>>, C::Err>
-    where
-        A: MakeRequest<LevelsRequest>,
-        C: CanCache<LevelsRequest>,
-    {
-        GdcfStream::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into())
     }
 
     /// Processes the given [`UserRequest`]
@@ -333,7 +307,7 @@ where
         A: MakeRequest<UserRequest>,
         C: CanCache<UserRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), &request.into())
+        ProcessRequestFuture::new(self.clone(), request.into())
     }
 
     pub fn search_user(&self, request: impl Into<UserSearchRequest>) -> Result<ProcessRequestFuture<UserSearchRequest, A, C>, C::Err>
@@ -341,7 +315,7 @@ where
         A: MakeRequest<UserSearchRequest>,
         C: CanCache<UserSearchRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), &request.into())
+        ProcessRequestFuture::new(self.clone(), request.into())
     }
 
     pub fn profile_comments(
@@ -352,17 +326,6 @@ where
         A: MakeRequest<ProfileCommentsRequest>,
         C: CanCache<ProfileCommentsRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), &request.into())
+        ProcessRequestFuture::new(self.clone(), request.into())
     }
-
-    pub fn paginate_profile_comments(
-        &self,
-        request: impl Into<ProfileCommentsRequest>,
-    ) -> Result<GdcfStream<ProcessRequestFuture<ProfileCommentsRequest, A, C>>, C::Err>
-    where
-        A: MakeRequest<ProfileCommentsRequest>,
-        C: CanCache<ProfileCommentsRequest>,
-    {
-        GdcfStream::new(self.clone(), request.into())
-    }
-}*/
+}

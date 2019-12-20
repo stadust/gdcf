@@ -1,127 +1,62 @@
 use crate::{
     api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, Lookup, Store},
-    error::{ApiError, Error},
-    future::{
-        process::ProcessRequestFuture,
-        upgrade::{MultiUpgradeFuture, UpgradeFuture},
-        GdcfFuture,
-    },
+    error::{ApiError, CacheError, Error},
+    future::{process::ProcessRequestFuture, upgrade::UpgradeFuture, StreamableFuture},
     upgrade::Upgradable,
     Gdcf,
 };
 use futures::{task, Async, Stream};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::{debug, info, trace};
+use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct GdcfStream<F: GdcfFuture>
-where
-    F::BaseRequest: PaginatableRequest,
-{
-    request: F::BaseRequest,
-    current_future: F,
+pub struct GdcfStream<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> {
+    current_future: Option<F>,
+    gdcf: Gdcf<A, C>,
 }
 
-impl<F: GdcfFuture> GdcfStream<F>
-where
-    F::BaseRequest: PaginatableRequest,
-{
-    pub fn reset(&mut self) -> Result<(), Error<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>> {
-        self.request.page(0);
-        self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(Error::Cache)?;
-
-        Ok(())
-    }
-}
-
-impl<F, T> GdcfStream<F>
-where
-    F::BaseRequest: PaginatableRequest,
-    F: GdcfFuture<GdcfItem = Vec<T>>,
-    T: Send + Sync + 'static,
-{
-    pub fn upgrade_all<Into>(self) -> GdcfStream<MultiUpgradeFuture<F, Into, T>>
-    where
-        T: Upgradable<Into>,
-        F::ApiClient: MakeRequest<<T as Upgradable<Into>>::Request>,
-        F::Cache: CanCache<<T as Upgradable<Into>>::Request> + Lookup<<T as Upgradable<Into>>::Lookup>,
-    {
+impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> GdcfStream<A, C, F> {
+    pub fn new(gdcf: Gdcf<A, C>, future: F) -> Self {
         GdcfStream {
-            current_future: MultiUpgradeFuture::upgrade_from(self.current_future),
-            request: self.request,
+            current_future: Some(future),
+            gdcf,
         }
     }
 }
 
-impl<F: GdcfFuture> GdcfStream<F>
-where
-    F::BaseRequest: PaginatableRequest,
-{
-    pub fn upgrade<Into>(self) -> GdcfStream<UpgradeFuture<F, Into, F::GdcfItem>>
-    where
-        F::GdcfItem: Upgradable<Into>,
-        F::ApiClient: MakeRequest<<F::GdcfItem as Upgradable<Into>>::Request>,
-        F::Cache: CanCache<<F::GdcfItem as Upgradable<Into>>::Request> + Lookup<<F::GdcfItem as Upgradable<Into>>::Lookup>,
-    {
-        GdcfStream {
-            current_future: UpgradeFuture::upgrade_from(self.current_future),
-            request: self.request,
-        }
-    }
-}
-
-impl<A, C, Req> GdcfStream<ProcessRequestFuture<Req, A, C>>
-where
-    C: Store<NewgroundsSongKey> + Store<CreatorKey> + Cache + CanCache<Req>,
-    A: ApiClient + MakeRequest<Req>,
-    Req: PaginatableRequest,
-{
-    pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
-        Ok(GdcfStream {
-            current_future: ProcessRequestFuture::new(gdcf, &request)?,
-            request,
-        })
-    }
-}
-
-impl<F> Stream for GdcfStream<F>
-where
-    F: GdcfFuture + std::fmt::Debug,
-    F::BaseRequest: PaginatableRequest,
-{
-    type Error = Error<<F::ApiClient as ApiClient>::Err, <F::Cache as Cache>::Err>;
-    type Item = CacheEntry<F::GdcfItem, <F::Cache as Cache>::CacheEntryMeta>;
+impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> Stream for GdcfStream<A, C, F> {
+    type Error = F::Error;
+    type Item = F::Item;
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
-        match self.current_future.poll() {
-            Ok(Async::NotReady) => {
-                trace!("Future {:?} not ready", self.current_future);
+        if let Some(ref mut current_future) = self.current_future {
+            match current_future.poll() {
+                Ok(Async::NotReady) => Ok(Async::NotReady),
 
-                Ok(Async::NotReady)
-            },
+                Ok(Async::Ready(page)) => {
+                    // We cannot move out of borrowed context, which means we have to "trick" rust into allowing up to
+                    // swap out the futures by using an Option
+                    self.current_future = self
+                        .current_future
+                        .take()
+                        .map(|current_future| current_future.next(&self.gdcf))
+                        .transpose()?;
 
-            Ok(Async::Ready(page)) => {
-                task::current().notify();
+                    Ok(Async::Ready(Some(page)))
+                },
 
-                info!("Advancing GdcfStream over {} by one page!", self.request);
+                Err(Error::Api(ref err)) if err.is_no_result() => {
+                    //info!("Stream over request {} terminating due to exhaustion!", self.request);
 
-                self.request.next();
-                self.current_future = F::new(self.current_future.gdcf(), &self.request).map_err(Error::Cache)?;
+                    Ok(Async::Ready(None))
+                },
 
-                debug!("Request is now {}", self.request);
-                trace!("New future is {:?}", self.current_future);
-
-                Ok(Async::Ready(Some(page)))
-            },
-
-            Err(Error::Api(ref err)) if err.is_no_result() => {
-                info!("Stream over request {} terminating due to exhaustion!", self.request);
-
-                Ok(Async::Ready(None))
-            },
-
-            Err(err) => Err(err),
+                Err(err) => Err(err),
+            }
+        } else {
+            Ok(Async::Ready(None))
         }
     }
 }

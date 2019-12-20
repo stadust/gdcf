@@ -34,6 +34,7 @@ impl Key for CreatorKey {
 }
 
 pub trait Lookup<K: Key>: Cache {
+    // TODO: maybe an exists method?
     fn lookup(&self, key: &K) -> Result<CacheEntry<K::Result, Self::CacheEntryMeta>, Self::Err>;
 }
 
@@ -51,7 +52,7 @@ pub trait CanCache<K: Key>: Cache + Lookup<K> + Store<K> {
 
 impl<K: Key, C: Cache> CanCache<K> for C where C: Lookup<K> + Store<K> {}
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CacheEntry<T, Meta: CacheEntryMeta> {
     /// Variant to return if there was no entry at all in the cache regarding a specific request,
     /// meaning the request hasn't been done yet ever
@@ -68,6 +69,8 @@ pub enum CacheEntry<T, Meta: CacheEntryMeta> {
 
     /// Variant indicating that a request was already made, and its results were stored.
     Cached(T, Meta),
+    /*/// Variant combining the cache entries for a list of requests made
+    CachedMany(Vec<CacheEntry<T, Meta>>),*/
 }
 
 impl<T: Display, Meta: CacheEntryMeta + Display> Display for CacheEntry<T, Meta> {

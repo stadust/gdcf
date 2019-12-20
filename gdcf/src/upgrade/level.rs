@@ -1,7 +1,7 @@
 use crate::{
     api::request::{LevelRequest, LevelRequestType, LevelsRequest, Request, SearchFilters, UserRequest},
-    cache::{Cache, CreatorKey, Lookup, NewgroundsSongKey},
-    upgrade::Upgradable,
+    cache::{Cache, CacheEntry, CreatorKey, Lookup, NewgroundsSongKey},
+    upgrade::{Upgradable, UpgradeError, UpgradeQuery},
 };
 use gdcf_model::{
     level::{Level, PartialLevel},
@@ -9,6 +9,41 @@ use gdcf_model::{
     user::{Creator, User},
 };
 
+impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
+    type From = PartialLevel<Option<u64>, u64>;
+    type LookupKey = LevelRequest;
+    type Request = LevelRequest;
+    type Upgrade = Level<Option<u64>, u64>;
+
+    fn query_upgrade<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        ignored_cached: bool,
+    ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
+        unimplemented!()
+    }
+
+    fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
+        &self,
+        cache: &C,
+        resolved_query: UpgradeQuery<CacheEntry<Level<Option<u64>, u64>, C::CacheEntryMeta>, Self::Upgrade>,
+    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+        unimplemented!()
+    }
+
+    fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (Level<Song, User>, UpgradeQuery<State, Self::From>) {
+        unimplemented!()
+    }
+
+    fn downgrade<State>(
+        upgraded: Level<Song, User>,
+        downgrade: UpgradeQuery<State, Self::From>,
+    ) -> (Self, UpgradeQuery<State, Self::Upgrade>) {
+        unimplemented!()
+    }
+}
+
+/*
 impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
     type From = PartialLevel<Option<u64>, u64>;
     type LookupKey = !;
@@ -274,7 +309,7 @@ impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>
         change_level_user(upgraded, downgrade)
     }
 }
-
+*/
 fn change_partial_level_song<OldSong, NewSong, User>(
     partial_level: PartialLevel<OldSong, User>,
     new_song: NewSong,
