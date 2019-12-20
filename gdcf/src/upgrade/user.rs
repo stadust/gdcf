@@ -20,24 +20,7 @@ impl Upgradable<User> for SearchedUser {
 
         request.set_force_refresh(ignored_cached);
 
-        let cached_user = cache.lookup(&request)?;
-
-        match cached_user {
-            CacheEntry::Missing => Ok(UpgradeQuery::One(Some(request), None)),
-            CacheEntry::DeducedAbsent => Err(UpgradeError::UpgradeFailed),
-            CacheEntry::MarkedAbsent(meta) =>
-                if meta.is_expired() {
-                    Ok(UpgradeQuery::One(Some(request), None))
-                } else {
-                    Err(UpgradeError::UpgradeFailed)
-                },
-            CacheEntry::Cached(user, meta) =>
-                if meta.is_expired() {
-                    Ok(UpgradeQuery::One(Some(request), Some(user)))
-                } else {
-                    Ok(UpgradeQuery::One(None, Some(user)))
-                },
-        }
+        query_upgrade!(cache, request, request)
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(

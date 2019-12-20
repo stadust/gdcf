@@ -61,3 +61,26 @@ macro_rules! const_setter {
         }
     }
 }
+
+macro_rules! query_upgrade {
+    ($cache: expr, $cache_request: expr, $refresh_request: expr) => {{
+        use crate::cache::CacheEntryMeta;
+
+        match $cache.lookup(&$cache_request)? {
+            CacheEntry::Missing => Ok(UpgradeQuery::One(Some($refresh_request), None)),
+            CacheEntry::DeducedAbsent => Err(UpgradeError::UpgradeFailed),
+            CacheEntry::MarkedAbsent(meta) =>
+                if meta.is_expired() {
+                    Ok(UpgradeQuery::One(Some($refresh_request), None))
+                } else {
+                    Err(UpgradeError::UpgradeFailed)
+                },
+            CacheEntry::Cached(user, meta) =>
+                if meta.is_expired() {
+                    Ok(UpgradeQuery::One(Some($refresh_request), Some(user)))
+                } else {
+                    Ok(UpgradeQuery::One(None, Some(user)))
+                },
+        }
+    }};
+}

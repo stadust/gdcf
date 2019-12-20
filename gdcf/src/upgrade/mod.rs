@@ -182,7 +182,7 @@ impl<F: Future, S> Future for UpgradeQueryFuture<F, S> {
             UpgradeQueryFuture::Many(inner) => {
                 let mut all_done = true;
 
-                for i in 0..inner.len() - 1 {
+                for i in 0..inner.len() {
                     match &mut inner[i] {
                         FutureState::Pending(future) =>
                             match future.poll()? {
@@ -196,6 +196,8 @@ impl<F: Future, S> Future for UpgradeQueryFuture<F, S> {
                 }
 
                 if all_done {
+                    log::debug!("All requests of upgrade query future done!");
+
                     Ok(Async::Ready(UpgradeQuery::Many(
                         std::mem::replace(inner, Vec::new())
                             .into_iter()

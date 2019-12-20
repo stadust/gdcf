@@ -20,7 +20,11 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
         cache: &C,
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
-        unimplemented!()
+        let mut request = LevelRequest::new(self.level_id);
+
+        request.set_force_refresh(ignored_cached);
+
+        query_upgrade!(cache, request, request)
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
@@ -28,18 +32,41 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<Level<Option<u64>, u64>, C::CacheEntryMeta>, Self::Upgrade>,
     ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
-        unimplemented!()
+        match resolved_query.one() {
+            (None, Some(user)) => Ok(UpgradeQuery::One(None, Some(user))),
+            (Some(CacheEntry::Cached(user, _)), _) => Ok(UpgradeQuery::One(None, Some(user))),
+            _ => Err(UpgradeError::UpgradeFailed),
+        }
     }
 
     fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (Level<Song, User>, UpgradeQuery<State, Self::From>) {
-        unimplemented!()
+        let upgrade = upgrade.one().1.unwrap();
+
+        let (partial_level, song) = change_partial_level_song(self, ());
+        let (partial_level, user) = change_partial_level_user(partial_level, ());
+
+        let (level, song_id) = change_level_song(upgrade, song);
+        let (level, creator_id) = change_level_user(level, user);
+
+        let partial_level = change_partial_level_user(partial_level, creator_id).0;
+        let partial_level = change_partial_level_song(partial_level, song_id).0;
+
+        (level, UpgradeQuery::One(None, Some(partial_level)))
     }
 
-    fn downgrade<State>(
-        upgraded: Level<Song, User>,
-        downgrade: UpgradeQuery<State, Self::From>,
-    ) -> (Self, UpgradeQuery<State, Self::Upgrade>) {
-        unimplemented!()
+    fn downgrade<State>(upgraded: Level<Song, User>, downgrade: UpgradeQuery<State, Self::From>) -> (Self, UpgradeQuery<State, Self::Upgrade>) {
+        let downgrade = downgrade.one().1.unwrap();
+
+        let (level, song) = change_level_song(upgraded, ());
+        let (level, creator) = change_level_user(level, ());
+
+        let (partial_level, song_id) = change_partial_level_song(downgrade, song);
+        let (partial_level, creator_id) = change_partial_level_user(partial_level, creator);
+
+        let level = change_level_user(level, creator_id).0;
+        let level = change_level_song(level, song_id).0;
+
+        (partial_level, UpgradeQuery::One(None, Some(level)))
     }
 }
 
