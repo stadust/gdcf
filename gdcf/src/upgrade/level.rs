@@ -377,7 +377,10 @@ impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, O
         }
     }
 
-    fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (PartialLevel<Song, Option<User>>, UpgradeQuery<State, Self::From>) {
+    fn upgrade<State>(
+        self,
+        upgrade: UpgradeQuery<State, Self::Upgrade>,
+    ) -> (PartialLevel<Song, Option<User>>, UpgradeQuery<State, Self::From>) {
         let (level, creator) = change_partial_level_user(self, upgrade.one().1.unwrap());
 
         (level, UpgradeQuery::One(None, Some(creator)))
