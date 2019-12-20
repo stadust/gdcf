@@ -11,6 +11,7 @@ r2d2 = "0.8.3"
 gdcf = { path = "../gdcf" }
 failure = "0.1.5"
 log = "0.4.6"
+derive_more = "*"
 
 [dependencies.diesel]
 version = "1.4.1"

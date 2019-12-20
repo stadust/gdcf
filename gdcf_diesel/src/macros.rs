@@ -249,28 +249,28 @@ macro_rules! __for_values {
 }
 
 macro_rules! store_simply {
-    ($to_store_ty: ty, $table: ident, $meta: ident, $primary: ident) => {
+    ($key_type: ty, $table: ident, $meta: ident, $primary: ident) => {
         fn __impl_store() {
-            use crate::{meta::Entry, Cache};
+            use crate::{meta::Entry, Cache, key::DatabaseKey};
             use diesel::RunQueryDsl;
-            use gdcf::cache::Store;
+            use gdcf::cache::{Store, Key};
             use log::{debug, warn};
 
-            impl Store<$to_store_ty> for Cache {
-                fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
-                    warn!("Marking {} with key {} as absent!", stringify!($to_store_ty), key as i64);
+            impl Store<$key_type> for Cache {
+                fn mark_absent(&mut self, key: &$key_type) -> Result<Entry, Self::Err> {
+                    warn!("Marking {} with key {} as absent!", stringify!($key_type), key);
 
-                    let entry = Entry::absent(key);
+                    let entry = Entry::absent(key.database_key());
 
                     update_entry!(&self, entry, $meta::table, $meta::$primary);
 
                     Ok(entry)
                 }
 
-                fn store(&mut self, object: &$to_store_ty, key: u64) -> Result<Entry, Self::Err> {
-                    debug!("Storing {} under key {}", object, key as i64);
+                fn store(&mut self, object: &<$key_type as Key>::Result, key: &$key_type) -> Result<Entry, Self::Err> {
+                    debug!("Storing {} under key {}", object, key);
 
-                    let entry = Entry::new(key);
+                    let entry = Entry::new(key.database_key());
 
                     update_entry!(self, entry, $meta::table, $meta::$primary);
                     upsert!(self, object, $table::table, $table::$primary);
@@ -283,26 +283,26 @@ macro_rules! store_simply {
 }
 
 macro_rules! lookup_simply {
-    ($to_lookup_ty: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
+    ($key_type: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{wrap::Wrapped, Cache, Entry};
+            use crate::{wrap::Wrapped, Cache, Entry, key::DatabaseKey};
             use diesel::{QueryDsl, RunQueryDsl};
-            use gdcf::cache::{CacheEntry, Lookup};
+            use gdcf::cache::{CacheEntry, Lookup, Key};
             use log::{debug, trace};
 
-            impl Lookup<$to_lookup_ty> for Cache {
-                fn lookup(&self, key: u64) -> Result<CacheEntry<$to_lookup_ty, Entry>, Self::Err> {
+            impl Lookup<$key_type> for Cache {
+                fn lookup(&self, key: &$key_type) -> Result<CacheEntry<<$key_type as Key>::Result, Entry>, Self::Err> {
                     trace!(
                         "Performing look up of {} with key {} in table {} (meta table {})",
                         stringify!($to_lookup_ty),
-                        key as i64,
+                        key,
                         stringify!($object_table),
                         stringify!($meta_table)
                     );
 
                     let connection = self.pool.get()?;
                     let entry = handle_missing!($meta_table::table
-                        .filter($meta_table::$primary_column.eq(key as i64))
+                        .filter($meta_table::$primary_column.eq(key.database_key()))
                         .get_result(&connection));
                     let entry = self.entry(entry);
 
@@ -314,8 +314,8 @@ macro_rules! lookup_simply {
                         return Ok(CacheEntry::MarkedAbsent(entry))
                     }
 
-                    let wrapped: Wrapped<$to_lookup_ty> = handle_missing!($object_table::table
-                        .filter($object_table::$primary_column.eq(key as i64))
+                    let wrapped: Wrapped<<$key_type as Key>::Result> = handle_missing!($object_table::table
+                        .filter($object_table::$primary_column.eq(key.database_key()))
                         .get_result(&connection));
 
                     Ok(CacheEntry::new(wrapped.0, entry))

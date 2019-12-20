@@ -11,6 +11,7 @@ mod partial_level;
 mod profile;
 mod song;
 mod wrap;
+mod key;
 
 // diesel devs refuse to make their macros work with the new rust 2018 import mechanics, so this
 // shit is necessary
@@ -20,7 +21,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use crate::{meta::DatabaseEntry, wrap::Wrapped};
+use crate::{meta::DatabaseEntry, wrap::Wrapped, key::DatabaseKey};
 use chrono::{DateTime, Duration, Utc};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
@@ -42,6 +43,8 @@ use diesel::pg::PgConnection;
 
 #[cfg(feature = "sqlite")]
 use diesel::sqlite::SqliteConnection;
+use gdcf::api::request::LevelsRequest;
+use crate::key::PartialLevelKey;
 
 pub struct Cache {
     #[cfg(feature = "pg")]
@@ -59,7 +62,7 @@ impl Cache {
 
         Entry {
             expired,
-            key: db_entry.key as u64,
+            key: db_entry.key,
             cached_at: db_entry.cached_at,
             absent: db_entry.absent,
         }
@@ -159,15 +162,15 @@ impl gdcf::cache::Cache for Cache {
 // TODO: in the future we can probably make these macro-generated as well, but for now we only have
 // one of them, so its fine
 
-impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Vec<PartialLevel<Option<u64>, u64>>, Entry>, Self::Err> {
+impl Lookup<LevelsRequest> for Cache {
+    fn lookup(&self, key: &LevelsRequest) -> Result<CacheEntry<Vec<PartialLevel<Option<u64>, u64>>, Entry>, Self::Err> {
         use crate::partial_level::*;
         use diesel::JoinOnDsl;
 
         let connection = self.pool.get()?;
 
         let entry = handle_missing!(level_list_meta::table
-            .filter(level_list_meta::request_hash.eq(key as i64))
+            .filter(level_list_meta::request_hash.eq(key.database_key()))
             .get_result(&connection));
 
         let entry = self.entry(entry);
@@ -178,7 +181,7 @@ impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
 
         let levels: Vec<_> = handle_missing!(partial_level::table
             .inner_join(level_request_results::table.on(partial_level::level_id.eq(level_request_results::level_id)))
-            .filter(level_request_results::request_hash.eq(key as i64))
+            .filter(level_request_results::request_hash.eq(key.database_key()))
             .select(partial_level::all_columns)
             .load(&connection))
         .into_iter()
@@ -193,39 +196,41 @@ impl Lookup<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
     }
 }
 
-impl Store<Vec<PartialLevel<Option<u64>, u64>>> for Cache {
-    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
+impl Store<LevelsRequest> for Cache {
+    fn mark_absent(&mut self, key: &LevelsRequest) -> Result<Entry, Self::Err> {
         use crate::partial_level::*;
 
         warn!("Marking results of LevelsRequest with key {} as absent!", key);
 
-        let entry = Entry::absent(key);
+        let entry = Entry::absent(key.database_key());
 
         update_entry!(self, entry, level_list_meta::table, level_list_meta::request_hash);
 
         Ok(entry)
     }
 
-    fn store(&mut self, partial_levels: &Vec<PartialLevel<Option<u64>, u64>>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
+    fn store(&mut self, partial_levels: &Vec<PartialLevel<Option<u64>, u64>>, key: &LevelsRequest) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
 
         debug!("Storing result of LevelsRequest with key {}", key);
 
+        let db_key = key.database_key();
+
         let conn = self.pool.get()?;
 
         diesel::delete(level_request_results::table)
-            .filter(level_request_results::request_hash.eq(key as i64))
+            .filter(level_request_results::request_hash.eq(db_key))
             .execute(&conn)?;
 
         for level in partial_levels {
-            self.store(level, level.level_id)?;
+            self.store(level, &PartialLevelKey(level.level_id))?;
 
             diesel::insert_into(level_request_results::table)
-                .values((level.level_id, key))
+                .values((level.level_id as i64, db_key))
                 .execute(&conn)?;
         }
 
-        let entry = Entry::new(key);
+        let entry = Entry::new(db_key);
 
         update_entry!(self, entry, level_list_meta::table, level_list_meta::request_hash);
 

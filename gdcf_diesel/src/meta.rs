@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter};
 pub struct Entry {
     pub(crate) cached_at: NaiveDateTime,
     pub(crate) expired: bool,
-    pub(crate) key: u64,
+    pub(crate) key: i64,
     pub(crate) absent: bool,
 }
 
@@ -25,7 +25,7 @@ impl PartialEq for Entry {
 impl Eq for Entry {}
 
 impl Entry {
-    pub(crate) fn new(key: u64) -> Self {
+    pub(crate) fn new(key: i64) -> Self {
         Self {
             cached_at: Utc::now().naive_utc(),
             expired: false,
@@ -34,7 +34,7 @@ impl Entry {
         }
     }
 
-    pub(crate) fn absent(key: u64) -> Self {
+    pub(crate) fn absent(key: i64) -> Self {
         Self {
             cached_at: Utc::now().naive_utc(),
             expired: false,
@@ -70,7 +70,7 @@ impl CacheEntryMeta for Entry {
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct DatabaseEntry {
-    pub(crate) key: u64,
+    pub(crate) key: i64,
     pub(crate) cached_at: NaiveDateTime,
     pub(crate) absent: bool,
 }
@@ -83,7 +83,7 @@ where
 
     fn build(row: Self::Row) -> Self {
         DatabaseEntry {
-            key: row.0 as u64,
+            key: row.0,
             cached_at: row.1,
             absent: row.2,
         }

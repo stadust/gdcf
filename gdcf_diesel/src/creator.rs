@@ -7,6 +7,7 @@ use diesel::{
     ExpressionMethods, Queryable,
 };
 use gdcf_model::user::Creator;
+use gdcf::cache::CreatorKey;
 
 impl<'a> Identifiable for &'a Wrapped<Creator> {
     type Id = &'a u64;
@@ -25,5 +26,5 @@ diesel_stuff! {
 }
 meta_table!(creator_meta, user_id);
 
-store_simply!(Creator, creator, creator_meta, user_id);
-lookup_simply!(Creator, creator, creator_meta, user_id);
+store_simply!(CreatorKey, creator, creator_meta, user_id);
+lookup_simply!(CreatorKey, creator, creator_meta, user_id);

@@ -7,6 +7,7 @@ use diesel::{
     ExpressionMethods,
 };
 use gdcf_model::song::NewgroundsSong;
+use gdcf::cache::NewgroundsSongKey;
 
 impl<'a> Identifiable for &'a Wrapped<NewgroundsSong> {
     type Id = &'a u64;
@@ -32,5 +33,5 @@ diesel_stuff! {
 
 meta_table!(song_meta, song_id);
 
-store_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
-lookup_simply!(NewgroundsSong, newgrounds_song, song_meta, song_id);
+store_simply!(NewgroundsSongKey, newgrounds_song, song_meta, song_id);
+lookup_simply!(NewgroundsSongKey, newgrounds_song, song_meta, song_id);

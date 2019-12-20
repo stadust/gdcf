@@ -177,7 +177,8 @@ where
     }
 }
 
-// There is no difference between these two methods at this level, but for API consistency we need to provide both
+// There is no difference between these two methods at this level, but for API consistency we need
+// to provide both
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,

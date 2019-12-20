@@ -7,6 +7,7 @@ use diesel::{
     ExpressionMethods, Queryable,
 };
 use gdcf_model::user::{Color, ModLevel, User};
+use gdcf::api::request::UserRequest;
 
 impl<'a> Identifiable for &'a Wrapped<User> {
     type Id = &'a u64;
@@ -53,5 +54,5 @@ diesel_stuff! {
 
 meta_table!(profile_meta, account_id);
 
-store_simply!(User, profile, profile_meta, account_id);
-lookup_simply!(User, profile, profile_meta, account_id);
+store_simply!(UserRequest, profile, profile_meta, account_id);
+lookup_simply!(UserRequest, profile, profile_meta, account_id);

@@ -4,8 +4,8 @@ use gdcf::cache::{CacheEntry, Lookup, Store};
 use gdcf_model::level::{Level, Password};
 use log::{debug, warn};
 use std::fmt::Display;
-
-// Daily reminder that diesel is a piece of shit
+use gdcf::api::request::LevelRequest;
+use crate::key::{SemiLevelKey, PartialLevelKey, DatabaseKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct SemiLevel {
@@ -83,15 +83,15 @@ impl Display for SemiLevel {
 
 meta_table!(level_meta, level_id);
 
-lookup_simply!(SemiLevel, level, level_meta, level_id);
+lookup_simply!(SemiLevelKey, level, level_meta, level_id);
 
-impl Lookup<Level<Option<u64>, u64>> for Cache {
-    fn lookup(&self, key: u64) -> Result<CacheEntry<Level<Option<u64>, u64>, Entry>, Self::Err> {
-        match self.lookup(key)? {
+impl Lookup<LevelRequest> for Cache {
+    fn lookup(&self, key: &LevelRequest) -> Result<CacheEntry<Level<Option<u64>, u64>, Entry>, Self::Err> {
+        match self.lookup(&SemiLevelKey(key.level_id))? {
             CacheEntry::Cached(semi_level, meta) => {
                 let semi_level: SemiLevel = semi_level;
 
-                match self.lookup(semi_level.level_id)? {
+                match self.lookup(&PartialLevelKey(semi_level.level_id))? {
                     CacheEntry::Cached(partial, _) =>
                         Ok(CacheEntry::Cached(
                             Level {
@@ -116,13 +116,13 @@ impl Lookup<Level<Option<u64>, u64>> for Cache {
     }
 }
 
-impl Store<Level<Option<u64>, u64>> for Cache {
-    fn store(&mut self, obj: &Level<Option<u64>, u64>, key: u64) -> Result<Self::CacheEntryMeta, Self::Err> {
-        self.store(&obj.base, obj.base.level_id)?;
+impl Store<LevelRequest> for Cache {
+    fn store(&mut self, obj: &Level<Option<u64>, u64>, key: &LevelRequest) -> Result<Self::CacheEntryMeta, Self::Err> {
+        self.store(&obj.base, &PartialLevelKey(obj.base.level_id))?;
 
-        debug!("Storing {} under key {}", obj, key as i64);
+        debug!("Storing {} under key {}", obj, key);
 
-        let entry = Entry::new(key);
+        let entry = Entry::new(key.database_key());
 
         update_entry!(self, entry, level_meta::table, level_meta::level_id);
         upsert!(self, obj, level::table, level::level_id);
@@ -130,10 +130,10 @@ impl Store<Level<Option<u64>, u64>> for Cache {
         Ok(entry)
     }
 
-    fn mark_absent(&mut self, key: u64) -> Result<Entry, Self::Err> {
-        warn!("Marking Level with key {} as absent!", key as i64);
+    fn mark_absent(&mut self, key: &LevelRequest) -> Result<Entry, Self::Err> {
+        warn!("Marking Level with key {} as absent!", key.database_key());
 
-        let entry = Entry::absent(key);
+        let entry = Entry::absent(key.database_key());
         update_entry!(self, entry, level_meta::table, level_meta::level_id);
         Ok(entry)
     }

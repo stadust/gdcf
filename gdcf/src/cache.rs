@@ -1,4 +1,5 @@
 use crate::{api::request::Request, error::CacheError};
+use derive_more::Display;
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 use std::fmt::{Display, Formatter};
 
@@ -7,10 +8,10 @@ pub trait Cache: Clone + Send + Sync + 'static {
     type Err: CacheError;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub struct NewgroundsSongKey(pub u64);
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub struct CreatorKey(pub u64);
 
 pub trait Key {
