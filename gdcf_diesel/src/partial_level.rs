@@ -1,10 +1,9 @@
-use crate::wrap::Wrapped;
+use crate::{key::PartialLevelKey, wrap::Wrapped};
 use diesel::{backend::Backend, deserialize::FromSqlRow, insertable::Insertable, ExpressionMethods, Queryable};
 use gdcf_model::{
     level::{Featured, LevelLength, LevelRating, PartialLevel},
     GameVersion,
 };
-use crate::key::PartialLevelKey;
 
 diesel_stuff! {
     partial_level (level_id, PartialLevel<Option<u64>, u64>) {

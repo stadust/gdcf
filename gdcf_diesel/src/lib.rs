@@ -6,12 +6,12 @@ mod meta;
 #[macro_use]
 mod macros;
 mod creator;
+mod key;
 mod level;
 mod partial_level;
 mod profile;
 mod song;
 mod wrap;
-mod key;
 
 // diesel devs refuse to make their macros work with the new rust 2018 import mechanics, so this
 // shit is necessary
@@ -21,7 +21,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-use crate::{meta::DatabaseEntry, wrap::Wrapped, key::DatabaseKey};
+use crate::{key::DatabaseKey, meta::DatabaseEntry, wrap::Wrapped};
 use chrono::{DateTime, Duration, Utc};
 use diesel::{query_dsl::QueryDsl, r2d2::ConnectionManager, ExpressionMethods, RunQueryDsl};
 use failure::Fail;
@@ -41,10 +41,10 @@ pub use crate::meta::Entry;
 #[cfg(feature = "pg")]
 use diesel::pg::PgConnection;
 
+use crate::key::PartialLevelKey;
 #[cfg(feature = "sqlite")]
 use diesel::sqlite::SqliteConnection;
 use gdcf::api::request::LevelsRequest;
-use crate::key::PartialLevelKey;
 
 pub struct Cache {
     #[cfg(feature = "pg")]
@@ -209,7 +209,11 @@ impl Store<LevelsRequest> for Cache {
         Ok(entry)
     }
 
-    fn store(&mut self, partial_levels: &Vec<PartialLevel<Option<u64>, u64>>, key: &LevelsRequest) -> Result<Self::CacheEntryMeta, Self::Err> {
+    fn store(
+        &mut self,
+        partial_levels: &Vec<PartialLevel<Option<u64>, u64>>,
+        key: &LevelsRequest,
+    ) -> Result<Self::CacheEntryMeta, Self::Err> {
         use crate::partial_level::*;
 
         debug!("Storing result of LevelsRequest with key {}", key);

@@ -1,10 +1,14 @@
-use gdcf::cache::{Key, CreatorKey, NewgroundsSongKey};
 use crate::level::SemiLevel;
-use gdcf_model::level::PartialLevel;
-use gdcf::api::request::{LevelRequest, UserRequest, LevelsRequest};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use derive_more::Display;
+use gdcf::{
+    api::request::{LevelRequest, LevelsRequest, UserRequest},
+    cache::{CreatorKey, Key, NewgroundsSongKey},
+};
+use gdcf_model::level::PartialLevel;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
 pub(crate) trait DatabaseKey: Key {
     fn database_key(&self) -> i64;

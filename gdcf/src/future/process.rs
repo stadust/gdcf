@@ -185,11 +185,11 @@ where
     C: Cache + CanCache<Req> + CanCache<CreatorKey> + CanCache<NewgroundsSongKey>,
     Req: Request,
 {
-    pub fn upgrade_all<Into>(self) -> UpgradeFuture<A, C, Self, Into, Req::Result>
+    pub fn upgrade_all<Into>(self) -> UpgradeFuture<A, C, Self, Vec<Into>, Req::Result>
     where
-        Req::Result: Upgradable<Into>,
-        A: MakeRequest<<Req::Result as Upgradable<Into>>::Request>,
-        C: CanCache<<Req::Result as Upgradable<Into>>::Request> + Lookup<<Req::Result as Upgradable<Into>>::LookupKey>,
+        Req::Result: Upgradable<Vec<Into>>,
+        A: MakeRequest<<Req::Result as Upgradable<Vec<Into>>>::Request>,
+        C: CanCache<<Req::Result as Upgradable<Vec<Into>>>::Request> + Lookup<<Req::Result as Upgradable<Vec<Into>>>::LookupKey>,
     {
         self.upgrade()
     }

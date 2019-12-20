@@ -1,11 +1,17 @@
-use crate::{meta::Entry, wrap::Wrapped, Cache};
+use crate::{
+    key::{DatabaseKey, PartialLevelKey, SemiLevelKey},
+    meta::Entry,
+    wrap::Wrapped,
+    Cache,
+};
 use diesel::{backend::Backend, deserialize::FromSqlRow, ExpressionMethods, Queryable, RunQueryDsl};
-use gdcf::cache::{CacheEntry, Lookup, Store};
+use gdcf::{
+    api::request::LevelRequest,
+    cache::{CacheEntry, Lookup, Store},
+};
 use gdcf_model::level::{Level, Password};
 use log::{debug, warn};
 use std::fmt::Display;
-use gdcf::api::request::LevelRequest;
-use crate::key::{SemiLevelKey, PartialLevelKey, DatabaseKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct SemiLevel {

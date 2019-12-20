@@ -6,8 +6,8 @@ use diesel::{
     sql_types::{Int8, Nullable, Text},
     ExpressionMethods, Queryable,
 };
-use gdcf_model::user::Creator;
 use gdcf::cache::CreatorKey;
+use gdcf_model::user::Creator;
 
 impl<'a> Identifiable for &'a Wrapped<Creator> {
     type Id = &'a u64;

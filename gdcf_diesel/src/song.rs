@@ -6,8 +6,8 @@ use diesel::{
     sql_types::*,
     ExpressionMethods,
 };
-use gdcf_model::song::NewgroundsSong;
 use gdcf::cache::NewgroundsSongKey;
+use gdcf_model::song::NewgroundsSong;
 
 impl<'a> Identifiable for &'a Wrapped<NewgroundsSong> {
     type Id = &'a u64;

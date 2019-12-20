@@ -251,9 +251,9 @@ macro_rules! __for_values {
 macro_rules! store_simply {
     ($key_type: ty, $table: ident, $meta: ident, $primary: ident) => {
         fn __impl_store() {
-            use crate::{meta::Entry, Cache, key::DatabaseKey};
+            use crate::{key::DatabaseKey, meta::Entry, Cache};
             use diesel::RunQueryDsl;
-            use gdcf::cache::{Store, Key};
+            use gdcf::cache::{Key, Store};
             use log::{debug, warn};
 
             impl Store<$key_type> for Cache {
@@ -285,9 +285,9 @@ macro_rules! store_simply {
 macro_rules! lookup_simply {
     ($key_type: ty, $object_table: ident,  $meta_table: ident, $primary_column: ident) => {
         fn __impl_lookup() {
-            use crate::{wrap::Wrapped, Cache, Entry, key::DatabaseKey};
+            use crate::{key::DatabaseKey, wrap::Wrapped, Cache, Entry};
             use diesel::{QueryDsl, RunQueryDsl};
-            use gdcf::cache::{CacheEntry, Lookup, Key};
+            use gdcf::cache::{CacheEntry, Key, Lookup};
             use log::{debug, trace};
 
             impl Lookup<$key_type> for Cache {
