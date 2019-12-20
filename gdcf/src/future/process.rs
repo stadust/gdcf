@@ -11,7 +11,7 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
-    future::{refresh::RefreshCacheFuture, upgrade::UpgradeFuture, PeekableFuture, StreamableFuture},
+    future::{refresh::RefreshCacheFuture, stream::GdcfStream, upgrade::UpgradeFuture, PeekableFuture, StreamableFuture},
     upgrade::Upgradable,
     Gdcf,
 };
@@ -25,6 +25,17 @@ where
     gdcf: Gdcf<A, C>,
     forces_refresh: bool,
     state: ProcessRequestFutureState<Req, A, C>,
+}
+
+impl<Req, A, C> ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
+    Req: PaginatableRequest,
+{
+    pub fn stream(self) -> GdcfStream<A, C, Self> {
+        GdcfStream::new(self.gdcf.clone(), self)
+    }
 }
 
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
