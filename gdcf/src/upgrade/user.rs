@@ -1,6 +1,6 @@
 use crate::{
     api::request::{Request, UserRequest},
-    cache::{Cache, CacheEntry, CacheEntryMeta, Lookup},
+    cache::{Cache, CacheEntry, Lookup},
     upgrade::{Upgradable, UpgradeError, UpgradeQuery},
 };
 use gdcf_model::user::{SearchedUser, User};

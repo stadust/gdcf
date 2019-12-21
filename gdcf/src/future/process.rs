@@ -1,8 +1,6 @@
 use futures::{Async, Future};
 use log::trace;
 
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-
 use crate::{
     api::{
         client::MakeRequest,

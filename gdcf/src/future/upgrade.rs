@@ -1,15 +1,13 @@
 use futures::{Async, Future};
-use log::{debug, error, trace, warn};
 
 use crate::{
-    api::{client::MakeRequest, request::Request, ApiClient},
+    api::{client::MakeRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
     future::{refresh::RefreshCacheFuture, stream::GdcfStream, PeekableFuture, StreamableFuture},
     upgrade::{Upgradable, UpgradeQueryFuture},
     Gdcf,
 };
-use failure::_core::fmt::Formatter;
 use std::fmt::Debug;
 
 struct PendingUpgrade<A, C, Into, U>

@@ -6,7 +6,7 @@
     stable_features,
     unknown_lints,
     unused_features,
-    //unused_imports,
+    unused_imports,
     unused_parens
 )]
 
@@ -107,7 +107,6 @@
 
 use log::{info, trace};
 
-use futures::{Async, Future};
 use gdcf_model::{song::NewgroundsSong, user::Creator};
 
 use crate::{

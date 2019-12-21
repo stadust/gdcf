@@ -19,13 +19,8 @@ pub use self::{
     level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
     user::UserRequest,
 };
-use failure::_core::fmt::{Error, Formatter};
 use gdcf_model::GameVersion;
-use std::{
-    collections::hash_map::DefaultHasher,
-    fmt::{Debug, Display},
-    hash::{Hash, Hasher},
-};
+use std::{fmt::Debug, hash::Hash};
 
 pub mod comment;
 pub mod level;

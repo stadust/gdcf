@@ -1,15 +1,11 @@
 use crate::{
-    api::{client::MakeRequest, request::PaginatableRequest, ApiClient},
-    cache::{Cache, CacheEntry, CanCache, Lookup, Store},
-    error::{ApiError, CacheError, Error},
-    future::{process::ProcessRequestFuture, upgrade::UpgradeFuture, StreamableFuture},
-    upgrade::Upgradable,
+    api::ApiClient,
+    cache::Cache,
+    error::{ApiError, Error},
+    future::StreamableFuture,
     Gdcf,
 };
-use futures::{task, Async, Stream};
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-use log::{debug, info, trace};
-use std::marker::PhantomData;
+use futures::{Async, Stream};
 
 #[derive(Debug)]
 pub struct GdcfStream<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> {

@@ -1,13 +1,6 @@
-use futures::{Async, Future};
+use futures::Future;
 
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-
-use crate::{
-    api::{request::Request, ApiClient},
-    cache::{Cache, CacheEntry, CreatorKey, NewgroundsSongKey, Store},
-    error::Error,
-    Gdcf,
-};
+use crate::{api::ApiClient, cache::Cache, error::Error, Gdcf};
 
 pub mod process;
 pub(crate) mod refresh;

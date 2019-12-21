@@ -1,14 +1,11 @@
 use crate::{
-    api::{client::MakeRequest, request::Request, ApiClient},
+    api::{client::MakeRequest, request::Request},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Key, Lookup, NewgroundsSongKey, Store},
     error::{ApiError, CacheError, Error},
-    future::{process::ProcessRequestFutureState, refresh::RefreshCacheFuture},
+    future::refresh::RefreshCacheFuture,
     Gdcf,
 };
-use failure::_core::fmt::Formatter;
 use futures::{Async, Future};
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-use std::panic::resume_unwind;
 
 pub mod level;
 pub mod user;

@@ -10,7 +10,6 @@ use crate::{
     Gdcf, Secondary,
 };
 use futures::{Async, Future};
-use gdcf_model::{song::NewgroundsSong, user::Creator};
 use log::{info, warn};
 
 pub(crate) struct RefreshCacheFuture<Req, A, C>
