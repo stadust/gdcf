@@ -96,7 +96,7 @@ mod postgres {
         }
 
         pub fn initialize(&self) -> Result<(), diesel_migrations::RunMigrationsError> {
-            embedded_migrations::run(&self.pool.get().unwrap())
+            embedded_migrations::run_with_output(&self.pool.get().unwrap(), &mut std::io::stdout())
         }
     }
 }
