@@ -71,10 +71,12 @@ impl LevelCommentsRequest {
 
     const_setter!(limit: u32);
 
-    pub const fn force_refresh(mut self) -> Self {
+    const_setter!(force_refresh: bool);
+
+    /*pub const fn force_refresh(mut self) -> Self {
         self.force_refresh = true;
         self
-    }
+    }*/
 
     pub const fn new(level: u64) -> LevelCommentsRequest {
         LevelCommentsRequest {
@@ -120,10 +122,6 @@ impl Request for LevelCommentsRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
     }
 }
 
@@ -213,10 +211,6 @@ impl Request for ProfileCommentsRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
     }
 }
 

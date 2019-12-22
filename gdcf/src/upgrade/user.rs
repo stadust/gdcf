@@ -1,5 +1,5 @@
 use crate::{
-    api::request::{Request, UserRequest},
+    api::request::UserRequest,
     cache::{Cache, CacheEntry, Lookup},
     upgrade::{Upgradable, UpgradeError, UpgradeQuery},
 };
@@ -16,16 +16,16 @@ impl Upgradable<User> for SearchedUser {
         cache: &C,
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
-        let mut request: UserRequest = self.account_id.into();
-
-        request.set_force_refresh(ignored_cached);
-
-        query_upgrade!(cache, request, request)
+        query_upgrade!(
+            cache,
+            UserRequest::new(self.account_id).force_refresh(ignored_cached),
+            UserRequest::new(self.account_id).force_refresh(ignored_cached)
+        )
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
         &self,
-        cache: &C,
+        _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
     ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {

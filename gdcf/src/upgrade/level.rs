@@ -20,16 +20,12 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
         cache: &C,
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
-        let mut request = LevelRequest::new(self.level_id);
-
-        request.set_force_refresh(ignored_cached);
-
-        query_upgrade!(cache, request, request)
+        query_upgrade!(cache,  LevelRequest::new(self.level_id).force_refresh(ignored_cached),  LevelRequest::new(self.level_id).force_refresh(ignored_cached))
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
         &self,
-        cache: &C,
+        _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<Level<Option<u64>, u64>, C::CacheEntryMeta>, Self::Upgrade>,
     ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
@@ -92,6 +88,7 @@ impl<User> Upgradable<Level<Option<NewgroundsSong>, User>> for Level<Option<u64>
                     LevelsRequest::default()
                         .filter(SearchFilters::default().custom_song(song_id))
                         .request_type(LevelRequestType::MostLiked)
+                        .force_refresh(ignored_cached)
                 ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
@@ -151,6 +148,7 @@ impl<User> Upgradable<PartialLevel<Option<NewgroundsSong>, User>> for PartialLev
                     LevelsRequest::default()
                         .filter(SearchFilters::default().custom_song(song_id))
                         .request_type(LevelRequestType::MostLiked)
+                        .force_refresh(ignored_cached)
                 ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
@@ -208,6 +206,7 @@ impl<Song> Upgradable<Level<Song, Option<Creator>>> for Level<Song, u64> {
             LevelsRequest::default()
                 .search(self.base.creator.to_string())
                 .request_type(LevelRequestType::User)
+                .force_refresh(ignored_cached)
         )
     }
 
@@ -263,6 +262,7 @@ impl<Song> Upgradable<PartialLevel<Song, Option<Creator>>> for PartialLevel<Song
             LevelsRequest::default()
                 .search(self.creator.to_string())
                 .request_type(LevelRequestType::User)
+                .force_refresh(ignored_cached)
         )
     }
 
@@ -313,14 +313,16 @@ impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.base.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) => query_upgrade_option!(cache, UserRequest::new(account_id), UserRequest::new(account_id)),
+            Some(account_id) => {
+                query_upgrade_option!(cache, UserRequest::new(account_id).force_refresh(ignored_cached), UserRequest::new(account_id).force_refresh(ignored_cached))
+            },
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
         &self,
-        cache: &C,
+        _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
     ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
@@ -359,14 +361,16 @@ impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, O
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) => query_upgrade_option!(cache, UserRequest::new(account_id), UserRequest::new(account_id)),
+            Some(account_id) => {
+                query_upgrade_option!(cache, UserRequest::new(account_id).force_refresh(ignored_cached), UserRequest::new(account_id).force_refresh(ignored_cached))
+            },
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
         &self,
-        cache: &C,
+        _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
     ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {

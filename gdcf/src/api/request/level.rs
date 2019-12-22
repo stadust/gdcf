@@ -458,10 +458,7 @@ impl LevelRequest {
         extra: bool
     }
 
-    pub const fn force_refresh(mut self) -> Self {
-        self.force_refresh = true;
-        self
-    }
+    const_setter!(force_refresh: bool);
 
     /// Constructs a new `LevelRequest` to retrieve the level with the given id
     ///
@@ -489,10 +486,7 @@ impl LevelsRequest {
 
     const_setter!(request_type, LevelRequestType);
 
-    pub const fn force_refresh(mut self) -> Self {
-        self.force_refresh = true;
-        self
-    }
+    const_setter!(force_refresh: bool);
 
     pub fn search(mut self, search_string: String) -> Self {
         self.search_string = search_string;
@@ -562,10 +556,6 @@ impl Request for LevelRequest {
     fn forces_refresh(&self) -> bool {
         self.force_refresh
     }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
-    }
 }
 
 impl Request for LevelsRequest {
@@ -573,10 +563,6 @@ impl Request for LevelsRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
     }
 }
 

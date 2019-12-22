@@ -30,10 +30,7 @@ pub struct UserRequest {
 impl UserRequest {
     const_setter!(with_base, base, BaseRequest);
 
-    pub const fn force_refresh(mut self) -> Self {
-        self.force_refresh = true;
-        self
-    }
+    const_setter!(force_refresh: bool);
 
     pub const fn new(user_id: u64) -> UserRequest {
         UserRequest {
@@ -77,16 +74,8 @@ impl Display for UserRequest {
 impl Request for UserRequest {
     type Result = User;
 
-    /*fn key(&self) -> u64 {
-        self.user
-    }*/
-
     fn forces_refresh(&self) -> bool {
         self.force_refresh
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
     }
 }
 
@@ -197,10 +186,6 @@ impl Request for UserSearchRequest {
 
     fn forces_refresh(&self) -> bool {
         self.force_refresh
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        self.force_refresh = force_refresh
     }
 }
 

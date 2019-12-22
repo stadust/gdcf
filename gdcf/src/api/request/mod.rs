@@ -100,7 +100,6 @@ pub trait Request: Debug + Send + Sync + 'static {
     type Result: Debug + Send + Sync + 'static;
 
     fn forces_refresh(&self) -> bool;
-    fn set_force_refresh(&mut self, force_refresh: bool);
 }
 
 pub trait PaginatableRequest: Request {

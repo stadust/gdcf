@@ -35,13 +35,6 @@ impl<R, S> UpgradeQuery<R, S> {
         }
     }
 
-    fn requests_necessary(&self) -> bool {
-        match self {
-            UpgradeQuery::One(request_option, _) => request_option.is_some(),
-            UpgradeQuery::Many(inner_queries) => inner_queries.iter().any(|query| query.requests_necessary()),
-        }
-    }
-
     pub(crate) fn upgrade_cached(&self) -> bool {
         match self {
             UpgradeQuery::One(_, upgrade) => upgrade.is_some(),
@@ -195,6 +188,9 @@ impl<F: Future, S> UpgradeQueryFuture<F, S> {
                             (FutureState::Done(lefts), rights)
                         },
                     };
+
+                    futures.push(future);
+                    upgrades.push(upgrade);
                 }
 
                 (UpgradeQueryFuture::Many(futures), UpgradeQuery::Many(upgrades))
