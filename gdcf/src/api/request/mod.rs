@@ -107,15 +107,3 @@ pub trait PaginatableRequest: Request {
     fn next(&mut self);
     fn page(&mut self, page: u32);
 }
-
-impl<R: Request> Request for Option<R> {
-    type Result = Option<R::Result>;
-
-    fn forces_refresh(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn set_force_refresh(&mut self, force_refresh: bool) {
-        unimplemented!()
-    }
-}
