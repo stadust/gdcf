@@ -9,7 +9,9 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
-    future::{refresh::RefreshCacheFuture, stream::GdcfStream, upgrade::UpgradeFuture, PeekableFuture, StreamableFuture},
+    future::{
+        refresh::RefreshCacheFuture, stream::GdcfStream, upgrade::UpgradeFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture,
+    },
     upgrade::Upgradable,
     Gdcf,
 };
@@ -23,6 +25,22 @@ where
     gdcf: Gdcf<A, C>,
     forces_refresh: bool,
     state: ProcessRequestFutureState<Req, A, C>,
+}
+
+impl<Req, A, C> CloneablePeekFuture for ProcessRequestFuture<Req, A, C>
+where
+    A: ApiClient + MakeRequest<Req>,
+    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
+    Req: Request,
+    Req::Result: Clone,
+{
+    fn clone_peek(&self) -> Result<Self::Item, ()> {
+        match &self.state {
+            ProcessRequestFutureState::UpToDate(None, _) => Err(()),
+            ProcessRequestFutureState::Uncached(_) => Ok(CacheEntry::Missing),
+            ProcessRequestFutureState::Outdated(cached, _) | ProcessRequestFutureState::UpToDate(Some(cached), _) => Ok(cached.clone()),
+        }
+    }
 }
 
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
@@ -203,19 +221,3 @@ where
         self.upgrade()
     }
 }
-/*
-impl<Req, A, C> CloneCached for ProcessRequestFuture<Req, A, C>
-where
-    A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
-    Req: Request,
-    Req::Result: Clone,
-{
-    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()> {
-        match &self.state {
-            ProcessRequestFutureState::Exhausted => Err(()),
-            ProcessRequestFutureState::Uncached(_) => Ok(CacheEntry::Missing),
-            ProcessRequestFutureState::Outdated(cached, _) | ProcessRequestFutureState::UpToDate(cached) => Ok(cached.clone()),
-        }
-    }
-}*/

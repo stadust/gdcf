@@ -12,6 +12,10 @@ pub trait PeekableFuture: Future + Sized {
     //fn can_peek(&self) -> bool;
 }
 
+pub trait CloneablePeekFuture: PeekableFuture {
+    fn clone_peek(&self) -> Result<Self::Item, ()>;
+}
+
 pub trait StreamableFuture<A: ApiClient, C: Cache>: Future<Error = Error<A::Err, C::Err>> + Sized {
     fn next(self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error>;
 
@@ -20,10 +24,3 @@ pub trait StreamableFuture<A: ApiClient, C: Cache>: Future<Error = Error<A::Err,
         GdcfStream::new(self.gdcf.clone(), self)
     }*/
 }
-/*
-// FIXME: we probably do not want this to be its own trait. Right now it is so we can keep the Clone
-// bounds contained
-pub trait CloneCached: GdcfFuture {
-    fn clone_cached(&self) -> Result<CacheEntry<Self::GdcfItem, <Self::Cache as Cache>::CacheEntryMeta>, ()>;
-}
-*/

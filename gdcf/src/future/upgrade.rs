@@ -4,7 +4,7 @@ use crate::{
     api::{client::MakeRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
-    future::{refresh::RefreshCacheFuture, stream::GdcfStream, PeekableFuture, StreamableFuture},
+    future::{refresh::RefreshCacheFuture, stream::GdcfStream, CloneablePeekFuture, PeekableFuture, StreamableFuture},
     upgrade::{Upgradable, UpgradeQueryFuture},
     Gdcf,
 };
@@ -235,6 +235,49 @@ where
         };
 
         Ok(self)
+    }
+}
+
+impl<A, C, From, Into, U> CloneablePeekFuture for UpgradeFuture<A, C, From, Into, U>
+where
+    A: ApiClient + MakeRequest<U::Request>,
+    C: Cache + CanCache<U::Request> + CanCache<CreatorKey> + CanCache<NewgroundsSongKey> + Lookup<U::LookupKey>,
+    From: CloneablePeekFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = Error<A::Err, C::Err>>,
+    U: Upgradable<Into> + Clone,
+    U::Upgrade: Clone,
+    Into: Clone,
+{
+    fn clone_peek(&self) -> Result<Self::Item, ()> {
+        match self.pending_upgrade {
+            None => {
+                let cache = self.gdcf.cache();
+                let inner_clone = self.inner_future.clone_peek()?;
+
+                if let CacheEntry::Cached(to_upgrade, meta) = inner_clone {
+                    let upgrade_query = to_upgrade.query_upgrade(&cache, false).map_err(|_| ())?;
+
+                    if upgrade_query.upgrade_cached() {
+                        Ok(CacheEntry::Cached(to_upgrade.upgrade(upgrade_query).0, meta))
+                    } else {
+                        Err(())
+                    }
+                } else {
+                    Ok(inner_clone.map_empty())
+                }
+            },
+            Some(ref upgrade) => {
+                let cloned_upgrade = upgrade.upgrade_future.clone_upgrades();
+
+                if cloned_upgrade.upgrade_cached() {
+                    Ok(CacheEntry::Cached(
+                        upgrade.to_upgrade.clone().upgrade(cloned_upgrade).0,
+                        upgrade.cache_meta.clone(),
+                    ))
+                } else {
+                    Err(())
+                }
+            },
+        }
     }
 }
 

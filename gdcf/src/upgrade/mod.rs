@@ -17,6 +17,16 @@ pub enum UpgradeQuery<R, S> {
 }
 
 impl<R, S> UpgradeQuery<R, S> {
+    fn clone_upgrades(&self) -> UpgradeQuery<!, S>
+    where
+        S: Clone,
+    {
+        match self {
+            UpgradeQuery::One(_, s) => UpgradeQuery::One(None, s.clone()),
+            UpgradeQuery::Many(inner_queries) => UpgradeQuery::Many(inner_queries.iter().map(UpgradeQuery::clone_upgrades).collect()),
+        }
+    }
+
     fn one(self) -> (Option<R>, Option<S>) {
         match self {
             UpgradeQuery::One(r, s) => (r, s),
@@ -31,7 +41,7 @@ impl<R, S> UpgradeQuery<R, S> {
         }
     }
 
-    pub fn upgrade_cached(&self) -> bool {
+    pub(crate) fn upgrade_cached(&self) -> bool {
         match self {
             UpgradeQuery::One(_, upgrade) => upgrade.is_some(),
             UpgradeQuery::Many(inner_queries) => inner_queries.iter().all(|query| query.upgrade_cached()),
@@ -128,12 +138,33 @@ impl<F: Future> UpgradeQueryFuture<F, !> {
                         })
                         .collect(),
                 ),
-            _ => panic!("Invalid recombination paramers. Can only combine when both upgrade query objects have the same structure"),
+            _ => panic!("Invalid recombination parameters. Can only combine when both upgrade query objects have the same structure"),
         }
     }
 }
 
 impl<F: Future, S> UpgradeQueryFuture<F, S> {
+    pub(crate) fn clone_upgrades(&self) -> UpgradeQuery<!, S>
+    where
+        S: Clone,
+    {
+        match self {
+            UpgradeQueryFuture::One(_, s) => UpgradeQuery::One(None, s.clone()),
+            UpgradeQueryFuture::Many(inner_queries) =>
+                UpgradeQuery::Many(
+                    inner_queries
+                        .iter()
+                        .map(|state| {
+                            match state {
+                                FutureState::Pending(upgrade_future) => upgrade_future.clone_upgrades(),
+                                FutureState::Done(upgrade_query) => upgrade_query.clone_upgrades(),
+                            }
+                        })
+                        .collect(),
+                ),
+        }
+    }
+
     pub(crate) fn mitosis(self) -> (UpgradeQueryFuture<F, !>, UpgradeQuery<!, S>) {
         match self {
             UpgradeQueryFuture::One(future, data) => (UpgradeQueryFuture::One(future, None), UpgradeQuery::One(None, data)),
