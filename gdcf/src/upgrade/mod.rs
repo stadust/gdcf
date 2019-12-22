@@ -284,7 +284,7 @@ impl<C: CacheError> From<C> for UpgradeError<C> {
 /// Implementing this trait for some type means that instances of that type can be upgraded into
 /// instances of type `Into`.
 pub trait Upgradable<Into>: Sized {
-    /// T-he part of the object that's being upgraded. If the whole object is upgraded, this should
+    /// The part of the object that's being upgraded. If the whole object is upgraded, this should
     /// be [`Self`]
     type From;
 
@@ -298,7 +298,8 @@ pub trait Upgradable<Into>: Sized {
     /// If applicable, the key of the object that has to be looked up in the cache to perform an
     /// upgrade.
     ///
-    /// If no upgrade is required, set this to [`!`](the never type).
+    /// If no lookup beyond one of [`Upgrdable::Request`] is required, set this to the never type or
+    /// `Upgradable::Request`.
     type LookupKey: Key;
 
     /// Determines how this upgrade has to be done by either producing the request that needs to be

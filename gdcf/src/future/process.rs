@@ -9,9 +9,7 @@ use crate::{
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
-    future::{
-        refresh::RefreshCacheFuture,  upgrade::UpgradeFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture,
-    },
+    future::{refresh::RefreshCacheFuture, upgrade::UpgradeFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture},
     upgrade::Upgradable,
     Gdcf,
 };

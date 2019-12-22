@@ -5,19 +5,19 @@ use crate::{
     future::StreamableFuture,
 };
 use futures::{Async, Stream};
-use failure::_core::marker::PhantomData;
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct GdcfStream<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> {
     current_future: Option<F>,
-    _phantom: PhantomData<(A, C)>
+    _phantom: PhantomData<(A, C)>,
 }
 
 impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> GdcfStream<A, C, F> {
     pub fn new(future: F) -> Self {
         GdcfStream {
             current_future: Some(future),
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 }
@@ -34,11 +34,7 @@ impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> Stream for GdcfStream<A,
                 Ok(Async::Ready(page)) => {
                     // We cannot move out of borrowed context, which means we have to "trick" rust into allowing up to
                     // swap out the futures by using an Option
-                    self.current_future = self
-                        .current_future
-                        .take()
-                        .map(|current_future| current_future.next())
-                        .transpose()?;
+                    self.current_future = self.current_future.take().map(|current_future| current_future.next()).transpose()?;
 
                     Ok(Async::Ready(Some(page)))
                 },

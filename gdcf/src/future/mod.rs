@@ -1,7 +1,6 @@
 use futures::Future;
 
-use crate::{api::ApiClient, cache::Cache, error::Error};
-use crate::future::stream::GdcfStream;
+use crate::{api::ApiClient, cache::Cache, error::Error, future::stream::GdcfStream};
 
 pub mod process;
 pub(crate) mod refresh;

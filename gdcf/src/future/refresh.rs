@@ -1,7 +1,7 @@
 use crate::{
     api::{
         client::{MakeRequest, Response},
-        request::{Request},
+        request::Request,
         ApiClient,
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, NewgroundsSongKey, Store},
