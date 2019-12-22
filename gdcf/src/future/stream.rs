@@ -22,6 +22,8 @@ impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> GdcfStream<A, C, F> {
     }
 }
 
+// FIXME: figure out a way to terminate these streams if our Item is a collection type (like Vec<T>)
+// and we receive an empty collection
 impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> Stream for GdcfStream<A, C, F> {
     type Error = F::Error;
     type Item = F::Item;
@@ -32,7 +34,7 @@ impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> Stream for GdcfStream<A,
                 Ok(Async::NotReady) => Ok(Async::NotReady),
 
                 Ok(Async::Ready(page)) => {
-                    // We cannot move out of borrowed context, which means we have to "trick" rust into allowing up to
+                    // We cannot move out of borrowed context, which means we have to "trick" rust into allowing us to
                     // swap out the futures by using an Option
                     self.current_future = self.current_future.take().map(|current_future| current_future.next()).transpose()?;
 

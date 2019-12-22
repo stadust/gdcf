@@ -67,6 +67,8 @@ impl LevelCommentsRequest {
 
     const_setter!(limit: u32);
 
+    const_setter!(page: u32);
+
     pub const fn new(level: u64) -> LevelCommentsRequest {
         LevelCommentsRequest {
             level_id: level,
@@ -112,10 +114,6 @@ impl Request for LevelCommentsRequest {
 impl PaginatableRequest for LevelCommentsRequest {
     fn next(&mut self) {
         self.page += 1;
-    }
-
-    fn page(&mut self, page: u32) {
-        self.page = page;
     }
 }
 
@@ -187,9 +185,5 @@ impl Request for ProfileCommentsRequest {
 impl PaginatableRequest for ProfileCommentsRequest {
     fn next(&mut self) {
         self.page += 1;
-    }
-
-    fn page(&mut self, page: u32) {
-        self.page = page;
     }
 }

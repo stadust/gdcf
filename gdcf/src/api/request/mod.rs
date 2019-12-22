@@ -85,22 +85,23 @@ impl Default for BaseRequest {
 }
 
 /// Trait for types that are meant to be requests whose results can be cached
-/// by GDCF
-///
-/// A `Request`'s `Hash` result must be forward-compatible with new fields
-/// added to a request. This means that if the GD API adds a new fields to a
-/// requests, making a request without this fields should generate the same
-/// hash value as the same request in
-/// an old version of GDCF without the field in the first place.
-/// This means foremost, that `Hash` impls mustn't hash the `BaseRequest`
-/// they're built upon. If new fields are added in later version of GDCF, they
-/// may only be hashed if they are explicitly set to a value, to ensure the
-/// above-mentioned compatibility
+/// by GDCF.
 pub trait Request: Debug + Send + Sync + 'static {
+    /// The type of object returned by this request.
+    ///
+    /// For requests that return multiple types of objects (like [`LevelsRequest`], which returns
+    /// levels, songs and creators), this is the non-[`Secondary`] object returned by this request
+    /// (so the vector of [`PartialLevel`]s in the above example) .
     type Result: Debug + Send + Sync + 'static;
 }
 
+/// Trait for requests that can be seen as returning pages of objects.
+///
+/// In general, these are requests like [`LevelsRequest`], which returns pages of levels. However,
+/// also requests like [`LevelRequest`] can be seen as paginatable (and does in fact implement this
+/// trait) because we can interpret a level with some level ID `n` to be the `n-`th page of the
+/// request.
 pub trait PaginatableRequest: Request {
+    /// Modifies this request in-place to be a request for the next page
     fn next(&mut self);
-    fn page(&mut self, page: u32);
 }

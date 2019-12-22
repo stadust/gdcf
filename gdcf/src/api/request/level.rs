@@ -471,9 +471,11 @@ impl LevelsRequest {
     // idk why this one can't be const
     setter!(filter, search_filters, SearchFilters);
 
-    const_setter!(total, i32);
+    const_setter!(total: i32);
 
-    const_setter!(request_type, LevelRequestType);
+    const_setter!(request_type: LevelRequestType);
+
+    const_setter!(page: u32);
 
     pub fn search(mut self, search_string: String) -> Self {
         self.search_string = search_string;
@@ -537,6 +539,12 @@ impl Request for LevelRequest {
     type Result = Level<Option<u64>, u64>;
 }
 
+impl PaginatableRequest for LevelRequest {
+    fn next(&mut self) {
+        self.level_id += 1;
+    }
+}
+
 impl Request for LevelsRequest {
     type Result = Vec<PartialLevel<Option<u64>, u64>>;
 }
@@ -544,10 +552,6 @@ impl Request for LevelsRequest {
 impl PaginatableRequest for LevelsRequest {
     fn next(&mut self) {
         self.page += 1;
-    }
-
-    fn page(&mut self, page: u32) {
-        self.page = page;
     }
 }
 

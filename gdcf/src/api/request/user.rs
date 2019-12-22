@@ -68,6 +68,12 @@ impl Request for UserRequest {
     type Result = User;
 }
 
+impl PaginatableRequest for UserRequest {
+    fn next(&mut self) {
+        self.user += 1;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UserSearchRequest {
     /// The base request data
@@ -101,6 +107,8 @@ impl UserSearchRequest {
     const_setter!(with_base, base, BaseRequest);
 
     const_setter!(total: u32);
+
+    const_setter!(page: u32);
 
     pub const fn new(search_string: String) -> Self {
         UserSearchRequest {
@@ -167,9 +175,5 @@ impl Request for UserSearchRequest {
 impl PaginatableRequest for UserSearchRequest {
     fn next(&mut self) {
         self.page += 1;
-    }
-
-    fn page(&mut self, page: u32) {
-        self.page = page;
     }
 }
