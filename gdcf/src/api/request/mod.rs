@@ -10,9 +10,9 @@
 //! remote types.
 
 pub use self::{
+    comment::{LevelCommentsRequest, ProfileCommentsRequest},
     level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
     user::{UserRequest, UserSearchRequest},
-    comment::{ProfileCommentsRequest, LevelCommentsRequest}
 };
 use gdcf_model::GameVersion;
 use std::{fmt::Debug, hash::Hash};

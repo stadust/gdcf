@@ -49,6 +49,8 @@ pub trait Store<K: Key>: Cache {
 // FIXME: One they are stabilized, use a trait alias here
 pub trait CanCache<K: Key>: Lookup<K> + Store<K> {}
 
+impl<K: Key, C: Cache> CanCache<K> for C where C: Store<K> + Lookup<K> {}
+
 /// Struct modelling the result of some GDCF request
 #[derive(Debug, PartialEq, Clone)]
 pub enum CacheEntry<T, Meta: CacheEntryMeta> {
