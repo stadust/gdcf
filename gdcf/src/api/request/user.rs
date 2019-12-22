@@ -13,10 +13,6 @@ use std::{
 /// their account IDs
 #[derive(Debug, Default, Clone, Copy)]
 pub struct UserRequest {
-    /// Whether this [`UserRequest`] request forces a cache refresh. This is not a HTTP
-    /// request field!
-    pub force_refresh: bool,
-
     /// The base request data
     pub base: BaseRequest,
 
@@ -30,11 +26,8 @@ pub struct UserRequest {
 impl UserRequest {
     const_setter!(with_base, base, BaseRequest);
 
-    const_setter!(force_refresh: bool);
-
     pub const fn new(user_id: u64) -> UserRequest {
         UserRequest {
-            force_refresh: false,
             base: GD_21,
             user: user_id,
         }
@@ -73,18 +66,10 @@ impl Display for UserRequest {
 
 impl Request for UserRequest {
     type Result = User;
-
-    fn forces_refresh(&self) -> bool {
-        self.force_refresh
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct UserSearchRequest {
-    /// Whether this [`UserSearchRequest`] request forces a cache refresh. This is not a HTTP
-    /// request field!
-    pub force_refresh: bool,
-
     /// The base request data
     pub base: BaseRequest,
 
@@ -117,14 +102,8 @@ impl UserSearchRequest {
 
     const_setter!(total: u32);
 
-    pub const fn force_refresh(mut self) -> Self {
-        self.force_refresh = true;
-        self
-    }
-
     pub const fn new(search_string: String) -> Self {
         UserSearchRequest {
-            force_refresh: false,
             base: GD_21,
             total: 0,
             page: 0,
@@ -183,10 +162,6 @@ impl Hash for UserSearchRequest {
 
 impl Request for UserSearchRequest {
     type Result = SearchedUser;
-
-    fn forces_refresh(&self) -> bool {
-        self.force_refresh
-    }
 }
 
 impl PaginatableRequest for UserSearchRequest {

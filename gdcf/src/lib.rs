@@ -100,7 +100,7 @@ where
     A: ApiClient,
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey>,
 {
-    fn process<R>(&self, request: R) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
+    fn process<R>(&self, request: R, force_refresh: bool) -> Result<ProcessRequestFutureState<R, A, C>, C::Err>
     where
         R: Request,
         A: MakeRequest<R>,
@@ -120,7 +120,7 @@ where
                     info!("Cache entry for request {:?} is expired!", request);
 
                     Some(entry)
-                } else if request.forces_refresh() {
+                } else if force_refresh {
                     trace!("Cache entry is {:?}", entry);
                     info!("Cache entry is up-to-date, but request forces refresh!");
 
@@ -170,12 +170,12 @@ where
     /// second one and uses the cached value (or at least it will if you set cache-expiry to
     /// anything larger than 0 seconds - but then again why would you use GDCF if you don't use the
     /// cache)
-    pub fn level(&self, request: impl Into<LevelRequest>) -> Result<ProcessRequestFuture<LevelRequest, A, C>, C::Err>
+    pub fn level(&self, request: impl Into<LevelRequest>, force_refresh: bool) -> Result<ProcessRequestFuture<LevelRequest, A, C>, C::Err>
     where
         A: MakeRequest<LevelRequest>,
         C: CanCache<LevelRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into(), force_refresh)
     }
 
     /// Processes the given [`LevelsRequest`]
@@ -193,39 +193,48 @@ where
     /// + [`u64`] - The custom song is provided only as its newgrounds ID. Causes no additional
     /// requests
     /// + [`NewgroundsSong`] - Causes no additional requests.
-    pub fn levels(&self, request: impl Into<LevelsRequest>) -> Result<ProcessRequestFuture<LevelsRequest, A, C>, C::Err>
+    pub fn levels(
+        &self,
+        request: impl Into<LevelsRequest>,
+        force_refresh: bool,
+    ) -> Result<ProcessRequestFuture<LevelsRequest, A, C>, C::Err>
     where
         A: MakeRequest<LevelsRequest>,
         C: CanCache<LevelsRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into(), force_refresh)
     }
 
     /// Processes the given [`UserRequest`]
-    pub fn user(&self, request: impl Into<UserRequest>) -> Result<ProcessRequestFuture<UserRequest, A, C>, C::Err>
+    pub fn user(&self, request: impl Into<UserRequest>, force_refresh: bool) -> Result<ProcessRequestFuture<UserRequest, A, C>, C::Err>
     where
         A: MakeRequest<UserRequest>,
         C: CanCache<UserRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into(), force_refresh)
     }
 
-    pub fn search_user(&self, request: impl Into<UserSearchRequest>) -> Result<ProcessRequestFuture<UserSearchRequest, A, C>, C::Err>
+    pub fn search_user(
+        &self,
+        request: impl Into<UserSearchRequest>,
+        force_refresh: bool,
+    ) -> Result<ProcessRequestFuture<UserSearchRequest, A, C>, C::Err>
     where
         A: MakeRequest<UserSearchRequest>,
         C: CanCache<UserSearchRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into(), force_refresh)
     }
 
     pub fn profile_comments(
         &self,
         request: impl Into<ProfileCommentsRequest>,
+        force_refresh: bool,
     ) -> Result<ProcessRequestFuture<ProfileCommentsRequest, A, C>, C::Err>
     where
         A: MakeRequest<ProfileCommentsRequest>,
         C: CanCache<ProfileCommentsRequest>,
     {
-        ProcessRequestFuture::new(self.clone(), request.into())
+        ProcessRequestFuture::new(self.clone(), request.into(), force_refresh)
     }
 }

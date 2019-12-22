@@ -18,8 +18,9 @@ impl Upgradable<User> for SearchedUser {
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         query_upgrade!(
             cache,
-            UserRequest::new(self.account_id).force_refresh(ignored_cached),
-            UserRequest::new(self.account_id).force_refresh(ignored_cached)
+            UserRequest::new(self.account_id),
+            UserRequest::new(self.account_id),
+            ignored_cached
         )
     }
 

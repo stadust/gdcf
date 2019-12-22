@@ -98,8 +98,6 @@ impl Default for BaseRequest {
 /// above-mentioned compatibility
 pub trait Request: Debug + Send + Sync + 'static {
     type Result: Debug + Send + Sync + 'static;
-
-    fn forces_refresh(&self) -> bool;
 }
 
 pub trait PaginatableRequest: Request {

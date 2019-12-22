@@ -63,20 +63,20 @@ macro_rules! const_setter {
 }
 
 macro_rules! query_upgrade {
-    ($cache: expr, $cache_request: expr, $refresh_request: expr) => {{
+    ($cache: expr, $cache_request: expr, $refresh_request: expr, $force_refresh: expr) => {{
         use crate::cache::CacheEntryMeta;
 
         match $cache.lookup(&$cache_request)? {
             CacheEntry::Missing => Ok(UpgradeQuery::One(Some($refresh_request), None)),
             CacheEntry::DeducedAbsent => Err(UpgradeError::UpgradeFailed),
             CacheEntry::MarkedAbsent(meta) =>
-                if meta.is_expired() {
+                if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), None))
                 } else {
                     Err(UpgradeError::UpgradeFailed)
                 },
             CacheEntry::Cached(user, meta) =>
-                if meta.is_expired() {
+                if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), Some(user)))
                 } else {
                     Ok(UpgradeQuery::One(None, Some(user)))
@@ -86,20 +86,22 @@ macro_rules! query_upgrade {
 }
 
 macro_rules! query_upgrade_option {
-    ($cache: expr, $cache_request: expr, $refresh_request: expr) => {{
+    ($cache: expr, $cache_request: expr, $refresh_request: expr, $force_refresh: expr) => {{
         use crate::cache::CacheEntryMeta;
+
+        // TODO: handle forced refreshs correctly!
 
         match $cache.lookup(&$cache_request)? {
             CacheEntry::Missing => Ok(UpgradeQuery::One(Some($refresh_request), None)),
             CacheEntry::DeducedAbsent => Ok(UpgradeQuery::One(None, Some(None))),
             CacheEntry::MarkedAbsent(meta) =>
-                if meta.is_expired() {
+                if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), None))
                 } else {
                     Ok(UpgradeQuery::One(None, Some(None)))
                 },
             CacheEntry::Cached(user, meta) =>
-                if meta.is_expired() {
+                if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), Some(Some(user))))
                 } else {
                     Ok(UpgradeQuery::One(None, Some(Some(user))))

@@ -22,8 +22,9 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         query_upgrade!(
             cache,
-            LevelRequest::new(self.level_id).force_refresh(ignored_cached),
-            LevelRequest::new(self.level_id).force_refresh(ignored_cached)
+            LevelRequest::new(self.level_id),
+            LevelRequest::new(self.level_id),
+            ignored_cached
         )
     }
 
@@ -91,8 +92,8 @@ impl<User> Upgradable<Level<Option<NewgroundsSong>, User>> for Level<Option<u64>
                     NewgroundsSongKey(song_id),
                     LevelsRequest::default()
                         .filter(SearchFilters::default().custom_song(song_id))
-                        .request_type(LevelRequestType::MostLiked)
-                        .force_refresh(ignored_cached)
+                        .request_type(LevelRequestType::MostLiked),
+                    ignored_cached
                 ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
@@ -151,8 +152,8 @@ impl<User> Upgradable<PartialLevel<Option<NewgroundsSong>, User>> for PartialLev
                     NewgroundsSongKey(song_id),
                     LevelsRequest::default()
                         .filter(SearchFilters::default().custom_song(song_id))
-                        .request_type(LevelRequestType::MostLiked)
-                        .force_refresh(ignored_cached)
+                        .request_type(LevelRequestType::MostLiked),
+                    ignored_cached
                 ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
@@ -209,8 +210,8 @@ impl<Song> Upgradable<Level<Song, Option<Creator>>> for Level<Song, u64> {
             CreatorKey(self.base.creator),
             LevelsRequest::default()
                 .search(self.base.creator.to_string())
-                .request_type(LevelRequestType::User)
-                .force_refresh(ignored_cached)
+                .request_type(LevelRequestType::User),
+            ignored_cached
         )
     }
 
@@ -265,8 +266,8 @@ impl<Song> Upgradable<PartialLevel<Song, Option<Creator>>> for PartialLevel<Song
             CreatorKey(self.creator),
             LevelsRequest::default()
                 .search(self.creator.to_string())
-                .request_type(LevelRequestType::User)
-                .force_refresh(ignored_cached)
+                .request_type(LevelRequestType::User),
+            ignored_cached
         )
     }
 
@@ -317,12 +318,7 @@ impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.base.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) =>
-                query_upgrade_option!(
-                    cache,
-                    UserRequest::new(account_id).force_refresh(ignored_cached),
-                    UserRequest::new(account_id).force_refresh(ignored_cached)
-                ),
+            Some(account_id) => query_upgrade_option!(cache, UserRequest::new(account_id), UserRequest::new(account_id), ignored_cached),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }
@@ -368,12 +364,7 @@ impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, O
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) =>
-                query_upgrade_option!(
-                    cache,
-                    UserRequest::new(account_id).force_refresh(ignored_cached),
-                    UserRequest::new(account_id).force_refresh(ignored_cached)
-                ),
+            Some(account_id) => query_upgrade_option!(cache, UserRequest::new(account_id), UserRequest::new(account_id), ignored_cached),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }

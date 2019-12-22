@@ -47,10 +47,10 @@ where
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
-    pub fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
+    pub fn new(gdcf: Gdcf<A, C>, request: Req, forces_refresh: bool) -> Result<Self, C::Err> {
         Ok(ProcessRequestFuture {
-            forces_refresh: request.forces_refresh(),
-            state: gdcf.process(request)?,
+            forces_refresh,
+            state: gdcf.process(request, forces_refresh)?,
             gdcf,
         })
     }
@@ -70,7 +70,7 @@ where
         request.next();
         Ok(ProcessRequestFuture {
             forces_refresh: self.forces_refresh,
-            state: self.gdcf.process(request).map_err(Error::Cache)?,
+            state: self.gdcf.process(request, self.forces_refresh).map_err(Error::Cache)?,
             gdcf: self.gdcf,
         })
     }

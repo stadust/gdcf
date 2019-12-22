@@ -14,10 +14,6 @@ use std::{
 /// with the response to a [`LevelsRequest`]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LevelRequest {
-    /// Whether this [`LevelRequest`] request forces a cache refresh. This is not a HTTP
-    /// request field!
-    pub force_refresh: bool,
-
     /// The base request data
     pub base: BaseRequest,
 
@@ -57,10 +53,6 @@ impl Hash for LevelRequest {
 /// [`NewgroundsSong`s](::model::song::NewgroundsSong) and [`Creator`s](::model::user::Creator).
 #[derive(Debug, Default, Clone)]
 pub struct LevelsRequest {
-    /// Whether this [`LevelsRequest`] request forces a cache refresh. This is not a HTTP
-    /// request field!
-    pub force_refresh: bool,
-
     /// The base request data
     pub base: BaseRequest,
 
@@ -458,8 +450,6 @@ impl LevelRequest {
         extra: bool
     }
 
-    const_setter!(force_refresh: bool);
-
     /// Constructs a new `LevelRequest` to retrieve the level with the given id
     ///
     /// Uses a default [`BaseRequest`], and sets the
@@ -467,7 +457,6 @@ impl LevelRequest {
     /// values set the by the Geometry Dash Client
     pub const fn new(level_id: u64) -> LevelRequest {
         LevelRequest {
-            force_refresh: false,
             base: GD_21,
             level_id,
             inc: true,
@@ -485,8 +474,6 @@ impl LevelsRequest {
     const_setter!(total, i32);
 
     const_setter!(request_type, LevelRequestType);
-
-    const_setter!(force_refresh: bool);
 
     pub fn search(mut self, search_string: String) -> Self {
         self.search_string = search_string;
@@ -548,22 +535,10 @@ impl From<u64> for LevelRequest {
 
 impl Request for LevelRequest {
     type Result = Level<Option<u64>, u64>;
-
-    /*fn key(&self) -> u64 {
-        self.level_id
-    }*/
-
-    fn forces_refresh(&self) -> bool {
-        self.force_refresh
-    }
 }
 
 impl Request for LevelsRequest {
     type Result = Vec<PartialLevel<Option<u64>, u64>>;
-
-    fn forces_refresh(&self) -> bool {
-        self.force_refresh
-    }
 }
 
 impl PaginatableRequest for LevelsRequest {
