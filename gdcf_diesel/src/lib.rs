@@ -191,7 +191,7 @@ impl Lookup<LevelsRequest> for Cache {
         if levels.is_empty() {
             Ok(CacheEntry::DeducedAbsent)
         } else {
-            Ok(CacheEntry::new(levels, entry))
+            Ok(CacheEntry::Cached(levels, entry))
         }
     }
 }

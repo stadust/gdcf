@@ -20,7 +20,11 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
         cache: &C,
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
-        query_upgrade!(cache,  LevelRequest::new(self.level_id).force_refresh(ignored_cached),  LevelRequest::new(self.level_id).force_refresh(ignored_cached))
+        query_upgrade!(
+            cache,
+            LevelRequest::new(self.level_id).force_refresh(ignored_cached),
+            LevelRequest::new(self.level_id).force_refresh(ignored_cached)
+        )
     }
 
     fn process_query_result<C: Cache + Lookup<Self::LookupKey>>(
@@ -313,9 +317,12 @@ impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.base.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) => {
-                query_upgrade_option!(cache, UserRequest::new(account_id).force_refresh(ignored_cached), UserRequest::new(account_id).force_refresh(ignored_cached))
-            },
+            Some(account_id) =>
+                query_upgrade_option!(
+                    cache,
+                    UserRequest::new(account_id).force_refresh(ignored_cached),
+                    UserRequest::new(account_id).force_refresh(ignored_cached)
+                ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }
@@ -361,9 +368,12 @@ impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, O
         ignored_cached: bool,
     ) -> Result<UpgradeQuery<Self::Request, Self::Upgrade>, UpgradeError<C::Err>> {
         match self.creator.as_ref().and_then(|creator| creator.account_id) {
-            Some(account_id) => {
-                query_upgrade_option!(cache, UserRequest::new(account_id).force_refresh(ignored_cached), UserRequest::new(account_id).force_refresh(ignored_cached))
-            },
+            Some(account_id) =>
+                query_upgrade_option!(
+                    cache,
+                    UserRequest::new(account_id).force_refresh(ignored_cached),
+                    UserRequest::new(account_id).force_refresh(ignored_cached)
+                ),
             None => Ok(UpgradeQuery::One(None, Some(None))),
         }
     }

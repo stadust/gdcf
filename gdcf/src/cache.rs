@@ -44,14 +44,8 @@ pub trait Store<K: Key>: Cache {
     fn mark_absent(&mut self, key: &K) -> Result<Self::CacheEntryMeta, Self::Err>;
 }
 
-// TODO: we can get rid of this now
-pub trait CanCache<K: Key>: Cache + Lookup<K> + Store<K> {
-    fn lookup_request(&self, key: &K) -> Result<CacheEntry<K::Result, Self::CacheEntryMeta>, Self::Err> {
-        self.lookup(key)
-    }
-}
-
-impl<K: Key, C: Cache> CanCache<K> for C where C: Lookup<K> + Store<K> {}
+// FIXME: One they are stabilized, use a trait alias here
+pub trait CanCache<K: Key>: Lookup<K> + Store<K> {}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum CacheEntry<T, Meta: CacheEntryMeta> {
@@ -86,14 +80,6 @@ impl<T: Display, Meta: CacheEntryMeta + Display> Display for CacheEntry<T, Meta>
 }
 
 impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
-    pub fn new(object: T, metadata: Meta) -> Self {
-        CacheEntry::Cached(object, metadata)
-    }
-
-    pub fn absent(metadata: Meta) -> Self {
-        CacheEntry::MarkedAbsent(metadata)
-    }
-
     pub fn is_expired(&self) -> bool {
         match self {
             CacheEntry::Missing => true,
@@ -120,17 +106,6 @@ impl<T, Meta: CacheEntryMeta> CacheEntry<T, Meta> {
 
     pub(crate) fn map_empty<U>(self) -> CacheEntry<U, Meta> {
         self.map(|_| panic!("CacheEntry::map_empty called on `Cached` variant"))
-    }
-}
-
-impl<T, Meta: CacheEntryMeta> Into<Option<T>> for CacheEntry<T, Meta> {
-    fn into(self) -> Option<T> {
-        match self {
-            CacheEntry::Missing => None,
-            CacheEntry::DeducedAbsent => None,
-            CacheEntry::MarkedAbsent(_) => None,
-            CacheEntry::Cached(cached, _) => Some(cached),
-        }
     }
 }
 

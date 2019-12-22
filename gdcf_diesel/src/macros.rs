@@ -318,7 +318,7 @@ macro_rules! lookup_simply {
                         .filter($object_table::$primary_column.eq(key.database_key()))
                         .get_result(&connection));
 
-                    Ok(CacheEntry::new(wrapped.0, entry))
+                    Ok(CacheEntry::Cached(wrapped.0, entry))
                 }
             }
         }

@@ -10,120 +10,21 @@
     unused_parens
 )]
 
-//! The `gdcf` crate is the core of the Geometry Dash Caching Framework.
-//! It provides all the core traits required to implement an API Client and
-//! a cache which are used by [`Gdcf`].
-//!
-//! # Geometry Dash Caching Framework
-//!
-//! The idea behind the Geometry Dash Caching Framework is to provide fast and
-//! reliable access to the resources provided by the Geometry Dash servers. It
-//! achieves this goal by caching all responses from the servers. When a resource is requested, it
-//! is first looked up in the cache. If the cache entry is not yet expired, it is simply returned
-//! and the request can be handled nearly instantly without any interaction with the Geometry Dash
-//! servers. If the cache entry is existing, but expired, GDCF will make an asynchronous request to
-//! the Geometry Dash servers and create a [Future](GdcfFuture) that resolves to the result of that
-//! request, while also providing access to the cached value (without the need to poll the Future
-//! to completion). The only time you are actually forced to wait for a response from the Geometry
-//! Dash servers is when the cache entry for a request isn't existing.
-//!
-//! Further, GDCF has the ability to "glue together" multiple requests to provide more information
-//! about requested objects. It is, for example, possible to issue a [`LevelRequest`]
-//! (`downloadGJLevel`) and have GDCF automatically issue a [`LevelsRequest`] (`getGJLevels`) to
-//! retrieve the creator and newgrounds song, which aren't provided by the former endpoint.
-//!
-//! # How to use:
-//! This crate only provides the required traits for caches and API clients, and the code that
-//! connects them. To use GDCF you first need to either find yourself an existing implementation of
-//! those, or write your own.
-//!
-//! The following example uses the `gdcf_dbcache` crate as its cache implementation (a database
-//! cache with sqlite and postgreSQL backend) and the `gdrs` crate as its API client.
-//!
-//! ```rust
-//! // First we need to configure the cache. Here we're using a sqlite in-memory database
-//! // whose cache entries expire after 30 minutes.
-//! let mut config = DatabaseCacheConfig::sqlite_memory_config();
-//! config.invalidate_after(Duration::minutes(30));
-//!
-//! // Then we can create the actual cache and API wrapper
-//! let cache = DatabaseCache::new(config);
-//! let client = BoomlingsClient::new();
-//!
-//! // A database cache needs to go through initialization before it can be used, as it
-//! // needs to create all the required tables
-//! cache.initialize()?;
-//!
-//! // Then we can create an instance of the Gdcf struct, which we will use to
-//! // actually make all our requests
-//! let gdcf = Gdcf::new(client, cache);
-//!
-//! // And we're good to go! To make a request, we need to initialize one of the
-//! // request structs. Here, we're make a requests to retrieve the 6th page of
-//! // featured demon levels of any demon difficulty
-//! let request = LevelsRequest::default()
-//!     .request_type(LevelRequestType::Featured)
-//!     .with_rating(LevelRating::Demon(DemonRating::Hard))
-//!     .page(5);
-//!
-//! // To actually issue the request, we call the appropriate method on our Gdcf instance.
-//! // The type parameters on these methods determine how much associated information
-//! // should be retrieved for the request result. Here we're telling GDCF to also
-//! // get us information about the requested levels' custom songs and creators
-//! // instead of just their IDs. "paginate_levels" give us a stream over all pages
-//! // of results from our request instead of only the page we requested.
-//! let stream = gdcf.paginate_levels::<NewgroundsSong, Creator>(request);
-//!
-//! // Since we have a stream, we can use all our favorite Stream methods from the
-//! // futures crate. Here we limit the stream to 50 pages of levels and print
-//! // out each level's name, creator, song and song artist.
-//! let future = stream
-//!     .take(50)
-//!     .for_each(|levels| {
-//!         for level in levels {
-//!             match level.custom_song {
-//!                 Some(newgrounds_song) =>
-//!                     println!(
-//!                         "Retrieved demon level {} by {} using custom song {} by {}",
-//!                         level.name, level.creator.name, newgrounds_song.name, newgrounds_song.artist
-//!                     ),
-//!                 None =>
-//!                     println!(
-//!                         "Retrieved demon level {} by {} using main song {} by {}",
-//!                         level.name,
-//!                         level.creator.name,
-//!                         level.main_song.unwrap().name,
-//!                         level.main_song.unwrap().artist
-//!                     ),
-//!             }
-//!         }
-//!
-//!         Ok(())
-//!     })
-//!     .map_err(|error| eprintln!("Something went wrong! {:?}", error));
-//!
-//! tokio::run(future);
-//! ```
-
-use log::{info, trace};
-
-use gdcf_model::{song::NewgroundsSong, user::Creator};
-
 use crate::{
     api::{
         client::MakeRequest,
         request::{comment::ProfileCommentsRequest, user::UserSearchRequest, LevelRequest, LevelsRequest, Request, UserRequest},
         ApiClient,
     },
-    cache::{Cache, CacheEntry, CanCache, Store},
+    cache::{Cache, CacheEntry, CanCache, CreatorKey, NewgroundsSongKey, Store},
     future::{
         process::{ProcessRequestFuture, ProcessRequestFutureState},
         refresh::RefreshCacheFuture,
     },
 };
-
-use crate::cache::{CreatorKey, NewgroundsSongKey};
 pub use error::Error;
+use gdcf_model::{song::NewgroundsSong, user::Creator};
+use log::{info, trace};
 
 #[macro_use]
 mod macros;
@@ -207,7 +108,7 @@ where
     {
         info!("Processing request {:?}", request);
 
-        let cached = match self.cache.lookup_request(&request)? {
+        let cached = match self.cache.lookup(&request)? {
             CacheEntry::Missing => {
                 info!("No cache entry for request {:?}", request);
 
