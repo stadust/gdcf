@@ -1,4 +1,4 @@
-//! Module ontianing request definitions for retrieving users
+//! Module containing request definitions for retrieving users
 
 use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
 use gdcf_model::user::{Creator, SearchedUser, User};

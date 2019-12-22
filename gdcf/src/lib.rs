@@ -28,12 +28,12 @@ use log::{info, trace};
 
 #[macro_use]
 mod macros;
+mod upgrade;
 
 pub mod api;
 pub mod cache;
 pub mod error;
 pub mod future;
-pub mod upgrade;
 
 // FIXME: move this somewhere more fitting
 #[derive(Debug, Clone, PartialEq)]

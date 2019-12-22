@@ -8,16 +8,11 @@
 //! request types, as there are simply no sensible defaults. When providing
 //! (de)serialization for requests, take a look at solutions like serde's
 //! remote types.
-//!
-//! Note that all `Hash` impls are to be forward compatible with new fields in
-//! the request. This means, that if an update to the GD API arrives which adds
-//! more fields to a request, those fields are hashed _only_ if they are
-//! different from their default values. This way, the hashes of requests made
-//! before the update will stay the same
 
 pub use self::{
     level::{LevelRequest, LevelRequestType, LevelsRequest, SearchFilters, SongFilter},
-    user::UserRequest,
+    user::{UserRequest, UserSearchRequest},
+    comment::{ProfileCommentsRequest, LevelCommentsRequest}
 };
 use gdcf_model::GameVersion;
 use std::{fmt::Debug, hash::Hash};

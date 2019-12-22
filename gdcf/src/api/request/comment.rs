@@ -1,10 +1,11 @@
+//! Module containing request structs for retrieving profile/level comments
+
 use crate::api::request::{BaseRequest, PaginatableRequest, Request, GD_21};
 use gdcf_model::comment::{CommentUser, LevelComment, ProfileComment};
 use std::{
     fmt::{Display, Formatter},
     hash::{Hash, Hasher},
 };
-//use gdcf_model::level::{PartialLevel, Level};
 
 /// The different orderings that can be requested for level comments
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

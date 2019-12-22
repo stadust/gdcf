@@ -47,7 +47,7 @@ where
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
-    pub fn new(gdcf: Gdcf<A, C>, request: Req, forces_refresh: bool) -> Result<Self, C::Err> {
+    pub(crate) fn new(gdcf: Gdcf<A, C>, request: Req, forces_refresh: bool) -> Result<Self, C::Err> {
         Ok(ProcessRequestFuture {
             forces_refresh,
             state: gdcf.process(request, forces_refresh)?,

@@ -1,3 +1,5 @@
+//! Module containing cache related traits/structs
+
 use crate::{api::request::Request, error::CacheError};
 use derive_more::Display;
 use gdcf_model::{song::NewgroundsSong, user::Creator};
@@ -47,6 +49,7 @@ pub trait Store<K: Key>: Cache {
 // FIXME: One they are stabilized, use a trait alias here
 pub trait CanCache<K: Key>: Lookup<K> + Store<K> {}
 
+/// Struct modelling the result of some GDCF request
 #[derive(Debug, PartialEq, Clone)]
 pub enum CacheEntry<T, Meta: CacheEntryMeta> {
     /// Variant to return if there was no entry at all in the cache regarding a specific request,
@@ -59,8 +62,6 @@ pub enum CacheEntry<T, Meta: CacheEntryMeta> {
 
     /// Variant indicating that a request was already made, and its results were stored.
     Cached(T, Meta),
-    /*/// Variant combining the cache entries for a list of requests made
-    CachedMany(Vec<CacheEntry<T, Meta>>),*/
 }
 
 impl<T: Display, Meta: CacheEntryMeta + Display> Display for CacheEntry<T, Meta> {

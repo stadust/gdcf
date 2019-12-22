@@ -1,3 +1,5 @@
+//! Module containing the machinery GDCF internally uses to upgrade requests and objects
+
 use crate::{
     api::{client::MakeRequest, request::Request},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Key, Lookup, NewgroundsSongKey, Store},
@@ -274,15 +276,15 @@ impl<C: CacheError> From<C> for UpgradeError<C> {
 
 /// Trait for upgrading objects
 ///
+/// Implementing this trait for some type means that instances of that type can be upgraded into
+/// instances of type `Into`.
+///
 /// Upgrading can either be realised by upgrading some component of an object (for instance when
 /// upgrading the id of a song into their [`NewgroundsSong`] objects in a [`PartialLevel`]), or by
 /// replacing the whole object alltogether (for instance when upgrading a [`SearchedUser`] into a
 /// profile.
 ///
 /// Upgrading does not perform any cloning.
-///
-/// Implementing this trait for some type means that instances of that type can be upgraded into
-/// instances of type `Into`.
 pub trait Upgradable<Into>: Sized {
     /// The part of the object that's being upgraded. If the whole object is upgraded, this should
     /// be [`Self`]

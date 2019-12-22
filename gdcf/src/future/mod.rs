@@ -1,3 +1,5 @@
+//! Module containing GDCF's future types
+
 use futures::Future;
 
 use crate::{api::ApiClient, cache::Cache, error::Error, future::stream::GdcfStream};

@@ -14,7 +14,7 @@ pub struct GdcfStream<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> {
 }
 
 impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> GdcfStream<A, C, F> {
-    pub fn new(future: F) -> Self {
+    pub(crate) fn new(future: F) -> Self {
         GdcfStream {
             current_future: Some(future),
             _phantom: PhantomData,

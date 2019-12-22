@@ -1,3 +1,5 @@
+//! Module containing the trait an API client would have to implement to be usable with GDCF
+
 use futures::Future;
 
 use crate::{api::request::Request, error::ApiError, Secondary};
