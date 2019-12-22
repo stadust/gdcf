@@ -26,6 +26,7 @@ where
     A: MakeRequest<U::Request>,
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<U::Request>,
     U: Upgradable<Into> + Debug,
+    U::Upgrade: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PendingUpgrade")
@@ -287,6 +288,7 @@ where
     C: Cache + CanCache<U::Request> + CanCache<CreatorKey> + CanCache<NewgroundsSongKey> + Lookup<U::LookupKey>,
     From: PeekableFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = Error<A::Err, C::Err>> + Debug,
     U: Upgradable<Into> + Debug,
+    U::Upgrade: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("UpgradeFuture")

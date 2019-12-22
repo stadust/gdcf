@@ -6,6 +6,7 @@ use crate::{
     Gdcf,
 };
 use futures::{Async, Future};
+use std::fmt::Debug;
 
 pub mod level;
 pub mod user;
@@ -105,6 +106,7 @@ impl<R: Request, S> UpgradeQuery<R, S> {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum FutureState<F: Future> {
     Pending(F),
     Done(F::Item),
@@ -115,9 +117,17 @@ pub(crate) enum UpgradeQueryFuture<F: Future, S> {
     Many(Vec<FutureState<UpgradeQueryFuture<F, S>>>),
 }
 
-impl<F: Future, S> std::fmt::Debug for UpgradeQueryFuture<F, S> {
+impl<F: Future, S> Debug for UpgradeQueryFuture<F, S>
+where
+    F: Debug,
+    F::Item: Debug,
+    S: Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unimplemented!()
+        match self {
+            UpgradeQueryFuture::One(fut, s) => f.debug_tuple("One").field(fut).field(s).finish(),
+            UpgradeQueryFuture::Many(inners) => f.debug_tuple("Many").field(inners).finish(),
+        }
     }
 }
 
