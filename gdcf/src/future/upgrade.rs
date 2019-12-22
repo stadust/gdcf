@@ -4,7 +4,7 @@ use crate::{
     api::{client::MakeRequest, ApiClient},
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
-    future::{refresh::RefreshCacheFuture, stream::GdcfStream, CloneablePeekFuture, PeekableFuture, StreamableFuture},
+    future::{refresh::RefreshCacheFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture},
     upgrade::{Upgradable, UpgradeQueryFuture},
     Gdcf,
 };
@@ -54,18 +54,6 @@ impl<A, C, From, Into, U> UpgradeFuture<A, C, From, Into, U>
 where
     A: ApiClient + MakeRequest<U::Request>,
     C: Cache + CanCache<U::Request> + CanCache<CreatorKey> + CanCache<NewgroundsSongKey> + Lookup<U::LookupKey>,
-    From: PeekableFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = Error<A::Err, C::Err>> + StreamableFuture<A, C>,
-    U: Upgradable<Into>,
-{
-    pub fn stream(self) -> GdcfStream<A, C, Self> {
-        GdcfStream::new(self.gdcf.clone(), self)
-    }
-}
-
-impl<A, C, From, Into, U> UpgradeFuture<A, C, From, Into, U>
-where
-    A: ApiClient + MakeRequest<U::Request>,
-    C: Cache + CanCache<U::Request> + CanCache<CreatorKey> + CanCache<NewgroundsSongKey> + Lookup<U::LookupKey>,
     From: PeekableFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = Error<A::Err, C::Err>>,
     U: Upgradable<Into>,
 {
@@ -85,9 +73,9 @@ where
     From: PeekableFuture<Item = CacheEntry<U, C::CacheEntryMeta>, Error = Error<A::Err, C::Err>> + StreamableFuture<A, C>,
     U: Upgradable<Into>,
 {
-    fn next(self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error> {
+    fn next(self) -> Result<Self, Self::Error> {
         Ok(Self {
-            inner_future: self.inner_future.next(gdcf)?,
+            inner_future: self.inner_future.next()?,
             pending_upgrade: None,
             ..self
         })

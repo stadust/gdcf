@@ -1,12 +1,11 @@
 use crate::{
     api::{
         client::{MakeRequest, Response},
-        request::{PaginatableRequest, Request},
+        request::{Request},
         ApiClient,
     },
     cache::{Cache, CacheEntry, CanCache, CreatorKey, NewgroundsSongKey, Store},
     error::{ApiError, Error},
-    future::StreamableFuture,
     Gdcf, Secondary,
 };
 use futures::{Async, Future};
@@ -21,19 +20,6 @@ where
     inner: <A as MakeRequest<Req>>::Future,
     cache: C,
     pub(super) request: Req,
-}
-
-impl<Req, A, C> StreamableFuture<A, C> for RefreshCacheFuture<Req, A, C>
-where
-    Req: PaginatableRequest,
-    A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
-{
-    fn next(mut self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error> {
-        self.request.next();
-
-        Ok(RefreshCacheFuture::new(gdcf, self.request))
-    }
 }
 
 impl<Req, A, C> std::fmt::Debug for RefreshCacheFuture<Req, A, C>

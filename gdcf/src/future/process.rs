@@ -10,7 +10,7 @@ use crate::{
     cache::{Cache, CacheEntry, CanCache, CreatorKey, Lookup, NewgroundsSongKey, Store},
     error::Error,
     future::{
-        refresh::RefreshCacheFuture, stream::GdcfStream, upgrade::UpgradeFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture,
+        refresh::RefreshCacheFuture,  upgrade::UpgradeFuture, CloneablePeekFuture, PeekableFuture, StreamableFuture,
     },
     upgrade::Upgradable,
     Gdcf,
@@ -47,17 +47,6 @@ impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
-    Req: PaginatableRequest,
-{
-    pub fn stream(self) -> GdcfStream<A, C, Self> {
-        GdcfStream::new(self.gdcf.clone(), self)
-    }
-}
-
-impl<Req, A, C> ProcessRequestFuture<Req, A, C>
-where
-    A: ApiClient + MakeRequest<Req>,
-    C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: Request,
 {
     pub fn new(gdcf: Gdcf<A, C>, request: Req) -> Result<Self, C::Err> {
@@ -75,16 +64,16 @@ where
     C: Cache + Store<CreatorKey> + Store<NewgroundsSongKey> + CanCache<Req>,
     Req: PaginatableRequest,
 {
-    fn next(self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error> {
+    fn next(self) -> Result<Self, Self::Error> {
         let mut request = match self.state {
             ProcessRequestFutureState::UpToDate(_, request) => request,
             ProcessRequestFutureState::Outdated(_, future) | ProcessRequestFutureState::Uncached(future) => future.request,
         };
         request.next();
         Ok(ProcessRequestFuture {
-            gdcf: self.gdcf,
             forces_refresh: self.forces_refresh,
-            state: gdcf.process(request).map_err(Error::Cache)?,
+            state: self.gdcf.process(request).map_err(Error::Cache)?,
+            gdcf: self.gdcf,
         })
     }
 }
@@ -204,8 +193,6 @@ where
     }
 }
 
-// There is no difference between these two methods at this level, but for API consistency we need
-// to provide both
 impl<Req, A, C> ProcessRequestFuture<Req, A, C>
 where
     A: ApiClient + MakeRequest<Req>,

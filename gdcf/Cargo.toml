@@ -2,6 +2,7 @@
 name = "gdcf"
 version = "0.1.0"
 edition = "2018"
+include = ["../README.md"]
 
 [dependencies]
 futures = "^0.1.17"

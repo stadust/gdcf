@@ -1,6 +1,7 @@
 use futures::Future;
 
-use crate::{api::ApiClient, cache::Cache, error::Error, Gdcf};
+use crate::{api::ApiClient, cache::Cache, error::Error};
+use crate::future::stream::GdcfStream;
 
 pub mod process;
 pub(crate) mod refresh;
@@ -17,10 +18,9 @@ pub trait CloneablePeekFuture: PeekableFuture {
 }
 
 pub trait StreamableFuture<A: ApiClient, C: Cache>: Future<Error = Error<A::Err, C::Err>> + Sized {
-    fn next(self, gdcf: &Gdcf<A, C>) -> Result<Self, Self::Error>;
+    fn next(self) -> Result<Self, Self::Error>;
 
-    // this is probably a better solution
-    /*fn stream(self) -> GdcfStream<A, C, Self> {
-        GdcfStream::new(self.gdcf.clone(), self)
-    }*/
+    fn stream(self) -> GdcfStream<A, C, Self> {
+        GdcfStream::new(self)
+    }
 }

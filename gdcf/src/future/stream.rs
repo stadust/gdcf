@@ -3,21 +3,21 @@ use crate::{
     cache::Cache,
     error::{ApiError, Error},
     future::StreamableFuture,
-    Gdcf,
 };
 use futures::{Async, Stream};
+use failure::_core::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct GdcfStream<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> {
     current_future: Option<F>,
-    gdcf: Gdcf<A, C>,
+    _phantom: PhantomData<(A, C)>
 }
 
 impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> GdcfStream<A, C, F> {
-    pub fn new(gdcf: Gdcf<A, C>, future: F) -> Self {
+    pub fn new(future: F) -> Self {
         GdcfStream {
             current_future: Some(future),
-            gdcf,
+            _phantom: PhantomData
         }
     }
 }
@@ -37,7 +37,7 @@ impl<A: ApiClient, C: Cache, F: StreamableFuture<A, C>> Stream for GdcfStream<A,
                     self.current_future = self
                         .current_future
                         .take()
-                        .map(|current_future| current_future.next(&self.gdcf))
+                        .map(|current_future| current_future.next())
                         .transpose()?;
 
                     Ok(Async::Ready(Some(page)))
