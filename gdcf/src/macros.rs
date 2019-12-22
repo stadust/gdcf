@@ -68,7 +68,6 @@ macro_rules! query_upgrade {
 
         match $cache.lookup(&$cache_request)? {
             CacheEntry::Missing => Ok(UpgradeQuery::One(Some($refresh_request), None)),
-            CacheEntry::DeducedAbsent => Err(UpgradeError::UpgradeFailed),
             CacheEntry::MarkedAbsent(meta) =>
                 if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), None))
@@ -89,11 +88,8 @@ macro_rules! query_upgrade_option {
     ($cache: expr, $cache_request: expr, $refresh_request: expr, $force_refresh: expr) => {{
         use crate::cache::CacheEntryMeta;
 
-        // TODO: handle forced refreshs correctly!
-
         match $cache.lookup(&$cache_request)? {
             CacheEntry::Missing => Ok(UpgradeQuery::One(Some($refresh_request), None)),
-            CacheEntry::DeducedAbsent => Ok(UpgradeQuery::One(None, Some(None))),
             CacheEntry::MarkedAbsent(meta) =>
                 if meta.is_expired() || $force_refresh {
                     Ok(UpgradeQuery::One(Some($refresh_request), None))

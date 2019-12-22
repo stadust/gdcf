@@ -188,11 +188,7 @@ impl Lookup<LevelsRequest> for Cache {
         .map(|row: Wrapped<_>| row.0)
         .collect();
 
-        if levels.is_empty() {
-            Ok(CacheEntry::DeducedAbsent)
-        } else {
-            Ok(CacheEntry::Cached(levels, entry))
-        }
+        Ok(CacheEntry::Cached(levels, entry))
     }
 }
 
