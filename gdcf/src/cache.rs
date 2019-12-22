@@ -20,10 +20,6 @@ pub trait Key {
     type Result;
 }
 
-impl Key for ! {
-    type Result = !;
-}
-
 impl<R: Request> Key for R {
     type Result = <R as Request>::Result;
 }

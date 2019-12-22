@@ -20,7 +20,7 @@ pub enum UpgradeQuery<R, S> {
 }
 
 impl<R, S> UpgradeQuery<R, S> {
-    fn clone_upgrades(&self) -> UpgradeQuery<!, S>
+    fn clone_upgrades(&self) -> UpgradeQuery<(), S>
     where
         S: Clone,
     {
@@ -44,7 +44,7 @@ impl<R, S> UpgradeQuery<R, S> {
         }
     }
 
-    fn mitosis(self) -> (UpgradeQuery<R, !>, UpgradeQuery<!, S>) {
+    fn mitosis(self) -> (UpgradeQuery<R, ()>, UpgradeQuery<(), S>) {
         match self {
             UpgradeQuery::One(left, right) => (UpgradeQuery::One(left, None), UpgradeQuery::One(None, right)),
             UpgradeQuery::Many(inner_queries) => {
@@ -64,8 +64,8 @@ impl<R, S> UpgradeQuery<R, S> {
     }
 }
 
-impl<R> UpgradeQuery<R, !> {
-    fn recombination<S>(self, other: UpgradeQuery<!, S>) -> UpgradeQuery<R, S> {
+impl<R> UpgradeQuery<R, ()> {
+    fn recombination<S>(self, other: UpgradeQuery<(), S>) -> UpgradeQuery<R, S> {
         match (self, other) {
             (UpgradeQuery::One(left, _), UpgradeQuery::One(_, right)) => UpgradeQuery::One(left, right),
             (UpgradeQuery::Many(lefts), UpgradeQuery::Many(rights)) =>
@@ -126,8 +126,8 @@ where
     }
 }
 
-impl<F: Future> UpgradeQueryFuture<F, !> {
-    pub(crate) fn recombination<S>(self, other: UpgradeQuery<!, S>) -> UpgradeQueryFuture<F, S> {
+impl<F: Future> UpgradeQueryFuture<F, ()> {
+    pub(crate) fn recombination<S>(self, other: UpgradeQuery<(), S>) -> UpgradeQueryFuture<F, S> {
         match (self, other) {
             (UpgradeQueryFuture::One(left, _), UpgradeQuery::One(_, right)) => UpgradeQueryFuture::One(left, right),
             (UpgradeQueryFuture::Many(lefts), UpgradeQuery::Many(rights)) =>
@@ -149,7 +149,7 @@ impl<F: Future> UpgradeQueryFuture<F, !> {
 }
 
 impl<F: Future, S> UpgradeQueryFuture<F, S> {
-    pub(crate) fn clone_upgrades(&self) -> UpgradeQuery<!, S>
+    pub(crate) fn clone_upgrades(&self) -> UpgradeQuery<(), S>
     where
         S: Clone,
     {
@@ -170,7 +170,7 @@ impl<F: Future, S> UpgradeQueryFuture<F, S> {
         }
     }
 
-    pub(crate) fn mitosis(self) -> (UpgradeQueryFuture<F, !>, UpgradeQuery<!, S>) {
+    pub(crate) fn mitosis(self) -> (UpgradeQueryFuture<F, ()>, UpgradeQuery<(), S>) {
         match self {
             UpgradeQueryFuture::One(future, data) => (UpgradeQueryFuture::One(future, None), UpgradeQuery::One(None, data)),
             UpgradeQueryFuture::Many(inner_futures) => {
@@ -334,7 +334,7 @@ pub trait Upgradable<Into>: Sized {
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>>;
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>>;
 
     fn upgrade<State>(self, upgrade: UpgradeQuery<State, Self::Upgrade>) -> (Into, UpgradeQuery<State, Self::From>);
     fn downgrade<State>(upgraded: Into, downgrade: UpgradeQuery<State, Self::From>) -> (Self, UpgradeQuery<State, Self::Upgrade>);
@@ -374,7 +374,7 @@ where
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query {
             UpgradeQuery::One(..) => panic!(),
             UpgradeQuery::Many(inner_queries) =>

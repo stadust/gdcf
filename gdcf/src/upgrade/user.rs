@@ -28,7 +28,7 @@ impl Upgradable<User> for SearchedUser {
         &self,
         _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(user)) => Ok(UpgradeQuery::One(None, Some(user))),
             (Some(CacheEntry::Cached(user, _)), _) => Ok(UpgradeQuery::One(None, Some(user))),

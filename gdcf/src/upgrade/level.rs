@@ -32,7 +32,7 @@ impl<Song, User> Upgradable<Level<Song, User>> for PartialLevel<Song, User> {
         &self,
         _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<Level<Option<u64>, u64>, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(user)) => Ok(UpgradeQuery::One(None, Some(user))),
             (Some(CacheEntry::Cached(user, _)), _) => Ok(UpgradeQuery::One(None, Some(user))),
@@ -103,7 +103,7 @@ impl<User> Upgradable<Level<Option<NewgroundsSong>, User>> for Level<Option<u64>
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(newgrounds_song)) => Ok(UpgradeQuery::One(None, Some(newgrounds_song))),
             (Some(_), _) =>
@@ -163,7 +163,7 @@ impl<User> Upgradable<PartialLevel<Option<NewgroundsSong>, User>> for PartialLev
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(newgrounds_song)) => Ok(UpgradeQuery::One(None, Some(newgrounds_song))),
             (Some(_), _) =>
@@ -219,7 +219,7 @@ impl<Song> Upgradable<Level<Song, Option<Creator>>> for Level<Song, u64> {
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(creator)) => Ok(UpgradeQuery::One(None, Some(creator))),
             (Some(_), _) =>
@@ -275,7 +275,7 @@ impl<Song> Upgradable<PartialLevel<Song, Option<Creator>>> for PartialLevel<Song
         &self,
         cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<<Self::Request as Request>::Result, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(creator)) => Ok(UpgradeQuery::One(None, Some(creator))),
             (Some(_), _) =>
@@ -327,7 +327,7 @@ impl<Song> Upgradable<Level<Song, Option<User>>> for Level<Song, Option<Creator>
         &self,
         _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(user)) => Ok(UpgradeQuery::One(None, Some(user))),
             (Some(CacheEntry::Cached(user, _)), _) => Ok(UpgradeQuery::One(None, Some(Some(user)))),
@@ -373,7 +373,7 @@ impl<Song> Upgradable<PartialLevel<Song, Option<User>>> for PartialLevel<Song, O
         &self,
         _cache: &C,
         resolved_query: UpgradeQuery<CacheEntry<User, C::CacheEntryMeta>, Self::Upgrade>,
-    ) -> Result<UpgradeQuery<!, Self::Upgrade>, UpgradeError<C::Err>> {
+    ) -> Result<UpgradeQuery<(), Self::Upgrade>, UpgradeError<C::Err>> {
         match resolved_query.one() {
             (None, Some(user)) => Ok(UpgradeQuery::One(None, Some(user))),
             (Some(CacheEntry::Cached(user, _)), _) => Ok(UpgradeQuery::One(None, Some(Some(user)))),
